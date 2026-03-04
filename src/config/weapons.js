@@ -79,3 +79,36 @@ export const PROJECTILE_POOL_SIZE_BY_TEXTURE = {
   proj_fireball: 240,
   proj_meteor: 180
 };
+
+export const LEVEL_UP_UPGRADES = [
+  {
+    id: "weapon_damage",
+    label: "Weapon Damage",
+    description: "All weapon damage +12%",
+    value: 0.12
+  },
+  {
+    id: "attack_speed",
+    label: "Attack Speed",
+    description: "Faster attacks +10%",
+    value: 0.1
+  },
+  {
+    id: "projectile_count",
+    label: "Projectile Count",
+    description: "Extra projectile +1",
+    value: 1
+  },
+  {
+    id: "movement_speed",
+    label: "Movement Speed",
+    description: "Move speed +20",
+    value: 20
+  },
+  {
+    id: "pickup_radius",
+    label: "Pickup Radius",
+    description: "Orb pickup radius +40",
+    value: 40
+  }
+];

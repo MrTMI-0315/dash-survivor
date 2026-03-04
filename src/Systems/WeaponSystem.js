@@ -14,6 +14,9 @@ export class WeaponSystem {
     this.scene = scene;
     this.player = player;
     this.projectilePoolByTexture = new Map();
+    this.globalDamageMultiplier = 1;
+    this.globalCooldownMultiplier = 1;
+    this.projectileCount = 1;
 
     this.projectiles = scene.physics.add.group({
       allowGravity: false,
@@ -92,6 +95,44 @@ export class WeaponSystem {
     projectile.setData("inProjectilePool", true);
     projectile.disableBody(true, true);
     freeList.push(projectile);
+  }
+
+  addGlobalDamagePercent(percent) {
+    const safePercent = Number(percent) || 0;
+    if (safePercent <= 0) {
+      return this.globalDamageMultiplier;
+    }
+
+    this.globalDamageMultiplier *= 1 + safePercent;
+    return this.globalDamageMultiplier;
+  }
+
+  addAttackSpeedPercent(percent) {
+    const safePercent = Number(percent) || 0;
+    if (safePercent <= 0) {
+      return this.globalCooldownMultiplier;
+    }
+
+    this.globalCooldownMultiplier = Math.max(0.35, this.globalCooldownMultiplier * (1 - safePercent));
+    return this.globalCooldownMultiplier;
+  }
+
+  addProjectileCount(amount = 1) {
+    const safeAmount = Math.max(0, Math.floor(amount));
+    if (safeAmount <= 0) {
+      return this.projectileCount;
+    }
+
+    this.projectileCount = Math.min(8, this.projectileCount + safeAmount);
+    return this.projectileCount;
+  }
+
+  getScaledWeaponDamage(weapon) {
+    return Math.max(1, Math.round(weapon.damage * this.globalDamageMultiplier));
+  }
+
+  getEffectiveCooldownMs(weapon) {
+    return Math.max(90, Math.round(weapon.cooldownMs * this.globalCooldownMultiplier));
   }
 
   addWeapon(baseType) {
@@ -239,7 +280,7 @@ export class WeaponSystem {
 
       const fired = this.fireWeapon(weapon);
       if (fired) {
-        weapon.nextFireAt = time + weapon.cooldownMs;
+        weapon.nextFireAt = time + this.getEffectiveCooldownMs(weapon);
       }
     });
   }
@@ -276,7 +317,7 @@ export class WeaponSystem {
         const theta = weapon.orbitAngle + (Math.PI * 2 * i) / count;
         blade.x = this.player.x + Math.cos(theta) * weapon.orbitRadius;
         blade.y = this.player.y + Math.sin(theta) * weapon.orbitRadius;
-        blade.setData("damage", weapon.damage);
+        blade.setData("damage", this.getScaledWeaponDamage(weapon));
         blade.setData("knockbackForce", weapon.knockbackForce);
       }
     });
@@ -299,10 +340,62 @@ export class WeaponSystem {
       blade.body.setCircle(blade.displayWidth * 0.48, 0, 0);
       blade.setData("weaponBaseType", weapon.baseType);
       blade.setData("orbitHitKey", `orbit_hit_${weapon.baseType}`);
-      blade.setData("damage", weapon.damage);
+      blade.setData("damage", this.getScaledWeaponDamage(weapon));
       blade.setData("knockbackForce", weapon.knockbackForce);
       weapon.orbitSprites.push(blade);
     }
+  }
+
+  rotateDirection(x, y, radians) {
+    if (radians === 0) {
+      return { x, y };
+    }
+
+    const cos = Math.cos(radians);
+    const sin = Math.sin(radians);
+    return {
+      x: x * cos - y * sin,
+      y: x * sin + y * cos
+    };
+  }
+
+  fireProjectileWeapon(weapon, spreadDeg) {
+    const target = this.findNearestEnemy(this.player.x, this.player.y, weapon.range);
+    if (!target) {
+      return false;
+    }
+
+    const baseDirection = {
+      x: target.x - this.player.x,
+      y: target.y - this.player.y
+    };
+    const scaledDamage = this.getScaledWeaponDamage(weapon);
+    const explosionDamage =
+      weapon.explosionDamageMultiplier && weapon.explosionDamageMultiplier > 0
+        ? Math.round(scaledDamage * weapon.explosionDamageMultiplier)
+        : 0;
+
+    const count = Math.max(1, this.projectileCount);
+    const center = (count - 1) / 2;
+    const spreadRad = Phaser.Math.DegToRad(spreadDeg);
+
+    let fired = false;
+    for (let i = 0; i < count; i += 1) {
+      const offset = (i - center) * spreadRad;
+      const direction = this.rotateDirection(baseDirection.x, baseDirection.y, offset);
+      const didFire = this.spawnProjectile(weapon.type, { x: this.player.x, y: this.player.y }, direction, {
+        speed: weapon.projectileSpeed,
+        maxDistance: weapon.range,
+        damage: scaledDamage,
+        knockbackForce: weapon.knockbackForce,
+        behavior: weapon.projectileBehavior,
+        explosionRadius: weapon.explosionRadius,
+        explosionDamage
+      });
+      fired = fired || didFire;
+    }
+
+    return fired;
   }
 
   fireWeapon(weapon) {
@@ -322,67 +415,15 @@ export class WeaponSystem {
   }
 
   fireDagger(weapon) {
-    const target = this.findNearestEnemy(this.player.x, this.player.y, weapon.range);
-    if (!target) {
-      return false;
-    }
-
-    return this.spawnProjectile(
-      weapon.type,
-      { x: this.player.x, y: this.player.y },
-      { x: target.x - this.player.x, y: target.y - this.player.y },
-      {
-        speed: weapon.projectileSpeed,
-        maxDistance: weapon.range,
-        damage: weapon.damage,
-        knockbackForce: weapon.knockbackForce,
-        behavior: weapon.projectileBehavior
-      }
-    );
+    return this.fireProjectileWeapon(weapon, 10);
   }
 
   fireFireball(weapon) {
-    const target = this.findNearestEnemy(this.player.x, this.player.y, weapon.range);
-    if (!target) {
-      return false;
-    }
-
-    return this.spawnProjectile(
-      weapon.type,
-      { x: this.player.x, y: this.player.y },
-      { x: target.x - this.player.x, y: target.y - this.player.y },
-      {
-        speed: weapon.projectileSpeed,
-        maxDistance: weapon.range,
-        damage: weapon.damage,
-        knockbackForce: weapon.knockbackForce,
-        behavior: weapon.projectileBehavior,
-        explosionRadius: weapon.explosionRadius,
-        explosionDamage: Math.round(weapon.damage * weapon.explosionDamageMultiplier)
-      }
-    );
+    return this.fireProjectileWeapon(weapon, 8);
   }
 
   fireMeteor(weapon) {
-    const target = this.findNearestEnemy(this.player.x, this.player.y, weapon.range);
-    if (!target) {
-      return false;
-    }
-
-    return this.spawnProjectile(
-      weapon.type,
-      { x: this.player.x, y: this.player.y },
-      { x: target.x - this.player.x, y: target.y - this.player.y },
-      {
-        speed: weapon.projectileSpeed,
-        maxDistance: weapon.range,
-        damage: weapon.damage,
-        knockbackForce: weapon.knockbackForce,
-        behavior: weapon.projectileBehavior,
-        explosionRadius: weapon.explosionRadius,
-        explosionDamage: Math.round(weapon.damage * weapon.explosionDamageMultiplier)
-      }
-    );
+    return this.fireProjectileWeapon(weapon, 6);
   }
 
   fireLightning(weapon) {
@@ -404,7 +445,8 @@ export class WeaponSystem {
     for (let i = 0; i < maxJumps && currentTarget; i += 1) {
       gfx.lineBetween(sourceX, sourceY, currentTarget.x, currentTarget.y);
       const falloff = i === 0 ? 1 : i === 1 ? 0.8 : 0.65;
-      this.applyDamage(currentTarget, Math.round(weapon.damage * falloff), weapon.knockbackForce, sourceX, sourceY);
+      const scaledDamage = this.getScaledWeaponDamage(weapon);
+      this.applyDamage(currentTarget, Math.round(scaledDamage * falloff), weapon.knockbackForce, sourceX, sourceY);
       hitEnemies.push(currentTarget);
 
       sourceX = currentTarget.x;

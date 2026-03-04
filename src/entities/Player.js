@@ -23,6 +23,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.maxWeaponSlots = 3;
     this.weapons = [];
     this.passives = {};
+    this.pickupRadius = 140;
 
     this.setCircle(16, 0, 0);
     this.setCollideWorldBounds(true);

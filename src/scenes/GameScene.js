@@ -5,6 +5,7 @@ import { WeaponSystem } from "../Systems/WeaponSystem.js";
 import { MetaProgressionSystem } from "../Systems/MetaProgressionSystem.js";
 import { ObjectPool } from "../Systems/ObjectPool.js";
 import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS } from "../config/enemies.js";
+import { LEVEL_UP_UPGRADES } from "../config/weapons.js";
 import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
   BOSS_SPAWN_INTERVAL_MS,
@@ -17,86 +18,6 @@ import {
   WORLD_WIDTH,
   XP_REQUIREMENTS
 } from "../config/progression.js";
-const UPGRADE_POOL = [
-  {
-    label: "Attack Speed",
-    description: "Attack interval -10%",
-    apply: (scene) => {
-      scene.attackIntervalMs = Math.max(180, Math.floor(scene.attackIntervalMs * 0.9));
-    }
-  },
-  {
-    label: "Damage",
-    description: "Attack damage +5",
-    apply: (scene) => {
-      scene.attackDamage += 5;
-    }
-  },
-  {
-    label: "Move Speed",
-    description: "Move speed +20",
-    apply: (scene) => {
-      scene.player.speed += 20;
-    }
-  },
-  {
-    label: "Attack Range",
-    description: "Range +20",
-    apply: (scene) => {
-      scene.attackRange += 20;
-    }
-  },
-  {
-    label: "Dash Recharge",
-    description: "Dash charge +20%",
-    apply: (scene) => {
-      scene.player.dashChargeRate *= 1.2;
-    }
-  },
-  {
-    label: "Fireball Weapon",
-    description: "Unlock/upgrade Fireball",
-    apply: (scene) => {
-      scene.weaponSystem.addWeapon("fireball");
-    }
-  },
-  {
-    label: "Dagger Weapon",
-    description: "Unlock/upgrade Dagger",
-    apply: (scene) => {
-      scene.weaponSystem.addWeapon("dagger");
-    }
-  },
-  {
-    label: "Lightning Weapon",
-    description: "Unlock/upgrade Lightning",
-    apply: (scene) => {
-      scene.weaponSystem.addWeapon("lightning");
-    }
-  },
-  {
-    label: "Passive Ember Core",
-    description: "Enables Fireball evolution",
-    apply: (scene) => {
-      const added = scene.player.addPassive("ember_core");
-      scene.weaponSystem.onPassiveAcquired();
-      if (!added) {
-        scene.weaponSystem.addWeapon("fireball");
-      }
-    }
-  },
-  {
-    label: "Passive Blade Sigil",
-    description: "Enables Dagger evolution",
-    apply: (scene) => {
-      const added = scene.player.addPassive("blade_sigil");
-      scene.weaponSystem.onPassiveAcquired();
-      if (!added) {
-        scene.weaponSystem.addWeapon("dagger");
-      }
-    }
-  }
-];
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -263,6 +184,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player.updateDash(delta);
     this.player.moveFromInput(this.keys);
+    this.pullXpOrbsToPlayer();
     this.weaponSystem.update(time, delta);
     this.performAutoAttack(time);
 
@@ -744,7 +666,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(31);
 
-    const choices = Phaser.Utils.Array.Shuffle([...UPGRADE_POOL]).slice(0, 3);
+    const choices = Phaser.Utils.Array.Shuffle([...LEVEL_UP_UPGRADES]).slice(0, 3);
     const optionObjects = [];
 
     choices.forEach((upgrade, index) => {
@@ -767,7 +689,7 @@ export class GameScene extends Phaser.Scene {
         .setDepth(32);
 
       const chooseUpgrade = () => {
-        upgrade.apply(this);
+        this.applyLevelUpUpgrade(upgrade);
         this.closeLevelUpChoices();
       };
       box.on("pointerdown", chooseUpgrade);
@@ -777,6 +699,59 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.levelUpUi = [panel, title, ...optionObjects];
+  }
+
+  applyLevelUpUpgrade(upgrade) {
+    if (!upgrade) {
+      return;
+    }
+
+    if (upgrade.id === "weapon_damage") {
+      this.weaponSystem.addGlobalDamagePercent(upgrade.value);
+      return;
+    }
+    if (upgrade.id === "attack_speed") {
+      this.attackIntervalMs = Math.max(180, Math.floor(this.attackIntervalMs * (1 - upgrade.value)));
+      this.weaponSystem.addAttackSpeedPercent(upgrade.value);
+      return;
+    }
+    if (upgrade.id === "projectile_count") {
+      this.weaponSystem.addProjectileCount(upgrade.value);
+      return;
+    }
+    if (upgrade.id === "movement_speed") {
+      this.player.speed += upgrade.value;
+      return;
+    }
+    if (upgrade.id === "pickup_radius") {
+      this.player.pickupRadius += upgrade.value;
+    }
+  }
+
+  pullXpOrbsToPlayer() {
+    const pickupRadius = Math.max(0, this.player.pickupRadius || 0);
+    if (pickupRadius <= 0) {
+      return;
+    }
+
+    this.xpOrbs.getChildren().forEach((orb) => {
+      if (!orb.active || !orb.body) {
+        return;
+      }
+
+      const dx = this.player.x - orb.x;
+      const dy = this.player.y - orb.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > pickupRadius) {
+        orb.body.setVelocity(0, 0);
+        return;
+      }
+
+      const nx = distance > 0.0001 ? dx / distance : 0;
+      const ny = distance > 0.0001 ? dy / distance : 0;
+      const pullStrength = Phaser.Math.Linear(220, 480, 1 - Phaser.Math.Clamp(distance / pickupRadius, 0, 1));
+      orb.body.setVelocity(nx * pullStrength, ny * pullStrength);
+    });
   }
 
   closeLevelUpChoices() {
