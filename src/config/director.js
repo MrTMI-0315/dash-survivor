@@ -34,6 +34,11 @@ export const DIRECTOR_ELITE_CHANCE = {
   relief: 0.01
 };
 
+export const DIRECTOR_ELITE_TIME_SCALING = {
+  perMinute: 0.02,
+  maxChance: 0.72
+};
+
 export const DIRECTOR_DIFFICULTY_SCALING = {
   base: 1,
   perMinute: 0.15

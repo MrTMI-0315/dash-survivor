@@ -359,10 +359,9 @@ export class GameScene extends Phaser.Scene {
       enemy.setData("archetype", type);
 
       const eliteChance = this.director.getEliteChance();
-      const peakBoost = this.director.getState() === DIRECTOR_STATE.PEAK ? 1.55 : 1;
-      const adjustedEliteChance = Math.min(0.72, eliteChance * peakBoost);
-      const isElite = type !== "swarm" && Math.random() < adjustedEliteChance;
+      const isElite = type !== "swarm" && Math.random() < eliteChance;
       enemy.setData("isElite", isElite);
+      enemy.setData("eliteType", null);
       if (isElite) {
         const eliteType = this.pickEliteType();
         enemy.setData("eliteType", eliteType);

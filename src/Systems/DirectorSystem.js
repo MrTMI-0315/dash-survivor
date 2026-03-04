@@ -2,6 +2,7 @@ import {
   DIRECTOR_DEFAULT_DURATIONS_MS,
   DIRECTOR_DIFFICULTY_SCALING,
   DIRECTOR_ELITE_CHANCE,
+  DIRECTOR_ELITE_TIME_SCALING,
   DIRECTOR_ENEMY_SPEED,
   DIRECTOR_SPAWN_RATE,
   DIRECTOR_STATE,
@@ -91,13 +92,16 @@ export class DirectorSystem {
   }
 
   getEliteChance() {
+    let baseChance = DIRECTOR_ELITE_CHANCE.relief;
     if (this.state === DIRECTOR_STATE.BUILD) {
-      return DIRECTOR_ELITE_CHANCE.build;
+      baseChance = DIRECTOR_ELITE_CHANCE.build;
     }
     if (this.state === DIRECTOR_STATE.PEAK) {
-      return DIRECTOR_ELITE_CHANCE.peak;
+      baseChance = DIRECTOR_ELITE_CHANCE.peak;
     }
-    return DIRECTOR_ELITE_CHANCE.relief;
+
+    const scaledChance = baseChance + this.getElapsedMinutes() * DIRECTOR_ELITE_TIME_SCALING.perMinute;
+    return Math.min(DIRECTOR_ELITE_TIME_SCALING.maxChance, scaledChance);
   }
 
   getEnemyHpMultiplier() {
