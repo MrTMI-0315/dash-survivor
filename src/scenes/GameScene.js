@@ -31,6 +31,13 @@ const UPGRADE_POOL = [
     apply: (scene) => {
       scene.attackRange += 20;
     }
+  },
+  {
+    label: "Dash Recharge",
+    description: "Dash charge +20%",
+    apply: (scene) => {
+      scene.player.dashChargeRate *= 1.2;
+    }
   }
 ];
 
@@ -77,6 +84,7 @@ export class GameScene extends Phaser.Scene {
       down: Phaser.Input.Keyboard.KeyCodes.S,
       left: Phaser.Input.Keyboard.KeyCodes.A,
       right: Phaser.Input.Keyboard.KeyCodes.D,
+      dash: Phaser.Input.Keyboard.KeyCodes.SPACE,
       restart: Phaser.Input.Keyboard.KeyCodes.R
     });
 
@@ -125,7 +133,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHud();
   }
 
-  update(time) {
+  update(time, delta) {
     if (this.isGameOver) {
       if (Phaser.Input.Keyboard.JustDown(this.keys.restart)) {
         this.scene.restart();
@@ -139,6 +147,11 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (Phaser.Input.Keyboard.JustDown(this.keys.dash)) {
+      this.player.tryDash();
+    }
+
+    this.player.updateDash(delta);
     this.player.moveFromInput(this.keys);
     this.performAutoAttack(time);
 
@@ -213,11 +226,28 @@ export class GameScene extends Phaser.Scene {
       damage: 10,
       xpValue: 10
     });
+    enemy.setData("lastDashHitId", -1);
 
     this.enemies.add(enemy);
   }
 
   handlePlayerEnemyCollision(player, enemy) {
+    if (player.isDashing()) {
+      const lastDashHitId = enemy.getData("lastDashHitId") ?? -1;
+      if (lastDashHitId === player.currentDashId) {
+        return;
+      }
+
+      enemy.setData("lastDashHitId", player.currentDashId);
+      enemy.takeDamage(player.dashDamage);
+
+      if (enemy.isDead()) {
+        this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
+        enemy.destroy();
+      }
+      return;
+    }
+
     const damaged = player.takeDamage(enemy.damage, this.time.now);
     if (!damaged) {
       return;
@@ -399,8 +429,9 @@ export class GameScene extends Phaser.Scene {
 
   updateHud() {
     const activeEnemies = this.enemies.getChildren().filter((enemy) => enemy.active).length;
+    const dashPercent = Math.floor(this.player.getDashRatio() * 100);
     this.hudText.setText(
-      `LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   Enemies ${activeEnemies}`
+      `LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   Enemies ${activeEnemies}`
     );
   }
 }

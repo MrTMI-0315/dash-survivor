@@ -10,12 +10,26 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.speed = 200;
     this.damageCooldownMs = 400;
     this.nextDamageAt = 0;
+    this.lastMoveDir = new Phaser.Math.Vector2(1, 0);
+
+    this.dashGaugeMax = 100;
+    this.dashGauge = 0;
+    this.dashChargeRate = 20;
+    this.dashDurationMs = 250;
+    this.dashRemainingMs = 0;
+    this.dashSpeedMultiplier = 4;
+    this.dashDamage = 20;
+    this.currentDashId = 0;
 
     this.setCircle(16, 0, 0);
     this.setCollideWorldBounds(true);
   }
 
   moveFromInput(keys) {
+    if (this.isDashing()) {
+      return;
+    }
+
     let moveX = 0;
     let moveY = 0;
 
@@ -39,7 +53,54 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     direction.normalize();
+    this.lastMoveDir.copy(direction);
     this.body.setVelocity(direction.x * this.speed, direction.y * this.speed);
+  }
+
+  updateDash(delta) {
+    if (this.isDashing()) {
+      this.dashRemainingMs = Math.max(0, this.dashRemainingMs - delta);
+      if (!this.isDashing()) {
+        this.clearTint();
+      }
+      return;
+    }
+
+    this.dashGauge = Math.min(this.dashGaugeMax, this.dashGauge + (this.dashChargeRate * delta) / 1000);
+  }
+
+  canDash() {
+    return !this.isDashing() && this.dashGauge >= this.dashGaugeMax;
+  }
+
+  tryDash() {
+    if (!this.canDash()) {
+      return false;
+    }
+
+    this.dashGauge = 0;
+    this.dashRemainingMs = this.dashDurationMs;
+    this.currentDashId += 1;
+
+    const dir = this.lastMoveDir.clone();
+    if (dir.lengthSq() === 0) {
+      dir.set(1, 0);
+    } else {
+      dir.normalize();
+    }
+
+    const dashSpeed = this.speed * this.dashSpeedMultiplier;
+    this.body.setVelocity(dir.x * dashSpeed, dir.y * dashSpeed);
+    this.setTint(0xfff2a6);
+    return true;
+  }
+
+  isDashing() {
+    return this.dashRemainingMs > 0;
+  }
+
+  getDashRatio() {
+    return this.dashGauge / this.dashGaugeMax;
   }
 
   takeDamage(amount, now) {
