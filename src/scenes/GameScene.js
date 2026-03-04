@@ -1,22 +1,25 @@
 import { Player } from "../entities/Player.js";
-import { Enemy, ENEMY_ARCHETYPE_CONFIGS } from "../entities/Enemy.js";
+import { Enemy } from "../entities/Enemy.js";
 import { BossEnemy } from "../entities/BossEnemy.js";
 import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
 import { WeaponSystem } from "../Systems/WeaponSystem.js";
 import { MetaProgressionSystem } from "../Systems/MetaProgressionSystem.js";
-
-const WORLD_WIDTH = 2400;
-const WORLD_HEIGHT = 1350;
-const BOSS_SPAWN_INTERVAL_MS = 90000;
-const DIFFICULTY_STEP_MS = 120000;
-const HP_SCALING_PER_STEP = 0.1;
-const SPEED_SCALING_PER_STEP = 0.05;
-const SPAWN_SCALING_PER_STEP = 0.1;
-const ENEMY_TYPE_WEIGHTS = [
-  { type: "chaser", weight: 50 },
-  { type: "tank", weight: 25 },
-  { type: "swarm", weight: 25 }
-];
+import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS } from "../config/enemies.js";
+import {
+  BASE_SPAWN_CHECK_INTERVAL_MS,
+  BOSS_SPAWN_INTERVAL_MS,
+  DIFFICULTY_STEP_MS,
+  HP_SCALING_PER_STEP,
+  SAFE_RADIUS,
+  SPAWN_BURST_CONFIG,
+  SPAWN_SCALING_PER_STEP,
+  SPEED_SCALING_PER_STEP,
+  TARGET_ENEMY_CURVE,
+  TARGET_ENEMY_FALLBACK,
+  WORLD_HEIGHT,
+  WORLD_WIDTH,
+  XP_REQUIREMENTS
+} from "../config/progression.js";
 const UPGRADE_POOL = [
   {
     label: "Attack Speed",
@@ -102,8 +105,8 @@ export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
 
-    this.safeRadius = 300;
-    this.baseSpawnCheckIntervalMs = 250;
+    this.safeRadius = SAFE_RADIUS;
+    this.baseSpawnCheckIntervalMs = BASE_SPAWN_CHECK_INTERVAL_MS;
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
@@ -150,11 +153,7 @@ export class GameScene extends Phaser.Scene {
     this.runMetaCurrency = 0;
     this.lastRunMetaCurrency = 0;
     this.metaSettled = false;
-    this.director = new DirectorSystem({
-      buildMs: 30000,
-      peakMs: 15000,
-      reliefMs: 8000
-    });
+    this.director = new DirectorSystem();
 
     this.createTextures();
     this.drawArena();
@@ -351,34 +350,23 @@ export class GameScene extends Phaser.Scene {
   }
 
   getTargetEnemyCount(seconds) {
-    if (seconds < 20) {
-      return Phaser.Math.Linear(3, 7, seconds / 20);
+    for (let i = 0; i < TARGET_ENEMY_CURVE.length; i += 1) {
+      const segment = TARGET_ENEMY_CURVE[i];
+      if (seconds < segment.endSec) {
+        const duration = Math.max(1, segment.endSec - segment.startSec);
+        const progress = (seconds - segment.startSec) / duration;
+        return Phaser.Math.Linear(segment.from, segment.to, progress);
+      }
     }
-    if (seconds < 60) {
-      return Phaser.Math.Linear(7, 16, (seconds - 20) / 40);
-    }
-    if (seconds < 100) {
-      return Phaser.Math.Linear(16, 26, (seconds - 60) / 40);
-    }
-    if (seconds < 150) {
-      return Phaser.Math.Linear(26, 18, (seconds - 100) / 50);
-    }
-    if (seconds < 240) {
-      return Phaser.Math.Linear(18, 24, (seconds - 150) / 90);
-    }
-    return 24;
+    return TARGET_ENEMY_FALLBACK;
   }
 
   getSpawnBurst(seconds, deficit) {
-    let burst = 1;
-    if (seconds >= 35) {
-      burst = 2;
-    }
-    if (seconds >= 70) {
-      burst = 3;
-    }
-    if (seconds >= 120) {
-      burst = 2;
+    let burst = SPAWN_BURST_CONFIG.defaultBurst;
+    for (let i = 0; i < SPAWN_BURST_CONFIG.steps.length; i += 1) {
+      if (seconds >= SPAWN_BURST_CONFIG.steps[i].atSec) {
+        burst = SPAWN_BURST_CONFIG.steps[i].burst;
+      }
     }
     return Math.min(deficit, burst);
   }
@@ -721,16 +709,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   getXpRequirement(level) {
-    if (level === 1) {
-      return 50;
+    if (XP_REQUIREMENTS.byLevel[level] !== undefined) {
+      return XP_REQUIREMENTS.byLevel[level];
     }
-    if (level === 2) {
-      return 80;
-    }
-    if (level === 3) {
-      return 120;
-    }
-    return 120 + (level - 3) * 50;
+    return XP_REQUIREMENTS.postL3Base + (level - 3) * XP_REQUIREMENTS.postL3Step;
   }
 
   openLevelUpChoices() {
