@@ -29,6 +29,10 @@ const ELITE_BONUS_XP_ORB_MAX = 4;
 const ELITE_BONUS_XP_ORB_VALUE_FACTOR = 0.35;
 const ELITE_UPGRADE_DROP_CHANCE = 0.28;
 const ELITE_BONUS_UPGRADE_IDS = ["weapon_damage", "attack_speed", "movement_speed", "pickup_radius", "projectile_count"];
+const PERFORMANCE_MAX_ACTIVE_ENEMIES = 160;
+const PARTICLE_LOAD_SOFT_CAP_ENEMIES = 50;
+const PARTICLE_LOAD_HARD_CAP_ENEMIES = PERFORMANCE_MAX_ACTIVE_ENEMIES;
+const MIN_PARTICLE_LOAD_SCALE = 0.38;
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
@@ -452,21 +456,24 @@ export class GameScene extends Phaser.Scene {
     if (!this.damageEmitter) {
       return;
     }
-    this.damageEmitter.explode(Math.max(3, Math.min(12, count)), x, y);
+    const scaledCount = this.getScaledParticleCount(count, 2);
+    this.damageEmitter.explode(Math.max(2, Math.min(12, scaledCount)), x, y);
   }
 
   spawnKillParticles(x, y, count = 10) {
     if (!this.killEmitter) {
       return;
     }
-    this.killEmitter.explode(Math.max(6, Math.min(20, count)), x, y);
+    const scaledCount = this.getScaledParticleCount(count, 4);
+    this.killEmitter.explode(Math.max(4, Math.min(20, scaledCount)), x, y);
   }
 
   spawnEliteKillParticles(x, y, count = 18) {
     if (!this.eliteKillEmitter) {
       return;
     }
-    this.eliteKillEmitter.explode(Math.max(12, Math.min(28, count)), x, y);
+    const scaledCount = this.getScaledParticleCount(count, 8);
+    this.eliteKillEmitter.explode(Math.max(8, Math.min(28, scaledCount)), x, y);
   }
 
   playWeaponEvolutionFeedback(weapon) {
@@ -480,7 +487,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.evolutionEmitter && this.player && this.player.active) {
-      this.evolutionEmitter.explode(36, this.player.x, this.player.y);
+      this.evolutionEmitter.explode(this.getScaledParticleCount(36, 14), this.player.x, this.player.y);
     }
 
     if (!this.time || !this.tweens || !this.physics?.world) {
@@ -522,15 +529,17 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    const particleScale = this.getParticleLoadScale();
     this.dashTrailTickMs += delta;
-    const spacingMs = 34;
+    const spacingMs = Phaser.Math.Linear(34, 58, 1 - particleScale);
+    const trailCount = this.getScaledParticleCount(2, 1, 2);
     while (this.dashTrailTickMs >= spacingMs) {
       this.dashTrailTickMs -= spacingMs;
       const vx = this.player.body ? this.player.body.velocity.x : 0;
       const vy = this.player.body ? this.player.body.velocity.y : 0;
       const trailX = this.player.x - vx * 0.017;
       const trailY = this.player.y - vy * 0.017;
-      this.dashTrailEmitter.explode(2, trailX, trailY);
+      this.dashTrailEmitter.explode(trailCount, trailX, trailY);
     }
   }
 
@@ -798,7 +807,7 @@ export class GameScene extends Phaser.Scene {
     const seconds = this.runTimeMs / 1000;
     const baseTarget = this.getTargetEnemyCount(seconds);
     const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
-    this.targetEnemies = Math.round(baseTarget * spawnRateMultiplier);
+    this.targetEnemies = Math.min(PERFORMANCE_MAX_ACTIVE_ENEMIES, Math.round(baseTarget * spawnRateMultiplier));
 
     const aliveEnemies = this.getAliveEnemyCount();
     if (aliveEnemies >= this.targetEnemies) {
@@ -816,6 +825,9 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver || this.isLeveling) {
       return;
     }
+    if (this.getAliveEnemyCount() >= PERFORMANCE_MAX_ACTIVE_ENEMIES) {
+      return;
+    }
 
     const type = this.pickEnemyArchetype();
     const hpMultiplier = this.director.getEnemyHpMultiplier();
@@ -825,6 +837,9 @@ export class GameScene extends Phaser.Scene {
     const anchor = this.getSpawnPosition();
 
     for (let i = 0; i < groupCount; i += 1) {
+      if (this.getAliveEnemyCount() >= PERFORMANCE_MAX_ACTIVE_ENEMIES) {
+        break;
+      }
       const jitter = type === "swarm" ? Phaser.Math.Between(12, 48) : 0;
       const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
       let spawnX = Phaser.Math.Clamp(anchor.x + Math.cos(angle) * jitter, 12, WORLD_WIDTH - 12);
@@ -854,6 +869,25 @@ export class GameScene extends Phaser.Scene {
       }
 
     }
+  }
+
+  getParticleLoadScale() {
+    const aliveEnemies = this.getAliveEnemyCount();
+    if (aliveEnemies <= PARTICLE_LOAD_SOFT_CAP_ENEMIES) {
+      return 1;
+    }
+
+    const pressure = Phaser.Math.Clamp(
+      (aliveEnemies - PARTICLE_LOAD_SOFT_CAP_ENEMIES) / (PARTICLE_LOAD_HARD_CAP_ENEMIES - PARTICLE_LOAD_SOFT_CAP_ENEMIES),
+      0,
+      1
+    );
+    return Phaser.Math.Linear(1, MIN_PARTICLE_LOAD_SCALE, pressure);
+  }
+
+  getScaledParticleCount(baseCount, minCount = 1, maxCount = baseCount) {
+    const scaled = Math.round(baseCount * this.getParticleLoadScale());
+    return Phaser.Math.Clamp(scaled, minCount, maxCount);
   }
 
   processDirectorBossSpawns() {
