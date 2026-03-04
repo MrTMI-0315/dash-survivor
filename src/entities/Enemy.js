@@ -1,5 +1,8 @@
 import { ENEMY_ARCHETYPE_CONFIGS, ELITE_TYPE_CONFIGS } from "../config/enemies.js";
 
+const ENCIRCLE_ANGLE_MIN_DEG = -30;
+const ENCIRCLE_ANGLE_MAX_DEG = 30;
+
 function getArchetypeConfig(type) {
   return ENEMY_ARCHETYPE_CONFIGS[type] ?? ENEMY_ARCHETYPE_CONFIGS.chaser;
 }
@@ -34,6 +37,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.dashVy = 0;
     this.nextPoisonTickAtMs = 0;
     this.flashToken = (this.flashToken ?? 0) + 1;
+    this.encircleAngleOffsetRad = Phaser.Math.DegToRad(
+      Phaser.Math.Between(ENCIRCLE_ANGLE_MIN_DEG, ENCIRCLE_ANGLE_MAX_DEG)
+    );
 
     this.baseTint = config.tint ?? archetype.tint;
     this.setScale(config.scale ?? archetype.scale);
@@ -120,8 +126,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
     }
 
-    const chaseVx = (dx / distance) * this.speed * speedMultiplier;
-    const chaseVy = (dy / distance) * this.speed * speedMultiplier;
+    const playerAngle = Math.atan2(dy, dx);
+    const encircleInfluence = Phaser.Math.Clamp(distance / 260, 0.35, 1);
+    const approachAngle = playerAngle + this.encircleAngleOffsetRad * encircleInfluence;
+    const chaseVx = Math.cos(approachAngle) * this.speed * speedMultiplier;
+    const chaseVy = Math.sin(approachAngle) * this.speed * speedMultiplier;
     this.body.setVelocity(chaseVx + this.knockbackVx, chaseVy + this.knockbackVy);
   }
 
