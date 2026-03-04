@@ -18,6 +18,12 @@ import {
   XP_REQUIREMENTS
 } from "../config/progression.js";
 
+const TERRAIN_OBSTACLE_MIN_COUNT = 5;
+const TERRAIN_OBSTACLE_MAX_COUNT = 10;
+const TERRAIN_OBSTACLE_WORLD_MARGIN = 120;
+const TERRAIN_OBSTACLE_SAFE_RADIUS_FROM_PLAYER = 220;
+const TERRAIN_OBSTACLE_MIN_GAP = 130;
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
@@ -52,6 +58,8 @@ export class GameScene extends Phaser.Scene {
     this.lastRunMetaCurrency = 0;
     this.metaSettled = false;
     this.enemyPool = null;
+    this.obstacles = null;
+    this.terrainObstacleAnchors = [];
   }
 
   create() {
@@ -85,6 +93,8 @@ export class GameScene extends Phaser.Scene {
     this.enemies = this.add.group();
     this.enemyPool = new ObjectPool(this, this.enemies, { initialSize: ENEMY_POOL_SIZE });
     this.xpOrbs = this.physics.add.group();
+    this.obstacles = this.physics.add.staticGroup();
+    this.createTerrainObstacles();
 
     this.keys = this.input.keyboard.addKeys({
       up: Phaser.Input.Keyboard.KeyCodes.W,
@@ -101,6 +111,8 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, this.enemies, this.handlePlayerEnemyCollision, null, this);
     this.physics.add.overlap(this.player, this.xpOrbs, this.handleXpOrbPickup, null, this);
+    this.physics.add.collider(this.player, this.obstacles);
+    this.physics.add.collider(this.enemies, this.obstacles);
     this.weaponSystem = new WeaponSystem(this, this.player);
     this.weaponSystem.addWeapon("dagger");
     this.weaponSystem.addWeapon("fireball");
@@ -241,6 +253,27 @@ export class GameScene extends Phaser.Scene {
       { x: 4, y: 36 },
       { x: 4, y: 12 }
     ], 0x6d34ff, 0x2f116f);
+    this.generatePolygonTexture("terrain_rock", 28, [
+      { x: 10, y: 12 },
+      { x: 20, y: 6 },
+      { x: 37, y: 8 },
+      { x: 46, y: 19 },
+      { x: 45, y: 36 },
+      { x: 33, y: 47 },
+      { x: 17, y: 48 },
+      { x: 8, y: 36 },
+      { x: 6, y: 23 }
+    ], 0x6f7d90, 0x374356);
+    this.generatePolygonTexture("terrain_pillar", 28, [
+      { x: 14, y: 7 },
+      { x: 42, y: 7 },
+      { x: 47, y: 16 },
+      { x: 47, y: 40 },
+      { x: 42, y: 49 },
+      { x: 14, y: 49 },
+      { x: 9, y: 40 },
+      { x: 9, y: 16 }
+    ], 0x8a8f9f, 0x4f5568);
     this.generateCircleTexture("xp_orb", 6, 0x66f5b2, 0x1f8d63);
     this.generateCircleTexture("proj_dagger", 4, 0xeef7ff, 0x7895af);
     this.generateCircleTexture("proj_fireball", 8, 0xff944d, 0xa84d1b);
@@ -404,6 +437,60 @@ export class GameScene extends Phaser.Scene {
     }
     for (let y = 0; y <= WORLD_HEIGHT; y += grid) {
       graphics.lineBetween(0, y, WORLD_WIDTH, y);
+    }
+  }
+
+  createTerrainObstacles() {
+    if (!this.obstacles) {
+      return;
+    }
+
+    this.terrainObstacleAnchors = [];
+    const count = Phaser.Math.Between(TERRAIN_OBSTACLE_MIN_COUNT, TERRAIN_OBSTACLE_MAX_COUNT);
+    for (let i = 0; i < count; i += 1) {
+      this.spawnTerrainObstacle();
+    }
+  }
+
+  spawnTerrainObstacle() {
+    const obstacleType = Math.random() < 0.56 ? "terrain_rock" : "terrain_pillar";
+    const minRadius = obstacleType === "terrain_rock" ? 30 : 34;
+    const maxRadius = obstacleType === "terrain_rock" ? 42 : 46;
+    const anchorRadius = Phaser.Math.Between(minRadius, maxRadius);
+
+    for (let attempt = 0; attempt < 36; attempt += 1) {
+      const x = Phaser.Math.Between(TERRAIN_OBSTACLE_WORLD_MARGIN, WORLD_WIDTH - TERRAIN_OBSTACLE_WORLD_MARGIN);
+      const y = Phaser.Math.Between(TERRAIN_OBSTACLE_WORLD_MARGIN, WORLD_HEIGHT - TERRAIN_OBSTACLE_WORLD_MARGIN);
+
+      const distFromPlayer = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y);
+      if (distFromPlayer <= TERRAIN_OBSTACLE_SAFE_RADIUS_FROM_PLAYER + anchorRadius) {
+        continue;
+      }
+
+      const overlapsExisting = this.terrainObstacleAnchors.some((anchor) => {
+        const gap = Phaser.Math.Distance.Between(anchor.x, anchor.y, x, y);
+        return gap < anchor.radius + anchorRadius + TERRAIN_OBSTACLE_MIN_GAP;
+      });
+      if (overlapsExisting) {
+        continue;
+      }
+
+      const obstacle = this.obstacles.create(x, y, obstacleType);
+      if (!obstacle) {
+        return;
+      }
+
+      const scale = Phaser.Math.FloatBetween(0.8, 1.15);
+      obstacle.setScale(scale);
+      obstacle.setDepth(2);
+      obstacle.refreshBody();
+
+      this.terrainObstacleAnchors.push({
+        x,
+        y,
+        radius: anchorRadius * scale
+      });
+      return;
     }
   }
 
