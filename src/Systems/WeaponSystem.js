@@ -6,11 +6,6 @@ import {
 } from "../config/weapons.js";
 import { Enemy } from "../entities/Enemy.js";
 
-const DEV_MODE =
-  typeof globalThis !== "undefined" &&
-  (globalThis.__DEV__ === true ||
-    (globalThis.location && (globalThis.location.hostname === "localhost" || globalThis.location.hostname === "127.0.0.1")));
-
 function getWeaponDefinition(type) {
   return WEAPON_DEFINITIONS[type] ?? null;
 }
@@ -23,7 +18,6 @@ export class WeaponSystem {
     this.globalDamageMultiplier = 1;
     this.globalCooldownMultiplier = 1;
     this.projectileCount = 1;
-    this.hasLoggedInvalidProjectileCollision = false;
 
     this.projectiles = scene.physics.add.group({
       allowGravity: false,
@@ -53,13 +47,8 @@ export class WeaponSystem {
     return { projectile, enemy };
   }
 
-  warnInvalidProjectileCollision(object) {
-    if (!DEV_MODE || this.hasLoggedInvalidProjectileCollision) {
-      return;
-    }
-    this.hasLoggedInvalidProjectileCollision = true;
-    // eslint-disable-next-line no-console
-    console.warn("Invalid collision object (expected Enemy)", object);
+  warnInvalidProjectileCollision(_object) {
+    // Intentionally no-op in release build.
   }
 
   isValidProjectileEnemyCollision(a, b) {

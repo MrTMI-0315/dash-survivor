@@ -2,20 +2,23 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <title>DashSurvivor Prototype</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div id="app">
       <div id="game-root"></div>
-      <div id="help">WASD Move · Survive · R Restart</div>
+      <div id="help">WASD Move · SPACE Dash · R Restart</div>
     </div>
 
     <script
       src="https://cdn.jsdelivr.net/npm/phaser@3.90.0/dist/phaser.min.js"
       integrity="sha384-AvQiDMZAVLda3VtAoU5MCfBz8pzXhteb2CiUJeKBmPlWzpXj1uJ96Km11+YuFNu/"
       crossorigin="anonymous"
+      defer
     ></script>
     <script type="module" src="./src/main.js"></script>
   </body>

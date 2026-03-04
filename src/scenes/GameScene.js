@@ -33,6 +33,9 @@ const PERFORMANCE_MAX_ACTIVE_ENEMIES = 160;
 const PARTICLE_LOAD_SOFT_CAP_ENEMIES = 50;
 const PARTICLE_LOAD_HARD_CAP_ENEMIES = PERFORMANCE_MAX_ACTIVE_ENEMIES;
 const MIN_PARTICLE_LOAD_SCALE = 0.38;
+const TOUCH_JOYSTICK_RADIUS = 68;
+const TOUCH_JOYSTICK_TOUCH_RADIUS = 110;
+const TOUCH_DASH_BUTTON_RADIUS = 58;
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
@@ -88,6 +91,18 @@ export class GameScene extends Phaser.Scene {
     this.hudDashStatusText = null;
     this.levelUpOptionActions = [];
     this.sfxLastPlayedAt = {};
+    this.touchControlsEnabled = false;
+    this.touchMovePointerId = null;
+    this.touchMoveVector = new Phaser.Math.Vector2(0, 0);
+    this.touchDashQueued = false;
+    this.touchJoystickCenter = new Phaser.Math.Vector2(0, 0);
+    this.touchJoystickBase = null;
+    this.touchJoystickThumb = null;
+    this.touchDashButton = null;
+    this.touchDashLabel = null;
+    this.onTouchPointerDown = null;
+    this.onTouchPointerMove = null;
+    this.onTouchPointerUp = null;
   }
 
   create() {
@@ -111,10 +126,14 @@ export class GameScene extends Phaser.Scene {
     this.director = new DirectorSystem();
     this.dashTrailTickMs = 0;
     this.sfxLastPlayedAt = {};
+    this.teardownTouchControls();
+    this.touchControlsEnabled = false;
+    this.touchMovePointerId = null;
+    this.touchMoveVector.set(0, 0);
+    this.touchDashQueued = false;
 
     this.createTextures();
     this.drawArena();
-    this.createDamageEmitter();
 
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
@@ -137,6 +156,7 @@ export class GameScene extends Phaser.Scene {
       meta3: Phaser.Input.Keyboard.KeyCodes.THREE,
       meta4: Phaser.Input.Keyboard.KeyCodes.FOUR
     });
+    this.input.addPointer(2);
 
     this.physics.add.overlap(this.player, this.enemies, this.handlePlayerEnemyCollision, null, this);
     this.physics.add.overlap(this.player, this.xpOrbs, this.handleXpOrbPickup, null, this);
@@ -234,6 +254,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(20)
       .setVisible(false);
 
+    this.createTouchControls();
     this.maintainEnemyDensity();
     this.updateHud();
   }
@@ -269,13 +290,13 @@ export class GameScene extends Phaser.Scene {
       this.maintainEnemyDensity();
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.dash)) {
+    if (Phaser.Input.Keyboard.JustDown(this.keys.dash) || this.consumeTouchDash()) {
       this.player.tryDash();
     }
 
     this.player.updateDash(delta);
     this.emitDashTrail(delta);
-    this.player.moveFromInput(this.keys);
+    this.player.moveFromInput(this.keys, this.getTouchMoveInput());
     this.pullXpOrbsToPlayer();
     this.weaponSystem.update(time, delta);
     this.performAutoAttack(time);
@@ -452,7 +473,15 @@ export class GameScene extends Phaser.Scene {
     this.dashTrailEmitter.setDepth(8);
   }
 
+  ensureParticleEmitters() {
+    if (this.damageEmitter && this.killEmitter && this.eliteKillEmitter && this.evolutionEmitter && this.dashTrailEmitter) {
+      return;
+    }
+    this.createDamageEmitter();
+  }
+
   spawnDamageParticles(x, y, count = 5) {
+    this.ensureParticleEmitters();
     if (!this.damageEmitter) {
       return;
     }
@@ -461,6 +490,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnKillParticles(x, y, count = 10) {
+    this.ensureParticleEmitters();
     if (!this.killEmitter) {
       return;
     }
@@ -469,6 +499,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnEliteKillParticles(x, y, count = 18) {
+    this.ensureParticleEmitters();
     if (!this.eliteKillEmitter) {
       return;
     }
@@ -477,6 +508,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   playWeaponEvolutionFeedback(weapon) {
+    this.ensureParticleEmitters();
     const flashDurationMs = 170;
     const slowScale = 0.26;
     const slowDurationMs = 180;
@@ -524,6 +556,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   emitDashTrail(delta) {
+    this.ensureParticleEmitters();
     if (!this.dashTrailEmitter || !this.player || !this.player.active || !this.player.isDashing()) {
       this.dashTrailTickMs = 0;
       return;
@@ -713,6 +746,179 @@ export class GameScene extends Phaser.Scene {
     for (let y = 0; y <= WORLD_HEIGHT; y += grid) {
       graphics.lineBetween(0, y, WORLD_WIDTH, y);
     }
+  }
+
+  createTouchControls() {
+    const hasTouch = Boolean(this.sys.game.device?.input?.touch);
+    this.touchControlsEnabled = hasTouch;
+    this.updateHelpOverlayText();
+    if (!hasTouch) {
+      return;
+    }
+
+    const hudDepth = 26;
+    this.touchJoystickCenter.set(96, this.scale.height - 96);
+    this.touchJoystickBase = this.add
+      .circle(this.touchJoystickCenter.x, this.touchJoystickCenter.y, TOUCH_JOYSTICK_RADIUS, 0x16304f, 0.38)
+      .setStrokeStyle(2, 0x7fb8ff, 0.72)
+      .setScrollFactor(0)
+      .setDepth(hudDepth)
+      .setVisible(true);
+    this.touchJoystickThumb = this.add
+      .circle(this.touchJoystickCenter.x, this.touchJoystickCenter.y, 28, 0x8ed8ff, 0.45)
+      .setStrokeStyle(2, 0xc6ecff, 0.8)
+      .setScrollFactor(0)
+      .setDepth(hudDepth + 1)
+      .setVisible(true);
+
+    const dashX = this.scale.width - 98;
+    const dashY = this.scale.height - 96;
+    this.touchDashButton = this.add
+      .circle(dashX, dashY, TOUCH_DASH_BUTTON_RADIUS, 0x72591a, 0.45)
+      .setStrokeStyle(2, 0xffd166, 0.86)
+      .setScrollFactor(0)
+      .setDepth(hudDepth)
+      .setInteractive();
+    this.touchDashLabel = this.add
+      .text(dashX, dashY, "DASH", {
+        fontFamily: "Arial",
+        fontSize: "22px",
+        color: "#ffe8a8",
+        stroke: "#3b2a08",
+        strokeThickness: 5
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(hudDepth + 1);
+
+    this.touchDashButton.on("pointerdown", () => {
+      this.touchDashQueued = true;
+    });
+
+    this.onTouchPointerDown = (pointer) => {
+      if (!this.touchControlsEnabled || this.touchMovePointerId !== null) {
+        return;
+      }
+      if (!this.isPointerInTouchJoystick(pointer)) {
+        return;
+      }
+      this.touchMovePointerId = pointer.id;
+      this.updateTouchJoystick(pointer);
+    };
+
+    this.onTouchPointerMove = (pointer) => {
+      if (!this.touchControlsEnabled || pointer.id !== this.touchMovePointerId) {
+        return;
+      }
+      this.updateTouchJoystick(pointer);
+    };
+
+    this.onTouchPointerUp = (pointer) => {
+      if (!this.touchControlsEnabled || pointer.id !== this.touchMovePointerId) {
+        return;
+      }
+      this.releaseTouchJoystick();
+    };
+
+    this.input.on("pointerdown", this.onTouchPointerDown);
+    this.input.on("pointermove", this.onTouchPointerMove);
+    this.input.on("pointerup", this.onTouchPointerUp);
+    this.input.on("pointerupoutside", this.onTouchPointerUp);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardownTouchControls());
+  }
+
+  teardownTouchControls() {
+    if (this.onTouchPointerDown) {
+      this.input.off("pointerdown", this.onTouchPointerDown);
+      this.onTouchPointerDown = null;
+    }
+    if (this.onTouchPointerMove) {
+      this.input.off("pointermove", this.onTouchPointerMove);
+      this.onTouchPointerMove = null;
+    }
+    if (this.onTouchPointerUp) {
+      this.input.off("pointerup", this.onTouchPointerUp);
+      this.input.off("pointerupoutside", this.onTouchPointerUp);
+      this.onTouchPointerUp = null;
+    }
+
+    if (this.touchDashButton) {
+      this.touchDashButton.destroy();
+      this.touchDashButton = null;
+    }
+    if (this.touchDashLabel) {
+      this.touchDashLabel.destroy();
+      this.touchDashLabel = null;
+    }
+    if (this.touchJoystickThumb) {
+      this.touchJoystickThumb.destroy();
+      this.touchJoystickThumb = null;
+    }
+    if (this.touchJoystickBase) {
+      this.touchJoystickBase.destroy();
+      this.touchJoystickBase = null;
+    }
+
+    this.touchMovePointerId = null;
+    this.touchDashQueued = false;
+    this.touchMoveVector.set(0, 0);
+  }
+
+  updateHelpOverlayText() {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const helpElement = document.getElementById("help");
+    if (!helpElement) {
+      return;
+    }
+
+    helpElement.textContent = this.touchControlsEnabled
+      ? "Touch Pad Move · Touch Dash Button · R Restart"
+      : "WASD Move · SPACE Dash · R Restart";
+  }
+
+  isPointerInTouchJoystick(pointer) {
+    return Phaser.Math.Distance.Between(pointer.x, pointer.y, this.touchJoystickCenter.x, this.touchJoystickCenter.y) <= TOUCH_JOYSTICK_TOUCH_RADIUS;
+  }
+
+  updateTouchJoystick(pointer) {
+    const dx = pointer.x - this.touchJoystickCenter.x;
+    const dy = pointer.y - this.touchJoystickCenter.y;
+    const distance = Math.hypot(dx, dy);
+    const clampedDistance = Math.min(distance, TOUCH_JOYSTICK_RADIUS);
+    const nx = distance > 0.0001 ? dx / distance : 0;
+    const ny = distance > 0.0001 ? dy / distance : 0;
+    const thumbX = this.touchJoystickCenter.x + nx * clampedDistance;
+    const thumbY = this.touchJoystickCenter.y + ny * clampedDistance;
+
+    this.touchMoveVector.set(nx * (clampedDistance / TOUCH_JOYSTICK_RADIUS), ny * (clampedDistance / TOUCH_JOYSTICK_RADIUS));
+    if (this.touchJoystickThumb) {
+      this.touchJoystickThumb.setPosition(thumbX, thumbY);
+    }
+  }
+
+  releaseTouchJoystick() {
+    this.touchMovePointerId = null;
+    this.touchMoveVector.set(0, 0);
+    if (this.touchJoystickThumb) {
+      this.touchJoystickThumb.setPosition(this.touchJoystickCenter.x, this.touchJoystickCenter.y);
+    }
+  }
+
+  getTouchMoveInput() {
+    if (!this.touchControlsEnabled) {
+      return null;
+    }
+    return this.touchMoveVector;
+  }
+
+  consumeTouchDash() {
+    if (!this.touchDashQueued) {
+      return false;
+    }
+    this.touchDashQueued = false;
+    return true;
   }
 
   createTerrainObstacles() {

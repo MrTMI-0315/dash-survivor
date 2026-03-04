@@ -32,7 +32,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setCollideWorldBounds(true);
   }
 
-  moveFromInput(keys) {
+  moveFromInput(keys, analogInput = null) {
     if (this.isDashing()) {
       return;
     }
@@ -53,15 +53,21 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
       moveY += 1;
     }
 
+    if (analogInput) {
+      moveX += analogInput.x ?? 0;
+      moveY += analogInput.y ?? 0;
+    }
+
     const direction = new Phaser.Math.Vector2(moveX, moveY);
     if (direction.lengthSq() === 0) {
       this.body.setVelocity(0, 0);
       return;
     }
 
+    const magnitude = Math.min(1, direction.length());
     direction.normalize();
     this.lastMoveDir.copy(direction);
-    this.body.setVelocity(direction.x * this.speed, direction.y * this.speed);
+    this.body.setVelocity(direction.x * this.speed * magnitude, direction.y * this.speed * magnitude);
   }
 
   updateDash(delta) {
