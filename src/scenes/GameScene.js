@@ -68,6 +68,28 @@ const UPGRADE_POOL = [
     apply: (scene) => {
       scene.weaponSystem.addWeapon("lightning");
     }
+  },
+  {
+    label: "Passive Ember Core",
+    description: "Enables Fireball evolution",
+    apply: (scene) => {
+      const added = scene.player.addPassive("ember_core");
+      scene.weaponSystem.onPassiveAcquired();
+      if (!added) {
+        scene.weaponSystem.addWeapon("fireball");
+      }
+    }
+  },
+  {
+    label: "Passive Blade Sigil",
+    description: "Enables Dagger evolution",
+    apply: (scene) => {
+      const added = scene.player.addPassive("blade_sigil");
+      scene.weaponSystem.onPassiveAcquired();
+      if (!added) {
+        scene.weaponSystem.addWeapon("dagger");
+      }
+    }
   }
 ];
 
@@ -240,6 +262,8 @@ export class GameScene extends Phaser.Scene {
     this.generateCircleTexture("xp_orb", 6, 0x66f5b2, 0x1f8d63);
     this.generateCircleTexture("proj_dagger", 4, 0xeef7ff, 0x7895af);
     this.generateCircleTexture("proj_fireball", 8, 0xff944d, 0xa84d1b);
+    this.generateCircleTexture("proj_meteor", 11, 0xff8b44, 0x70220d);
+    this.generateCircleTexture("proj_orbit_blade", 7, 0xc6e5ff, 0x5884ad);
   }
 
   generateCircleTexture(key, radius, fillColor, strokeColor) {
@@ -694,8 +718,9 @@ export class GameScene extends Phaser.Scene {
     const dashPercent = Math.floor(this.player.getDashRatio() * 100);
     const directorState = this.director.getState();
     const weaponCount = this.player.weapons.length;
+    const passiveCount = Object.keys(this.player.passives).length;
     this.hudText.setText(
-      `DIR ${directorState}   LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   WPN ${weaponCount}/${this.player.maxWeaponSlots}   Enemies ${activeEnemies}/${this.targetEnemies}`
+      `DIR ${directorState}   LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   WPN ${weaponCount}/${this.player.maxWeaponSlots}   PAS ${passiveCount}   Enemies ${activeEnemies}/${this.targetEnemies}`
     );
   }
 }

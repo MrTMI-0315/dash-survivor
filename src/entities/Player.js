@@ -22,6 +22,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.currentDashId = 0;
     this.maxWeaponSlots = 3;
     this.weapons = [];
+    this.passives = {};
 
     this.setCircle(16, 0, 0);
     this.setCollideWorldBounds(true);
@@ -129,5 +130,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   isDead() {
     return this.hp <= 0;
+  }
+
+  addPassive(passiveKey) {
+    if (this.passives[passiveKey]) {
+      return false;
+    }
+    this.passives[passiveKey] = true;
+    return true;
+  }
+
+  hasPassive(passiveKey) {
+    return Boolean(this.passives[passiveKey]);
   }
 }
