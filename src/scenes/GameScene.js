@@ -1,5 +1,6 @@
 import { Player } from "../entities/Player.js";
 import { Enemy } from "../entities/Enemy.js";
+import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
 
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1350;
@@ -46,7 +47,7 @@ export class GameScene extends Phaser.Scene {
     super("GameScene");
 
     this.safeRadius = 300;
-    this.spawnCheckIntervalMs = 250;
+    this.baseSpawnCheckIntervalMs = 250;
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
@@ -77,6 +78,11 @@ export class GameScene extends Phaser.Scene {
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
+    this.director = new DirectorSystem({
+      buildMs: 30000,
+      peakMs: 15000,
+      reliefMs: 8000
+    });
 
     this.createTextures();
     this.drawArena();
@@ -145,10 +151,18 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    const stateChanged = this.director.update(delta);
+    if (stateChanged && this.director.getState() === DIRECTOR_STATE.PEAK) {
+      this.cameras.main.shake(180, 0.0028);
+    }
+
     this.runTimeMs += delta;
     this.spawnAccumulatorMs += delta;
-    if (this.spawnAccumulatorMs >= this.spawnCheckIntervalMs) {
-      this.spawnAccumulatorMs = 0;
+
+    const spawnRateMultiplier = this.director.getSpawnRateMultiplier();
+    const effectiveSpawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
+    while (this.spawnAccumulatorMs >= effectiveSpawnIntervalMs) {
+      this.spawnAccumulatorMs -= effectiveSpawnIntervalMs;
       this.maintainEnemyDensity();
     }
 
@@ -160,8 +174,10 @@ export class GameScene extends Phaser.Scene {
     this.player.moveFromInput(this.keys);
     this.performAutoAttack(time);
 
+    const speedMultiplier = this.director.getEnemySpeedMultiplier();
     this.enemies.getChildren().forEach((enemy) => {
-      enemy.chase(this.player);
+      enemy.speed = enemy.baseSpeed * speedMultiplier;
+      enemy.chase(this.player, delta);
     });
 
     this.updateHud();
@@ -241,7 +257,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     const seconds = this.runTimeMs / 1000;
-    this.targetEnemies = Math.round(this.getTargetEnemyCount(seconds));
+    const baseTarget = this.getTargetEnemyCount(seconds);
+    const spawnRateMultiplier = this.director.getSpawnRateMultiplier();
+    this.targetEnemies = Math.round(baseTarget * spawnRateMultiplier);
 
     const aliveEnemies = this.getAliveEnemyCount();
     if (aliveEnemies >= this.targetEnemies) {
@@ -261,13 +279,20 @@ export class GameScene extends Phaser.Scene {
     }
 
     const spawnPosition = this.getSpawnPosition();
+    const eliteChance = this.director.getEliteChance();
+    const isElite = Math.random() < eliteChance;
     const enemy = new Enemy(this, spawnPosition.x, spawnPosition.y, {
-      hp: 20,
-      speed: 80,
-      damage: 10,
-      xpValue: 10
+      hp: isElite ? 36 : 20,
+      speed: isElite ? 92 : 80,
+      damage: isElite ? 16 : 10,
+      xpValue: isElite ? 18 : 10
     });
     enemy.setData("lastDashHitId", -1);
+    enemy.setData("isElite", isElite);
+    if (isElite) {
+      enemy.setScale(1.2);
+      enemy.setTint(0xffbc5c);
+    }
 
     this.enemies.add(enemy);
   }
@@ -348,6 +373,7 @@ export class GameScene extends Phaser.Scene {
 
       enemy.setData("lastDashHitId", player.currentDashId);
       enemy.takeDamage(player.dashDamage);
+      enemy.applyKnockbackFrom(player.x, player.y, 340, 120);
 
       if (enemy.isDead()) {
         this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
@@ -399,6 +425,7 @@ export class GameScene extends Phaser.Scene {
 
     this.lastAttackAt = now;
     nearestEnemy.takeDamage(this.attackDamage);
+    nearestEnemy.applyKnockbackFrom(this.player.x, this.player.y, 190, 75);
 
     const flash = this.add.graphics();
     flash.lineStyle(2, 0x89e8ff, 1);
@@ -542,8 +569,9 @@ export class GameScene extends Phaser.Scene {
   updateHud() {
     const activeEnemies = this.getAliveEnemyCount();
     const dashPercent = Math.floor(this.player.getDashRatio() * 100);
+    const directorState = this.director.getState();
     this.hudText.setText(
-      `LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   Enemies ${activeEnemies}/${this.targetEnemies}`
+      `DIR ${directorState}   LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   Enemies ${activeEnemies}/${this.targetEnemies}`
     );
   }
 }
