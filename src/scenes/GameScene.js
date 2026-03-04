@@ -42,6 +42,9 @@ export class GameScene extends Phaser.Scene {
     this.levelUpUi = [];
     this.isGameOver = false;
     this.damageEmitter = null;
+    this.killEmitter = null;
+    this.dashTrailEmitter = null;
+    this.dashTrailTickMs = 0;
     this.metaSystem = new MetaProgressionSystem();
     this.metaData = this.metaSystem.getData();
     this.metaXpMultiplier = 1;
@@ -70,6 +73,7 @@ export class GameScene extends Phaser.Scene {
     this.lastRunMetaCurrency = 0;
     this.metaSettled = false;
     this.director = new DirectorSystem();
+    this.dashTrailTickMs = 0;
 
     this.createTextures();
     this.drawArena();
@@ -181,6 +185,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.updateDash(delta);
+    this.emitDashTrail(delta);
     this.player.moveFromInput(this.keys);
     this.pullXpOrbsToPlayer();
     this.weaponSystem.update(time, delta);
@@ -247,6 +252,12 @@ export class GameScene extends Phaser.Scene {
     if (this.damageEmitter) {
       this.damageEmitter.destroy();
     }
+    if (this.killEmitter) {
+      this.killEmitter.destroy();
+    }
+    if (this.dashTrailEmitter) {
+      this.dashTrailEmitter.destroy();
+    }
 
     this.damageEmitter = this.add.particles(0, 0, "hit_particle", {
       emitting: false,
@@ -261,6 +272,34 @@ export class GameScene extends Phaser.Scene {
       blendMode: "ADD"
     });
     this.damageEmitter.setDepth(9);
+
+    this.killEmitter = this.add.particles(0, 0, "hit_particle", {
+      emitting: false,
+      quantity: 0,
+      frequency: -1,
+      speed: { min: 80, max: 240 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 140, max: 320 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 0.95, end: 0 },
+      tint: [0xffffff, 0xffd8a8, 0xff9b7a],
+      blendMode: "ADD"
+    });
+    this.killEmitter.setDepth(10);
+
+    this.dashTrailEmitter = this.add.particles(0, 0, "hit_particle", {
+      emitting: false,
+      quantity: 0,
+      frequency: -1,
+      speed: { min: 12, max: 70 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 70, max: 140 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 0.7, end: 0 },
+      tint: [0xfff3b3, 0xb8f0ff, 0x79d7ff],
+      blendMode: "ADD"
+    });
+    this.dashTrailEmitter.setDepth(8);
   }
 
   spawnDamageParticles(x, y, count = 5) {
@@ -268,6 +307,31 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.damageEmitter.explode(Math.max(3, Math.min(12, count)), x, y);
+  }
+
+  spawnKillParticles(x, y, count = 10) {
+    if (!this.killEmitter) {
+      return;
+    }
+    this.killEmitter.explode(Math.max(6, Math.min(20, count)), x, y);
+  }
+
+  emitDashTrail(delta) {
+    if (!this.dashTrailEmitter || !this.player || !this.player.active || !this.player.isDashing()) {
+      this.dashTrailTickMs = 0;
+      return;
+    }
+
+    this.dashTrailTickMs += delta;
+    const spacingMs = 34;
+    while (this.dashTrailTickMs >= spacingMs) {
+      this.dashTrailTickMs -= spacingMs;
+      const vx = this.player.body ? this.player.body.velocity.x : 0;
+      const vy = this.player.body ? this.player.body.velocity.y : 0;
+      const trailX = this.player.x - vx * 0.017;
+      const trailY = this.player.y - vy * 0.017;
+      this.dashTrailEmitter.explode(2, trailX, trailY);
+    }
   }
 
   generateCircleTexture(key, radius, fillColor, strokeColor) {
@@ -671,6 +735,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.spawnKillParticles(enemy.x, enemy.y, enemy.isElite ? 14 : 10);
     this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
 
     if (enemy.getData("pooledEnemy") === true) {
