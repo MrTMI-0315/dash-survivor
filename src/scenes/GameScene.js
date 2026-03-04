@@ -38,6 +38,7 @@ const TOUCH_JOYSTICK_TOUCH_RADIUS = 110;
 const TOUCH_DASH_BUTTON_RADIUS = 58;
 const PARTICLE_TEXTURE_KEY = "hit_particle";
 const PARTICLE_FALLBACK_TEXTURE_KEY = "__WHITE";
+const PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY = "particle_fallback";
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
@@ -128,6 +129,7 @@ export class GameScene extends Phaser.Scene {
     this.director = new DirectorSystem();
     this.dashTrailTickMs = 0;
     this.sfxLastPlayedAt = {};
+    this.clearEvolutionSlowMoTimer();
     this.teardownTouchControls();
     this.touchControlsEnabled = false;
     this.touchMovePointerId = null;
@@ -158,7 +160,11 @@ export class GameScene extends Phaser.Scene {
       meta3: Phaser.Input.Keyboard.KeyCodes.THREE,
       meta4: Phaser.Input.Keyboard.KeyCodes.FOUR
     });
-    this.input.addPointer(2);
+    const desiredPointers = 3;
+    const pointerDeficit = desiredPointers - this.input.manager.pointersTotal;
+    if (pointerDeficit > 0) {
+      this.input.addPointer(pointerDeficit);
+    }
 
     this.physics.add.overlap(this.player, this.enemies, this.handlePlayerEnemyCollision, null, this);
     this.physics.add.overlap(this.player, this.xpOrbs, this.handleXpOrbPickup, null, this);
@@ -269,7 +275,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isLeveling) {
       this.handleLevelUpInput();
-      this.player.body.setVelocity(0, 0);
+      this.player.body?.setVelocity(0, 0);
       this.updateHud();
       return;
     }
@@ -480,7 +486,11 @@ export class GameScene extends Phaser.Scene {
     if (this.textures.exists(PARTICLE_TEXTURE_KEY)) {
       return PARTICLE_TEXTURE_KEY;
     }
-    return PARTICLE_FALLBACK_TEXTURE_KEY;
+    if (this.textures.exists(PARTICLE_FALLBACK_TEXTURE_KEY)) {
+      return PARTICLE_FALLBACK_TEXTURE_KEY;
+    }
+    this.generateCircleTexture(PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY, 2, 0xffffff, 0xffffff);
+    return PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY;
   }
 
   isEmitterReady(emitter) {
@@ -555,10 +565,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (this.evolutionSlowMoRestoreHandle) {
-      clearTimeout(this.evolutionSlowMoRestoreHandle);
-      this.evolutionSlowMoRestoreHandle = null;
-    }
+    this.clearEvolutionSlowMoTimer();
 
     const previousTimeScale = this.time.timeScale;
     const previousTweenScale = this.tweens.timeScale;
@@ -569,6 +576,7 @@ export class GameScene extends Phaser.Scene {
     this.evolutionSlowMoActive = true;
 
     this.evolutionSlowMoRestoreHandle = setTimeout(() => {
+      this.evolutionSlowMoRestoreHandle = null;
       if (!this.sys || !this.sys.isActive()) {
         return;
       }
@@ -576,7 +584,6 @@ export class GameScene extends Phaser.Scene {
       this.tweens.timeScale = previousTweenScale;
       this.physics.world.timeScale = previousPhysicsScale;
       this.evolutionSlowMoActive = false;
-      this.evolutionSlowMoRestoreHandle = null;
     }, slowDurationMs);
 
     if (this.showHudAlert && weapon?.baseType) {
@@ -852,7 +859,30 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointermove", this.onTouchPointerMove);
     this.input.on("pointerup", this.onTouchPointerUp);
     this.input.on("pointerupoutside", this.onTouchPointerUp);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.teardownTouchControls());
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.teardownTouchControls();
+      this.clearEvolutionSlowMoTimer();
+    });
+  }
+
+  clearEvolutionSlowMoTimer() {
+    if (this.evolutionSlowMoRestoreHandle) {
+      clearTimeout(this.evolutionSlowMoRestoreHandle);
+      this.evolutionSlowMoRestoreHandle = null;
+    }
+
+    if (this.evolutionSlowMoActive) {
+      if (this.time) {
+        this.time.timeScale = 1;
+      }
+      if (this.tweens) {
+        this.tweens.timeScale = 1;
+      }
+      if (this.physics?.world) {
+        this.physics.world.timeScale = 1;
+      }
+      this.evolutionSlowMoActive = false;
+    }
   }
 
   teardownTouchControls() {
@@ -1292,6 +1322,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   handlePlayerEnemyCollision(player, enemy) {
+    if (!enemy || typeof enemy.takeDamage !== "function" || typeof enemy.applyKnockbackFrom !== "function") {
+      return;
+    }
+
     if (player.isDashing()) {
       const lastDashHitId = enemy.getData("lastDashHitId") ?? -1;
       if (lastDashHitId !== player.currentDashId) {
@@ -1348,6 +1382,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.lastAttackAt = now;
+    if (typeof nearestEnemy.takeDamage !== "function" || typeof nearestEnemy.applyKnockbackFrom !== "function") {
+      return;
+    }
     nearestEnemy.takeDamage(this.attackDamage);
     nearestEnemy.applyKnockbackFrom(this.player.x, this.player.y, 140);
 
@@ -1369,8 +1406,11 @@ export class GameScene extends Phaser.Scene {
   spawnXpOrb(x, y, value, config = {}) {
     const texture = config.texture ?? "xp_orb";
     const orb = this.xpOrbs.create(x, y, texture);
+    if (!orb) {
+      return;
+    }
     const radius = config.radius ?? (config.pickupType === "elite_upgrade" ? 8 : 6);
-    orb.setCircle(radius, 0, 0);
+    orb.setCircle?.(radius, 0, 0);
     orb.xpValue = value;
     if (config.pickupType) {
       orb.setData("pickupType", config.pickupType);
@@ -1506,7 +1546,7 @@ export class GameScene extends Phaser.Scene {
     this.isLeveling = true;
     this.levelUpOptionActions = [];
     this.physics.pause();
-    this.player.body.setVelocity(0, 0);
+    this.player.body?.setVelocity(0, 0);
 
     const centerX = 640;
     const centerY = 360;
@@ -1693,7 +1733,7 @@ export class GameScene extends Phaser.Scene {
 
     this.isGameOver = true;
     this.physics.pause();
-    this.player.body.setVelocity(0, 0);
+    this.player.body?.setVelocity(0, 0);
     this.finalizeMetaRun();
     this.refreshGameOverText();
     this.gameOverText.setVisible(true);

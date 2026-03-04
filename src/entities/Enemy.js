@@ -90,7 +90,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   chase(target, deltaMs = 0, nowMs = 0) {
-    if (!this.active || !target.active) {
+    if (!this.active || !target.active || this.isDead() || !this.body) {
       return;
     }
 
@@ -152,7 +152,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   }
 
   takeDamage(amount) {
-    this.hp = Math.max(0, this.hp - amount);
+    const safeAmount = Number.isFinite(amount) ? amount : 0;
+    this.hp = Math.max(0, this.hp - safeAmount);
     if (this.hp <= 0) {
       this.die();
     }
@@ -167,11 +168,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.scene.spawnDamageParticles) {
       this.scene.spawnDamageParticles(this.x, this.y, this.isElite ? 8 : 5);
     }
-    this.scene.time.delayedCall(80, () => {
-      if (this.active && this.flashToken === flashToken) {
-        this.setTint(this.baseTint);
-      }
-    });
+    if (this.scene?.time?.delayedCall) {
+      this.scene.time.delayedCall(80, () => {
+        if (this.active && this.flashToken === flashToken) {
+          this.setTint(this.baseTint);
+        }
+      });
+    }
   }
 
   die() {

@@ -33,6 +33,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   moveFromInput(keys, analogInput = null) {
+    if (!this.body) {
+      return;
+    }
+
     if (this.isDashing()) {
       return;
     }
@@ -89,6 +93,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   }
 
   tryDash() {
+    if (!this.body) {
+      return false;
+    }
+
     if (!this.canDash()) {
       return false;
     }

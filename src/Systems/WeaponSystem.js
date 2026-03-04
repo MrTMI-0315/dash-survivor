@@ -553,7 +553,7 @@ export class WeaponSystem {
   }
 
   handleOrbitBladeHit(blade, enemy) {
-    if (!blade.active || !enemy.active) {
+    if (!blade?.active || !enemy?.active || !(enemy instanceof Enemy)) {
       return;
     }
 
@@ -571,9 +571,15 @@ export class WeaponSystem {
   }
 
   triggerExplosion(x, y, radius, damage) {
+    const safeRadius = Number.isFinite(radius) ? radius : 0;
+    if (safeRadius <= 0) {
+      return;
+    }
+    const safeDamage = Number.isFinite(damage) ? damage : 0;
+
     const gfx = this.scene.add.graphics();
     gfx.fillStyle(0xffb169, 0.6);
-    gfx.fillCircle(x, y, radius);
+    gfx.fillCircle(x, y, safeRadius);
     this.scene.tweens.add({
       targets: gfx,
       alpha: 0,
@@ -587,11 +593,11 @@ export class WeaponSystem {
       }
 
       const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
-      if (dist > radius) {
+      if (dist > safeRadius) {
         return;
       }
 
-      this.applyDamage(enemy, damage, 120, x, y);
+      this.applyDamage(enemy, safeDamage, 120, x, y);
     });
   }
 
@@ -601,8 +607,10 @@ export class WeaponSystem {
       return;
     }
 
-    enemy.takeDamage(damage);
-    enemy.applyKnockbackFrom(sourceX, sourceY, knockbackForce);
+    const safeDamage = Number.isFinite(damage) ? damage : 0;
+    const safeKnockback = Number.isFinite(knockbackForce) ? knockbackForce : 0;
+    enemy?.takeDamage(safeDamage);
+    enemy?.applyKnockbackFrom(sourceX, sourceY, safeKnockback);
 
     if (!enemy.isDead()) {
       return;
@@ -614,7 +622,7 @@ export class WeaponSystem {
     }
 
     this.scene.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
-    enemy.destroy();
+    enemy?.destroy?.();
   }
 
   findNearestEnemy(fromX, fromY, range, excluded = null) {
