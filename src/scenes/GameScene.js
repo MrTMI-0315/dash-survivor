@@ -250,8 +250,17 @@ export class GameScene extends Phaser.Scene {
     const speedMultiplier = this.director.getEnemySpeedMultiplier();
     this.enemies.getChildren().forEach((enemy) => {
       enemy.speed = enemy.baseSpeed * speedMultiplier;
-      enemy.chase(this.player, delta);
+      enemy.chase(this.player, delta, time);
+      enemy.tryApplyPoisonAura(this.player, time);
     });
+
+    if (this.player.isDead()) {
+      this.isGameOver = true;
+      this.physics.pause();
+      this.player.body.setVelocity(0, 0);
+      this.gameOverText.setVisible(true);
+      return;
+    }
 
     this.updateHud();
   }
@@ -376,16 +385,14 @@ export class GameScene extends Phaser.Scene {
       enemy.setData("archetype", type);
 
       const eliteChance = this.director.getEliteChance();
-      const isElite = type !== "swarm" && Math.random() < eliteChance;
+      const peakBoost = this.director.getState() === DIRECTOR_STATE.PEAK ? 1.55 : 1;
+      const adjustedEliteChance = Math.min(0.72, eliteChance * peakBoost);
+      const isElite = type !== "swarm" && Math.random() < adjustedEliteChance;
       enemy.setData("isElite", isElite);
       if (isElite) {
-        enemy.hp = Math.round(enemy.hp * 1.65);
-        enemy.damage = Math.round(enemy.damage * 1.35);
-        enemy.speed *= 1.08;
-        enemy.baseSpeed = enemy.speed;
-        enemy.xpValue = Math.round(enemy.xpValue * 1.6);
-        enemy.setScale(enemy.scaleX * 1.1, enemy.scaleY * 1.1);
-        enemy.setTint(0xffc36a);
+        const eliteType = this.pickEliteType();
+        enemy.setData("eliteType", eliteType);
+        enemy.setElite(eliteType);
       }
 
       this.enemies.add(enemy);
@@ -509,6 +516,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     return "chaser";
+  }
+
+  pickEliteType() {
+    const roll = Math.random();
+    if (roll < 0.34) {
+      return "speed_boost";
+    }
+    if (roll < 0.67) {
+      return "dash_attack";
+    }
+    return "poison_aura";
   }
 
   handlePlayerEnemyCollision(player, enemy) {

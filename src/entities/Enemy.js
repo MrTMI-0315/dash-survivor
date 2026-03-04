@@ -28,6 +28,21 @@ const ENEMY_ARCHETYPE_CONFIGS = {
   }
 };
 
+const ELITE_TYPE_CONFIGS = {
+  speed_boost: {
+    tint: 0x76e7ff,
+    hpMultiplier: 2.1
+  },
+  dash_attack: {
+    tint: 0xff8f70,
+    hpMultiplier: 2.35
+  },
+  poison_aura: {
+    tint: 0x8ef58f,
+    hpMultiplier: 2.6
+  }
+};
+
 function getArchetypeConfig(type) {
   return ENEMY_ARCHETYPE_CONFIGS[type] ?? ENEMY_ARCHETYPE_CONFIGS.chaser;
 }
@@ -49,6 +64,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.xpValue = config.xpValue ?? archetype.xpValue;
     this.knockbackVx = 0;
     this.knockbackVy = 0;
+    this.isElite = false;
+    this.eliteType = null;
+    this.abilityNextAtMs = 0;
+    this.abilityUntilMs = 0;
+    this.dashVx = 0;
+    this.dashVy = 0;
+    this.nextPoisonTickAtMs = 0;
 
     this.setScale(config.scale ?? archetype.scale);
     this.setCircle(config.radius ?? archetype.radius, 0, 0);
@@ -56,7 +78,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.setTint(config.tint ?? archetype.tint);
   }
 
-  chase(target, deltaMs = 0) {
+  chase(target, deltaMs = 0, nowMs = 0) {
     if (!this.active || !target.active) {
       return;
     }
@@ -70,8 +92,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       return;
     }
 
-    const chaseVx = (dx / distance) * this.speed;
-    const chaseVy = (dy / distance) * this.speed;
+    let speedMultiplier = 1;
+    if (this.isElite && this.eliteType === "speed_boost") {
+      if (nowMs >= this.abilityNextAtMs) {
+        this.abilityUntilMs = nowMs + 900;
+        this.abilityNextAtMs = nowMs + 4300;
+      }
+      if (nowMs < this.abilityUntilMs) {
+        speedMultiplier = 1.72;
+      }
+    }
 
     const dt = Math.max(1, deltaMs);
     // Exponential decay: knockback quickly fades out to preserve snappy combat feel.
@@ -86,6 +116,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.knockbackVy = 0;
     }
 
+    if (this.isElite && this.eliteType === "dash_attack") {
+      if (nowMs >= this.abilityNextAtMs) {
+        if (distance <= 460) {
+          this.abilityUntilMs = nowMs + 240;
+          this.dashVx = (dx / distance) * this.speed * 2.95;
+          this.dashVy = (dy / distance) * this.speed * 2.95;
+        }
+        this.abilityNextAtMs = nowMs + 3200;
+      }
+
+      if (nowMs < this.abilityUntilMs) {
+        this.body.setVelocity(this.dashVx + this.knockbackVx, this.dashVy + this.knockbackVy);
+        return;
+      }
+    }
+
+    const chaseVx = (dx / distance) * this.speed * speedMultiplier;
+    const chaseVy = (dy / distance) * this.speed * speedMultiplier;
     this.body.setVelocity(chaseVx + this.knockbackVx, chaseVy + this.knockbackVy);
   }
 
@@ -119,9 +167,47 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
   }
 
+  setElite(eliteType) {
+    const eliteConfig = ELITE_TYPE_CONFIGS[eliteType] ?? ELITE_TYPE_CONFIGS.speed_boost;
+    this.isElite = true;
+    this.eliteType = eliteType;
+    this.abilityNextAtMs = 0;
+    this.abilityUntilMs = 0;
+    this.nextPoisonTickAtMs = 0;
+
+    this.hp = Math.round(this.hp * eliteConfig.hpMultiplier);
+    this.damage = Math.round(this.damage * 1.35);
+    this.speed *= 1.1;
+    this.baseSpeed = this.speed;
+    this.xpValue = Math.round(this.xpValue * 2.2);
+
+    this.setScale(this.scaleX * 1.14, this.scaleY * 1.14);
+    this.setTint(eliteConfig.tint);
+  }
+
+  tryApplyPoisonAura(target, nowMs) {
+    if (!this.isElite || this.eliteType !== "poison_aura") {
+      return false;
+    }
+
+    const auraRadius = 98;
+    const distance = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+    if (distance > auraRadius) {
+      return false;
+    }
+
+    if (nowMs < this.nextPoisonTickAtMs) {
+      return false;
+    }
+    this.nextPoisonTickAtMs = nowMs + 650;
+
+    const auraDamage = Math.max(4, Math.round(this.damage * 0.45));
+    return target.takeDamage(auraDamage, nowMs);
+  }
+
   isDead() {
     return this.hp <= 0;
   }
 }
 
-export { ENEMY_ARCHETYPE_CONFIGS };
+export { ENEMY_ARCHETYPE_CONFIGS, ELITE_TYPE_CONFIGS };
