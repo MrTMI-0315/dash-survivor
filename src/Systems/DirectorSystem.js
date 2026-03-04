@@ -1,5 +1,6 @@
 import {
   DIRECTOR_BOSS_SPAWN,
+  DIRECTOR_DENSITY_REWORK,
   DIRECTOR_DEFAULT_DURATIONS_MS,
   DIRECTOR_DIFFICULTY_SCALING,
   DIRECTOR_ELITE_CHANCE,
@@ -18,6 +19,12 @@ function lerp(from, to, t) {
   return from + (to - from) * clamp01(t);
 }
 
+function randomIntInclusive(min, max) {
+  const safeMin = Math.ceil(min);
+  const safeMax = Math.floor(max);
+  return Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
+}
+
 export class DirectorSystem {
   constructor(config = {}) {
     this.durationsMs = {
@@ -32,12 +39,16 @@ export class DirectorSystem {
     this.bossSpawnIntervalMs = config.bossSpawnIntervalMs ?? DIRECTOR_BOSS_SPAWN.intervalMs;
     this.nextBossSpawnAtMs = this.bossSpawnIntervalMs;
     this.pendingBossSpawnCount = 0;
+    this.spawnBurstIntervalMs = config.spawnBurstIntervalMs ?? DIRECTOR_DENSITY_REWORK.burstIntervalMs;
+    this.nextSpawnBurstAtMs = this.spawnBurstIntervalMs;
+    this.pendingSpawnBurstCount = 0;
   }
 
   update(deltaMs) {
     this.stateElapsedMs += deltaMs;
     this.totalElapsedMs += deltaMs;
     this.updateBossSpawnSchedule();
+    this.updateSpawnBurstSchedule();
 
     const duration = this.getStateDurationMs(this.state);
     if (this.stateElapsedMs < duration) {
@@ -62,9 +73,25 @@ export class DirectorSystem {
     }
   }
 
+  updateSpawnBurstSchedule() {
+    while (this.totalElapsedMs >= this.nextSpawnBurstAtMs) {
+      this.pendingSpawnBurstCount += randomIntInclusive(
+        DIRECTOR_DENSITY_REWORK.burstMinCount,
+        DIRECTOR_DENSITY_REWORK.burstMaxCount
+      );
+      this.nextSpawnBurstAtMs += this.spawnBurstIntervalMs;
+    }
+  }
+
   consumeBossSpawnRequests() {
     const pending = this.pendingBossSpawnCount;
     this.pendingBossSpawnCount = 0;
+    return pending;
+  }
+
+  consumeSpawnBurstRequests() {
+    const pending = this.pendingSpawnBurstCount;
+    this.pendingSpawnBurstCount = 0;
     return pending;
   }
 
@@ -92,22 +119,26 @@ export class DirectorSystem {
     const difficulty = this.getDifficultyMultiplier();
 
     if (this.state === DIRECTOR_STATE.BUILD) {
-      return lerp(DIRECTOR_SPAWN_RATE.buildStart, DIRECTOR_SPAWN_RATE.buildEnd, this.getStateProgress()) * difficulty;
+      return (
+        lerp(DIRECTOR_SPAWN_RATE.buildStart, DIRECTOR_SPAWN_RATE.buildEnd, this.getStateProgress()) *
+        difficulty *
+        DIRECTOR_DENSITY_REWORK.spawnRateBoost
+      );
     }
     if (this.state === DIRECTOR_STATE.PEAK) {
-      return DIRECTOR_SPAWN_RATE.peakBase * difficulty;
+      return DIRECTOR_SPAWN_RATE.peakBase * difficulty * DIRECTOR_DENSITY_REWORK.spawnRateBoost;
     }
-    return DIRECTOR_SPAWN_RATE.relief * difficulty;
+    return DIRECTOR_SPAWN_RATE.relief * difficulty * DIRECTOR_DENSITY_REWORK.spawnRateBoost;
   }
 
   getEnemySpeedMultiplier() {
+    let stateMultiplier = DIRECTOR_ENEMY_SPEED.relief;
     if (this.state === DIRECTOR_STATE.BUILD) {
-      return lerp(DIRECTOR_ENEMY_SPEED.buildStart, DIRECTOR_ENEMY_SPEED.buildEnd, this.getStateProgress());
+      stateMultiplier = lerp(DIRECTOR_ENEMY_SPEED.buildStart, DIRECTOR_ENEMY_SPEED.buildEnd, this.getStateProgress());
+    } else if (this.state === DIRECTOR_STATE.PEAK) {
+      stateMultiplier = DIRECTOR_ENEMY_SPEED.peak;
     }
-    if (this.state === DIRECTOR_STATE.PEAK) {
-      return DIRECTOR_ENEMY_SPEED.peak;
-    }
-    return DIRECTOR_ENEMY_SPEED.relief;
+    return stateMultiplier * DIRECTOR_DENSITY_REWORK.enemySpeedBoost;
   }
 
   getEliteChance() {

@@ -47,3 +47,11 @@ export const DIRECTOR_DIFFICULTY_SCALING = {
   base: 1,
   perMinute: 0.15
 };
+
+export const DIRECTOR_DENSITY_REWORK = {
+  spawnRateBoost: 1.4,
+  enemySpeedBoost: 1.2,
+  burstIntervalMs: 20000,
+  burstMinCount: 8,
+  burstMaxCount: 12
+};

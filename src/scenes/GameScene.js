@@ -167,6 +167,7 @@ export class GameScene extends Phaser.Scene {
     this.runTimeMs += delta;
     this.spawnAccumulatorMs += delta;
     this.processDirectorBossSpawns();
+    this.processDirectorSpawnBursts();
 
     const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
     const effectiveSpawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
@@ -375,6 +376,13 @@ export class GameScene extends Phaser.Scene {
     const pendingBossSpawns = this.director.consumeBossSpawnRequests();
     for (let i = 0; i < pendingBossSpawns; i += 1) {
       this.spawnBossEnemy();
+    }
+  }
+
+  processDirectorSpawnBursts() {
+    const pendingBurstSpawns = this.director.consumeSpawnBurstRequests();
+    for (let i = 0; i < pendingBurstSpawns; i += 1) {
+      this.spawnEnemyFromEdge();
     }
   }
 
