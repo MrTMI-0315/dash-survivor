@@ -1,5 +1,5 @@
 import { Player } from "../entities/Player.js";
-import { Enemy } from "../entities/Enemy.js";
+import { Enemy, ENEMY_ARCHETYPE_CONFIGS } from "../entities/Enemy.js";
 import { BossEnemy } from "../entities/BossEnemy.js";
 import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
 import { WeaponSystem } from "../Systems/WeaponSystem.js";
@@ -7,6 +7,10 @@ import { WeaponSystem } from "../Systems/WeaponSystem.js";
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1350;
 const BOSS_SPAWN_INTERVAL_MS = 90000;
+const DIFFICULTY_STEP_MS = 120000;
+const HP_SCALING_PER_STEP = 0.1;
+const SPEED_SCALING_PER_STEP = 0.05;
+const SPAWN_SCALING_PER_STEP = 0.1;
 const ENEMY_TYPE_WEIGHTS = [
   { type: "chaser", weight: 50 },
   { type: "tank", weight: 25 },
@@ -233,7 +237,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnAccumulatorMs += delta;
     this.updateBossSpawns();
 
-    const spawnRateMultiplier = this.director.getSpawnRateMultiplier();
+    const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
     const effectiveSpawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
     while (this.spawnAccumulatorMs >= effectiveSpawnIntervalMs) {
       this.spawnAccumulatorMs -= effectiveSpawnIntervalMs;
@@ -249,7 +253,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponSystem.update(time, delta);
     this.performAutoAttack(time);
 
-    const speedMultiplier = this.director.getEnemySpeedMultiplier();
+    const speedMultiplier = this.getEffectiveEnemySpeedMultiplier();
     this.enemies.getChildren().forEach((enemy) => {
       enemy.speed = enemy.baseSpeed * speedMultiplier;
       enemy.chase(this.player, delta, time);
@@ -367,6 +371,32 @@ export class GameScene extends Phaser.Scene {
     return Math.min(deficit, burst);
   }
 
+  getDifficultyTier() {
+    return Math.floor(this.runTimeMs / DIFFICULTY_STEP_MS);
+  }
+
+  getDifficultyMultipliers() {
+    const tier = this.getDifficultyTier();
+    return {
+      tier,
+      hpMultiplier: 1 + tier * HP_SCALING_PER_STEP,
+      speedMultiplier: 1 + tier * SPEED_SCALING_PER_STEP,
+      spawnMultiplier: 1 + tier * SPAWN_SCALING_PER_STEP
+    };
+  }
+
+  getEffectiveSpawnRateMultiplier() {
+    const difficulty = this.getDifficultyMultipliers();
+    const directorSpawn = this.director.getSpawnRateMultiplier(difficulty.tier);
+    return directorSpawn * difficulty.spawnMultiplier;
+  }
+
+  getEffectiveEnemySpeedMultiplier() {
+    const difficulty = this.getDifficultyMultipliers();
+    const directorSpeed = this.director.getEnemySpeedMultiplier();
+    return directorSpeed * difficulty.speedMultiplier;
+  }
+
   maintainEnemyDensity() {
     if (this.isGameOver || this.isLeveling) {
       return;
@@ -374,7 +404,7 @@ export class GameScene extends Phaser.Scene {
 
     const seconds = this.runTimeMs / 1000;
     const baseTarget = this.getTargetEnemyCount(seconds);
-    const spawnRateMultiplier = this.director.getSpawnRateMultiplier();
+    const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
     this.targetEnemies = Math.round(baseTarget * spawnRateMultiplier);
 
     const aliveEnemies = this.getAliveEnemyCount();
@@ -395,6 +425,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     const type = this.pickEnemyArchetype();
+    const difficulty = this.getDifficultyMultipliers();
+    const baseHp = ENEMY_ARCHETYPE_CONFIGS[type]?.hp ?? ENEMY_ARCHETYPE_CONFIGS.chaser.hp;
+    const scaledHp = Math.max(1, Math.round(baseHp * difficulty.hpMultiplier));
     const groupCount = type === "swarm" ? Phaser.Math.Between(3, 5) : 1;
     const anchor = this.getSpawnPosition();
 
@@ -410,7 +443,7 @@ export class GameScene extends Phaser.Scene {
         spawnY = fallback.y;
       }
 
-      const enemy = new Enemy(this, spawnX, spawnY, { type });
+      const enemy = new Enemy(this, spawnX, spawnY, { type, hp: scaledHp });
       enemy.setData("lastDashHitId", -1);
       enemy.setData("archetype", type);
 
@@ -439,6 +472,8 @@ export class GameScene extends Phaser.Scene {
   spawnBossEnemy() {
     const spawnPosition = this.getSpawnPosition();
     const boss = new BossEnemy(this, spawnPosition.x, spawnPosition.y);
+    const difficulty = this.getDifficultyMultipliers();
+    boss.hp = Math.max(1, Math.round(boss.hp * difficulty.hpMultiplier));
     boss.setData("lastDashHitId", -1);
     boss.setData("archetype", "boss");
     this.enemies.add(boss);

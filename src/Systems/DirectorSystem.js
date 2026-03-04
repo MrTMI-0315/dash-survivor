@@ -56,12 +56,14 @@ export class DirectorSystem {
     return this.stateElapsedMs / this.getStateDurationMs(this.state);
   }
 
-  getSpawnRateMultiplier() {
+  getSpawnRateMultiplier(difficultyTier = 0) {
     if (this.state === DIRECTOR_STATE.BUILD) {
       return lerp(0.85, 1.25, this.getStateProgress());
     }
     if (this.state === DIRECTOR_STATE.PEAK) {
-      return 1.8;
+      const tier = Math.max(0, Math.floor(difficultyTier));
+      const peakDifficultyBonus = 1 + Math.min(0.5, tier * 0.08);
+      return 1.8 * peakDifficultyBonus;
     }
     return 0.35;
   }
