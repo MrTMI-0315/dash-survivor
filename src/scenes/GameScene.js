@@ -2,6 +2,7 @@ import { Player } from "../entities/Player.js";
 import { Enemy } from "../entities/Enemy.js";
 import { BossEnemy } from "../entities/BossEnemy.js";
 import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
+import { WeaponSystem } from "../Systems/WeaponSystem.js";
 
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1350;
@@ -45,6 +46,27 @@ const UPGRADE_POOL = [
     description: "Dash charge +20%",
     apply: (scene) => {
       scene.player.dashChargeRate *= 1.2;
+    }
+  },
+  {
+    label: "Fireball Weapon",
+    description: "Unlock/upgrade Fireball",
+    apply: (scene) => {
+      scene.weaponSystem.addWeapon("fireball");
+    }
+  },
+  {
+    label: "Dagger Weapon",
+    description: "Unlock/upgrade Dagger",
+    apply: (scene) => {
+      scene.weaponSystem.addWeapon("dagger");
+    }
+  },
+  {
+    label: "Lightning Weapon",
+    description: "Unlock/upgrade Lightning",
+    apply: (scene) => {
+      scene.weaponSystem.addWeapon("lightning");
     }
   }
 ];
@@ -115,6 +137,9 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, this.enemies, this.handlePlayerEnemyCollision, null, this);
     this.physics.add.overlap(this.player, this.xpOrbs, this.handleXpOrbPickup, null, this);
+    this.weaponSystem = new WeaponSystem(this, this.player);
+    this.weaponSystem.addWeapon("dagger");
+    this.weaponSystem.addWeapon("fireball");
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
@@ -197,6 +222,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player.updateDash(delta);
     this.player.moveFromInput(this.keys);
+    this.weaponSystem.update(time, delta);
     this.performAutoAttack(time);
 
     const speedMultiplier = this.director.getEnemySpeedMultiplier();
@@ -212,6 +238,8 @@ export class GameScene extends Phaser.Scene {
     this.generateCircleTexture("player", 16, 0x53d8fb, 0x1f7fa5);
     this.generateCircleTexture("enemy", 14, 0xff6d6d, 0xad3434);
     this.generateCircleTexture("xp_orb", 6, 0x66f5b2, 0x1f8d63);
+    this.generateCircleTexture("proj_dagger", 4, 0xeef7ff, 0x7895af);
+    this.generateCircleTexture("proj_fireball", 8, 0xff944d, 0xa84d1b);
   }
 
   generateCircleTexture(key, radius, fillColor, strokeColor) {
@@ -665,8 +693,9 @@ export class GameScene extends Phaser.Scene {
     const activeEnemies = this.getAliveEnemyCount();
     const dashPercent = Math.floor(this.player.getDashRatio() * 100);
     const directorState = this.director.getState();
+    const weaponCount = this.player.weapons.length;
     this.hudText.setText(
-      `DIR ${directorState}   LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   Enemies ${activeEnemies}/${this.targetEnemies}`
+      `DIR ${directorState}   LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   WPN ${weaponCount}/${this.player.maxWeaponSlots}   Enemies ${activeEnemies}/${this.targetEnemies}`
     );
   }
 }
