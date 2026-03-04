@@ -171,6 +171,7 @@ export class GameScene extends Phaser.Scene {
     this.runTimeMs += delta;
     this.spawnAccumulatorMs += delta;
     this.processDirectorBossSpawns();
+    this.processDirectorMiniBossSpawns();
     this.processDirectorSpawnBursts();
 
     const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
@@ -509,6 +510,13 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  processDirectorMiniBossSpawns() {
+    const pendingMiniBossSpawns = this.director.consumeMiniBossSpawnRequests();
+    for (let i = 0; i < pendingMiniBossSpawns; i += 1) {
+      this.spawnMiniBossEnemy();
+    }
+  }
+
   processDirectorSpawnBursts() {
     const pendingBurstSpawns = this.director.consumeSpawnBurstRequests();
     for (let i = 0; i < pendingBurstSpawns; i += 1) {
@@ -527,6 +535,19 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.shake(210, 0.0048);
     this.showHudAlert("BOSS INCOMING");
+  }
+
+  spawnMiniBossEnemy() {
+    const spawnPosition = this.getSpawnPosition();
+    const miniBoss = new BossEnemy(this, spawnPosition.x, spawnPosition.y, { variant: "mini" });
+    const hpMultiplier = this.director.getEnemyHpMultiplier();
+    miniBoss.hp = Math.max(1, Math.round(miniBoss.hp * hpMultiplier));
+    miniBoss.setData("lastDashHitId", -1);
+    miniBoss.setData("archetype", "mini_boss");
+    this.enemies.add(miniBoss);
+
+    this.cameras.main.shake(160, 0.0036);
+    this.showHudAlert("MINI BOSS");
   }
 
   showHudAlert(message, durationMs = 1600) {

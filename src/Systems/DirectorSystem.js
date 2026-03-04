@@ -6,6 +6,7 @@ import {
   DIRECTOR_ELITE_CHANCE,
   DIRECTOR_ELITE_TIME_SCALING,
   DIRECTOR_ENEMY_SPEED,
+  DIRECTOR_MINI_BOSS_EVENT,
   DIRECTOR_SPAWN_RATE,
   DIRECTOR_STATE,
   DIRECTOR_STATE_SEQUENCE
@@ -39,6 +40,9 @@ export class DirectorSystem {
     this.bossSpawnIntervalMs = config.bossSpawnIntervalMs ?? DIRECTOR_BOSS_SPAWN.intervalMs;
     this.nextBossSpawnAtMs = this.bossSpawnIntervalMs;
     this.pendingBossSpawnCount = 0;
+    this.miniBossSpawnAtMs = config.miniBossSpawnAtMs ?? DIRECTOR_MINI_BOSS_EVENT.atMs;
+    this.hasMiniBossSpawned = false;
+    this.pendingMiniBossSpawnCount = 0;
     this.spawnBurstIntervalMs = config.spawnBurstIntervalMs ?? DIRECTOR_DENSITY_REWORK.burstIntervalMs;
     this.nextSpawnBurstAtMs = this.spawnBurstIntervalMs;
     this.pendingSpawnBurstCount = 0;
@@ -48,6 +52,7 @@ export class DirectorSystem {
     this.stateElapsedMs += deltaMs;
     this.totalElapsedMs += deltaMs;
     this.updateBossSpawnSchedule();
+    this.updateMiniBossSpawnSchedule();
     this.updateSpawnBurstSchedule();
 
     const duration = this.getStateDurationMs(this.state);
@@ -83,6 +88,19 @@ export class DirectorSystem {
     }
   }
 
+  updateMiniBossSpawnSchedule() {
+    if (this.hasMiniBossSpawned) {
+      return;
+    }
+
+    if (this.totalElapsedMs < this.miniBossSpawnAtMs) {
+      return;
+    }
+
+    this.pendingMiniBossSpawnCount = 1;
+    this.hasMiniBossSpawned = true;
+  }
+
   consumeBossSpawnRequests() {
     const pending = this.pendingBossSpawnCount;
     this.pendingBossSpawnCount = 0;
@@ -92,6 +110,12 @@ export class DirectorSystem {
   consumeSpawnBurstRequests() {
     const pending = this.pendingSpawnBurstCount;
     this.pendingSpawnBurstCount = 0;
+    return pending;
+  }
+
+  consumeMiniBossSpawnRequests() {
+    const pending = this.pendingMiniBossSpawnCount;
+    this.pendingMiniBossSpawnCount = 0;
     return pending;
   }
 

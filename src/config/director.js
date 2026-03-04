@@ -16,6 +16,10 @@ export const DIRECTOR_BOSS_SPAWN = {
   intervalMs: 180000
 };
 
+export const DIRECTOR_MINI_BOSS_EVENT = {
+  atMs: 90000
+};
+
 export const DIRECTOR_SPAWN_RATE = {
   buildStart: 0.85,
   buildEnd: 1.25,
