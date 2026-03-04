@@ -56,8 +56,11 @@ export class GameScene extends Phaser.Scene {
     this.damageEmitter = null;
     this.killEmitter = null;
     this.eliteKillEmitter = null;
+    this.evolutionEmitter = null;
     this.dashTrailEmitter = null;
     this.dashTrailTickMs = 0;
+    this.evolutionSlowMoRestoreHandle = null;
+    this.evolutionSlowMoActive = false;
     this.metaSystem = new MetaProgressionSystem();
     this.metaData = this.metaSystem.getData();
     this.metaXpMultiplier = 1;
@@ -332,6 +335,9 @@ export class GameScene extends Phaser.Scene {
     if (this.eliteKillEmitter) {
       this.eliteKillEmitter.destroy();
     }
+    if (this.evolutionEmitter) {
+      this.evolutionEmitter.destroy();
+    }
     if (this.dashTrailEmitter) {
       this.dashTrailEmitter.destroy();
     }
@@ -378,6 +384,20 @@ export class GameScene extends Phaser.Scene {
     });
     this.eliteKillEmitter.setDepth(11);
 
+    this.evolutionEmitter = this.add.particles(0, 0, "hit_particle", {
+      emitting: false,
+      quantity: 0,
+      frequency: -1,
+      speed: { min: 140, max: 360 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 160, max: 420 },
+      scale: { start: 1.4, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: [0xffffff, 0xfff0a6, 0xa5f1ff, 0xcbb2ff],
+      blendMode: "ADD"
+    });
+    this.evolutionEmitter.setDepth(12);
+
     this.dashTrailEmitter = this.add.particles(0, 0, "hit_particle", {
       emitting: false,
       quantity: 0,
@@ -412,6 +432,53 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.eliteKillEmitter.explode(Math.max(12, Math.min(28, count)), x, y);
+  }
+
+  playWeaponEvolutionFeedback(weapon) {
+    const flashDurationMs = 170;
+    const slowScale = 0.26;
+    const slowDurationMs = 180;
+
+    if (this.cameras?.main) {
+      this.cameras.main.flash(flashDurationMs, 255, 246, 197, true);
+      this.cameras.main.shake(110, 0.0019);
+    }
+
+    if (this.evolutionEmitter && this.player && this.player.active) {
+      this.evolutionEmitter.explode(36, this.player.x, this.player.y);
+    }
+
+    if (!this.time || !this.tweens || !this.physics?.world) {
+      return;
+    }
+
+    if (this.evolutionSlowMoRestoreHandle) {
+      clearTimeout(this.evolutionSlowMoRestoreHandle);
+      this.evolutionSlowMoRestoreHandle = null;
+    }
+
+    const previousTimeScale = this.time.timeScale;
+    const previousTweenScale = this.tweens.timeScale;
+    const previousPhysicsScale = this.physics.world.timeScale;
+    this.time.timeScale = slowScale;
+    this.tweens.timeScale = slowScale;
+    this.physics.world.timeScale = slowScale;
+    this.evolutionSlowMoActive = true;
+
+    this.evolutionSlowMoRestoreHandle = setTimeout(() => {
+      if (!this.sys || !this.sys.isActive()) {
+        return;
+      }
+      this.time.timeScale = previousTimeScale;
+      this.tweens.timeScale = previousTweenScale;
+      this.physics.world.timeScale = previousPhysicsScale;
+      this.evolutionSlowMoActive = false;
+      this.evolutionSlowMoRestoreHandle = null;
+    }, slowDurationMs);
+
+    if (this.showHudAlert && weapon?.baseType) {
+      this.showHudAlert(`${weapon.baseType.toUpperCase()} POWER SPIKE`, 1000);
+    }
   }
 
   emitDashTrail(delta) {

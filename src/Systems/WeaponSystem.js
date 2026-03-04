@@ -300,6 +300,9 @@ export class WeaponSystem {
     if (this.scene.showHudAlert) {
       this.scene.showHudAlert(`${weapon.baseType.toUpperCase()} EVOLVED`, 1800);
     }
+    if (this.scene.playWeaponEvolutionFeedback) {
+      this.scene.playWeaponEvolutionFeedback(weapon);
+    }
   }
 
   update(time, delta) {
