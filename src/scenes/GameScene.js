@@ -3,6 +3,36 @@ import { Enemy } from "../entities/Enemy.js";
 
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1350;
+const UPGRADE_POOL = [
+  {
+    label: "Attack Speed",
+    description: "Attack interval -10%",
+    apply: (scene) => {
+      scene.attackIntervalMs = Math.max(180, Math.floor(scene.attackIntervalMs * 0.9));
+    }
+  },
+  {
+    label: "Damage",
+    description: "Attack damage +5",
+    apply: (scene) => {
+      scene.attackDamage += 5;
+    }
+  },
+  {
+    label: "Move Speed",
+    description: "Move speed +20",
+    apply: (scene) => {
+      scene.player.speed += 20;
+    }
+  },
+  {
+    label: "Attack Range",
+    description: "Range +20",
+    apply: (scene) => {
+      scene.attackRange += 20;
+    }
+  }
+];
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -14,12 +44,24 @@ export class GameScene extends Phaser.Scene {
     this.attackDamage = 10;
     this.lastAttackAt = 0;
     this.totalXp = 0;
+    this.level = 1;
+    this.currentXp = 0;
+    this.xpToNext = 50;
+    this.pendingLevelUps = 0;
+    this.isLeveling = false;
+    this.levelUpUi = [];
     this.isGameOver = false;
   }
 
   create() {
     this.isGameOver = false;
     this.totalXp = 0;
+    this.level = 1;
+    this.currentXp = 0;
+    this.xpToNext = this.getXpRequirement(this.level);
+    this.pendingLevelUps = 0;
+    this.isLeveling = false;
+    this.levelUpUi = [];
 
     this.createTextures();
     this.drawArena();
@@ -91,6 +133,12 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.isLeveling) {
+      this.player.body.setVelocity(0, 0);
+      this.updateHud();
+      return;
+    }
+
     this.player.moveFromInput(this.keys);
     this.performAutoAttack(time);
 
@@ -137,7 +185,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnEnemy() {
-    if (this.isGameOver) {
+    if (this.isGameOver || this.isLeveling) {
       return;
     }
 
@@ -241,12 +289,118 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.totalXp += orb.xpValue ?? 0;
+    this.gainXp(orb.xpValue ?? 0);
     orb.destroy();
+  }
+
+  gainXp(amount) {
+    this.totalXp += amount;
+    this.currentXp += amount;
+
+    while (this.currentXp >= this.xpToNext) {
+      this.currentXp -= this.xpToNext;
+      this.level += 1;
+      this.pendingLevelUps += 1;
+      this.xpToNext = this.getXpRequirement(this.level);
+    }
+
+    if (!this.isLeveling && this.pendingLevelUps > 0) {
+      this.openLevelUpChoices();
+    }
+  }
+
+  getXpRequirement(level) {
+    if (level === 1) {
+      return 50;
+    }
+    if (level === 2) {
+      return 80;
+    }
+    if (level === 3) {
+      return 120;
+    }
+    return 120 + (level - 3) * 50;
+  }
+
+  openLevelUpChoices() {
+    if (this.pendingLevelUps <= 0) {
+      return;
+    }
+
+    this.pendingLevelUps -= 1;
+    this.isLeveling = true;
+    this.physics.pause();
+    this.player.body.setVelocity(0, 0);
+
+    const centerX = 640;
+    const centerY = 360;
+    const panel = this.add
+      .rectangle(centerX, centerY, 520, 360, 0x070d18, 0.96)
+      .setStrokeStyle(2, 0x4f607d, 1)
+      .setScrollFactor(0)
+      .setDepth(30);
+
+    const title = this.add
+      .text(centerX, centerY - 130, "Level Up - Choose One", {
+        fontFamily: "Arial",
+        fontSize: "30px",
+        color: "#f8fbff"
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(31);
+
+    const choices = Phaser.Utils.Array.Shuffle([...UPGRADE_POOL]).slice(0, 3);
+    const optionObjects = [];
+
+    choices.forEach((upgrade, index) => {
+      const y = centerY - 45 + index * 92;
+      const box = this.add
+        .rectangle(centerX, y, 450, 72, 0x17233a, 1)
+        .setStrokeStyle(1, 0x4f607d, 1)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0)
+        .setDepth(31);
+
+      const label = this.add
+        .text(centerX, y, `${upgrade.label} - ${upgrade.description}`, {
+          fontFamily: "Arial",
+          fontSize: "21px",
+          color: "#e9f4ff"
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(32);
+
+      const chooseUpgrade = () => {
+        upgrade.apply(this);
+        this.closeLevelUpChoices();
+      };
+      box.on("pointerdown", chooseUpgrade);
+      label.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
+
+      optionObjects.push(box, label);
+    });
+
+    this.levelUpUi = [panel, title, ...optionObjects];
+  }
+
+  closeLevelUpChoices() {
+    this.levelUpUi.forEach((obj) => obj.destroy());
+    this.levelUpUi = [];
+
+    this.isLeveling = false;
+    this.physics.resume();
+
+    if (this.pendingLevelUps > 0) {
+      this.openLevelUpChoices();
+    }
   }
 
   updateHud() {
     const activeEnemies = this.enemies.getChildren().filter((enemy) => enemy.active).length;
-    this.hudText.setText(`HP ${this.player.hp}/${this.player.maxHp}   XP ${this.totalXp}   Enemies ${activeEnemies}`);
+    this.hudText.setText(
+      `LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   Enemies ${activeEnemies}`
+    );
   }
 }
