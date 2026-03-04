@@ -60,6 +60,8 @@ export class GameScene extends Phaser.Scene {
     this.enemyPool = null;
     this.obstacles = null;
     this.terrainObstacleAnchors = [];
+    this.gameOverRestartButton = null;
+    this.gameOverRestartLabel = null;
   }
 
   create() {
@@ -145,6 +147,31 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(12)
       .setVisible(false);
+
+    this.gameOverRestartButton = this.add
+      .rectangle(640, 540, 240, 58, 0x17304f, 0.95)
+      .setStrokeStyle(2, 0x66b9ff, 1)
+      .setScrollFactor(0)
+      .setDepth(13)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false);
+    this.gameOverRestartLabel = this.add
+      .text(640, 540, "Restart Run", {
+        fontFamily: "Arial",
+        fontSize: "26px",
+        color: "#eaf6ff",
+        stroke: "#0d1628",
+        strokeThickness: 5
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(14)
+      .setInteractive({ useHandCursor: true })
+      .setVisible(false);
+
+    const onRestartPointer = () => this.restartRun();
+    this.gameOverRestartButton.on("pointerdown", onRestartPointer);
+    this.gameOverRestartLabel.on("pointerdown", onRestartPointer);
 
     this.hudAlertText = this.add
       .text(640, 74, "", {
@@ -1057,6 +1084,10 @@ export class GameScene extends Phaser.Scene {
     this.finalizeMetaRun();
     this.refreshGameOverText();
     this.gameOverText.setVisible(true);
+    if (this.gameOverRestartButton && this.gameOverRestartLabel) {
+      this.gameOverRestartButton.setVisible(true);
+      this.gameOverRestartLabel.setVisible(true);
+    }
   }
 
   handleGameOverInput() {
@@ -1073,8 +1104,12 @@ export class GameScene extends Phaser.Scene {
       this.tryPurchaseMetaUpgrade("starting_weapon");
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys.restart)) {
-      this.scene.restart();
+      this.restartRun();
     }
+  }
+
+  restartRun() {
+    this.scene.restart();
   }
 
   tryPurchaseMetaUpgrade(upgradeKey) {
