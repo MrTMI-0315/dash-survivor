@@ -36,6 +36,8 @@ const MIN_PARTICLE_LOAD_SCALE = 0.38;
 const TOUCH_JOYSTICK_RADIUS = 68;
 const TOUCH_JOYSTICK_TOUCH_RADIUS = 110;
 const TOUCH_DASH_BUTTON_RADIUS = 58;
+const PARTICLE_TEXTURE_KEY = "hit_particle";
+const PARTICLE_FALLBACK_TEXTURE_KEY = "__WHITE";
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
@@ -402,7 +404,8 @@ export class GameScene extends Phaser.Scene {
       this.dashTrailEmitter.destroy();
     }
 
-    this.damageEmitter = this.add.particles(0, 0, "hit_particle", {
+    const particleTextureKey = this.getSafeParticleTextureKey();
+    this.damageEmitter = this.add.particles(0, 0, particleTextureKey, {
       emitting: false,
       quantity: 0,
       frequency: -1,
@@ -416,7 +419,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.damageEmitter.setDepth(9);
 
-    this.killEmitter = this.add.particles(0, 0, "hit_particle", {
+    this.killEmitter = this.add.particles(0, 0, particleTextureKey, {
       emitting: false,
       quantity: 0,
       frequency: -1,
@@ -430,7 +433,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.killEmitter.setDepth(10);
 
-    this.eliteKillEmitter = this.add.particles(0, 0, "hit_particle", {
+    this.eliteKillEmitter = this.add.particles(0, 0, particleTextureKey, {
       emitting: false,
       quantity: 0,
       frequency: -1,
@@ -444,7 +447,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.eliteKillEmitter.setDepth(11);
 
-    this.evolutionEmitter = this.add.particles(0, 0, "hit_particle", {
+    this.evolutionEmitter = this.add.particles(0, 0, particleTextureKey, {
       emitting: false,
       quantity: 0,
       frequency: -1,
@@ -458,7 +461,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.evolutionEmitter.setDepth(12);
 
-    this.dashTrailEmitter = this.add.particles(0, 0, "hit_particle", {
+    this.dashTrailEmitter = this.add.particles(0, 0, particleTextureKey, {
       emitting: false,
       quantity: 0,
       frequency: -1,
@@ -473,16 +476,44 @@ export class GameScene extends Phaser.Scene {
     this.dashTrailEmitter.setDepth(8);
   }
 
-  ensureParticleEmitters() {
-    if (this.damageEmitter && this.killEmitter && this.eliteKillEmitter && this.evolutionEmitter && this.dashTrailEmitter) {
-      return;
+  getSafeParticleTextureKey() {
+    if (this.textures.exists(PARTICLE_TEXTURE_KEY)) {
+      return PARTICLE_TEXTURE_KEY;
     }
+    return PARTICLE_FALLBACK_TEXTURE_KEY;
+  }
+
+  isEmitterReady(emitter) {
+    if (!emitter || !emitter.active || !emitter.texture) {
+      return false;
+    }
+    const textureKey = emitter.texture.key;
+    return typeof textureKey === "string" && this.textures.exists(textureKey);
+  }
+
+  ensureParticleEmitters() {
+    if (
+      this.isEmitterReady(this.damageEmitter) &&
+      this.isEmitterReady(this.killEmitter) &&
+      this.isEmitterReady(this.eliteKillEmitter) &&
+      this.isEmitterReady(this.evolutionEmitter) &&
+      this.isEmitterReady(this.dashTrailEmitter)
+    ) {
+      return true;
+    }
+
     this.createDamageEmitter();
+    return (
+      this.isEmitterReady(this.damageEmitter) &&
+      this.isEmitterReady(this.killEmitter) &&
+      this.isEmitterReady(this.eliteKillEmitter) &&
+      this.isEmitterReady(this.evolutionEmitter) &&
+      this.isEmitterReady(this.dashTrailEmitter)
+    );
   }
 
   spawnDamageParticles(x, y, count = 5) {
-    this.ensureParticleEmitters();
-    if (!this.damageEmitter) {
+    if (!this.ensureParticleEmitters()) {
       return;
     }
     const scaledCount = this.getScaledParticleCount(count, 2);
@@ -490,8 +521,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnKillParticles(x, y, count = 10) {
-    this.ensureParticleEmitters();
-    if (!this.killEmitter) {
+    if (!this.ensureParticleEmitters()) {
       return;
     }
     const scaledCount = this.getScaledParticleCount(count, 4);
@@ -499,8 +529,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnEliteKillParticles(x, y, count = 18) {
-    this.ensureParticleEmitters();
-    if (!this.eliteKillEmitter) {
+    if (!this.ensureParticleEmitters()) {
       return;
     }
     const scaledCount = this.getScaledParticleCount(count, 8);
@@ -556,8 +585,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   emitDashTrail(delta) {
-    this.ensureParticleEmitters();
-    if (!this.dashTrailEmitter || !this.player || !this.player.active || !this.player.isDashing()) {
+    if (!this.ensureParticleEmitters() || !this.player || !this.player.active || !this.player.isDashing()) {
       this.dashTrailTickMs = 0;
       return;
     }
