@@ -149,8 +149,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.hp = 0;
   }
 
-  reset(config = {}) {
-    this.resetForSpawn(config);
+  reset(x, y, config = {}) {
+    if (typeof x === "object" && x !== null) {
+      this.resetForSpawn(x);
+      return;
+    }
+
+    this.resetForSpawn({
+      ...(config ?? {}),
+      x: x ?? this.x,
+      y: y ?? this.y
+    });
   }
 
   applyKnockbackFrom(sourceX, sourceY, force) {

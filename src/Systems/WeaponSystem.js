@@ -4,6 +4,12 @@ import {
   WEAPON_DEFINITIONS,
   WEAPON_EVOLUTION_RULES
 } from "../config/weapons.js";
+import { Enemy } from "../entities/Enemy.js";
+
+const DEV_MODE =
+  typeof globalThis !== "undefined" &&
+  (globalThis.__DEV__ === true ||
+    (globalThis.location && (globalThis.location.hostname === "localhost" || globalThis.location.hostname === "127.0.0.1")));
 
 function getWeaponDefinition(type) {
   return WEAPON_DEFINITIONS[type] ?? null;
@@ -17,6 +23,7 @@ export class WeaponSystem {
     this.globalDamageMultiplier = 1;
     this.globalCooldownMultiplier = 1;
     this.projectileCount = 1;
+    this.hasLoggedInvalidProjectileCollision = false;
 
     this.projectiles = scene.physics.add.group({
       allowGravity: false,
@@ -30,8 +37,39 @@ export class WeaponSystem {
 
     this.preallocateProjectilePool();
 
-    scene.physics.add.overlap(this.projectiles, scene.enemies, this.handleProjectileHit, null, this);
+    scene.physics.add.overlap(this.projectiles, scene.enemies, this.handleProjectileHit, this.isValidProjectileEnemyCollision, this);
     scene.physics.add.overlap(this.orbitBlades, scene.enemies, this.handleOrbitBladeHit, null, this);
+  }
+
+  normalizeProjectileEnemyPair(a, b) {
+    let projectile = a;
+    let enemy = b;
+
+    if (a instanceof Enemy && !(b instanceof Enemy)) {
+      enemy = a;
+      projectile = b;
+    }
+
+    return { projectile, enemy };
+  }
+
+  warnInvalidProjectileCollision(object) {
+    if (!DEV_MODE || this.hasLoggedInvalidProjectileCollision) {
+      return;
+    }
+    this.hasLoggedInvalidProjectileCollision = true;
+    // eslint-disable-next-line no-console
+    console.warn("Invalid collision object (expected Enemy)", object);
+  }
+
+  isValidProjectileEnemyCollision(a, b) {
+    const { projectile, enemy } = this.normalizeProjectileEnemyPair(a, b);
+    const hasProjectileSignature = Boolean(projectile && typeof projectile.getData === "function" && projectile.getData("poolTexture"));
+    const valid = enemy instanceof Enemy && hasProjectileSignature;
+    if (!valid) {
+      this.warnInvalidProjectileCollision(enemy);
+    }
+    return valid;
   }
 
   preallocateProjectilePool() {
@@ -496,13 +534,11 @@ export class WeaponSystem {
   }
 
   handleProjectileHit(projectile, enemy) {
-    let hitProjectile = projectile;
-    let hitEnemy = enemy;
+    const { projectile: hitProjectile, enemy: hitEnemy } = this.normalizeProjectileEnemyPair(projectile, enemy);
 
-    // Defensive guard: overlap callbacks can be wired in reverse in some setups.
-    if (typeof hitEnemy?.takeDamage !== "function" && typeof hitProjectile?.takeDamage === "function") {
-      hitProjectile = enemy;
-      hitEnemy = projectile;
+    if (!(hitEnemy instanceof Enemy)) {
+      this.warnInvalidProjectileCollision(hitEnemy);
+      return;
     }
 
     if (!hitProjectile || !hitEnemy || !hitProjectile.active || !hitEnemy.active) {
@@ -568,27 +604,15 @@ export class WeaponSystem {
   }
 
   applyDamage(enemy, damage, knockbackForce, sourceX, sourceY) {
-    if (!enemy || !enemy.active) {
+    if (!(enemy instanceof Enemy) || !enemy.active) {
+      this.warnInvalidProjectileCollision(enemy);
       return;
     }
 
-    const damageHandler =
-      typeof enemy.takeDamage === "function"
-        ? enemy.takeDamage
-        : typeof enemy.applyDamage === "function"
-          ? enemy.applyDamage
-          : typeof enemy.receiveDamage === "function"
-            ? enemy.receiveDamage
-            : null;
-    if (!damageHandler) {
-      return;
-    }
-
-    damageHandler.call(enemy, damage);
+    enemy.takeDamage(damage);
     enemy.applyKnockbackFrom(sourceX, sourceY, knockbackForce);
 
-    const dead = typeof enemy.isDead === "function" ? enemy.isDead() : (enemy.hp ?? 1) <= 0;
-    if (!dead) {
+    if (!enemy.isDead()) {
       return;
     }
 
