@@ -25,6 +25,15 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     radius: 10,
     scale: 0.8,
     tint: 0xff8a9c
+  },
+  hunter: {
+    speed: 176,
+    hp: 9,
+    damage: 6,
+    xpValue: 9,
+    radius: 11,
+    scale: 0.92,
+    tint: 0x6db8ff
   }
 };
 
@@ -44,7 +53,10 @@ export const ELITE_TYPE_CONFIGS = {
 };
 
 export const ENEMY_TYPE_WEIGHTS = [
-  { type: "chaser", weight: 50 },
-  { type: "tank", weight: 25 },
-  { type: "swarm", weight: 25 }
+  { type: "chaser", weight: 40 },
+  { type: "tank", weight: 22 },
+  { type: "swarm", weight: 23 },
+  { type: "hunter", weight: 15 }
 ];
+
+export const HUNTER_UNLOCK_TIME_SEC = 45;

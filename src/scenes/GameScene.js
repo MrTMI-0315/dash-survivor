@@ -4,7 +4,7 @@ import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
 import { WeaponSystem } from "../Systems/WeaponSystem.js";
 import { MetaProgressionSystem } from "../Systems/MetaProgressionSystem.js";
 import { ObjectPool } from "../Systems/ObjectPool.js";
-import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS } from "../config/enemies.js";
+import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS, HUNTER_UNLOCK_TIME_SEC } from "../config/enemies.js";
 import { LEVEL_UP_UPGRADES } from "../config/weapons.js";
 import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
@@ -487,13 +487,21 @@ export class GameScene extends Phaser.Scene {
   }
 
   pickEnemyArchetype() {
-    const totalWeight = ENEMY_TYPE_WEIGHTS.reduce((sum, entry) => sum + entry.weight, 0);
+    const elapsedSeconds = this.runTimeMs / 1000;
+    const availableTypes = ENEMY_TYPE_WEIGHTS.filter((entry) => {
+      if (entry.type === "hunter" && elapsedSeconds < HUNTER_UNLOCK_TIME_SEC) {
+        return false;
+      }
+      return true;
+    });
+
+    const totalWeight = availableTypes.reduce((sum, entry) => sum + entry.weight, 0);
     let roll = Math.random() * totalWeight;
 
-    for (let i = 0; i < ENEMY_TYPE_WEIGHTS.length; i += 1) {
-      roll -= ENEMY_TYPE_WEIGHTS[i].weight;
+    for (let i = 0; i < availableTypes.length; i += 1) {
+      roll -= availableTypes[i].weight;
       if (roll <= 0) {
-        return ENEMY_TYPE_WEIGHTS[i].type;
+        return availableTypes[i].type;
       }
     }
 
