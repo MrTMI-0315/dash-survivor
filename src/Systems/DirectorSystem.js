@@ -1,5 +1,6 @@
 import {
   DIRECTOR_DEFAULT_DURATIONS_MS,
+  DIRECTOR_DIFFICULTY_SCALING,
   DIRECTOR_ELITE_CHANCE,
   DIRECTOR_ENEMY_SPEED,
   DIRECTOR_SPAWN_RATE,
@@ -25,10 +26,12 @@ export class DirectorSystem {
 
     this.state = DIRECTOR_STATE.BUILD;
     this.stateElapsedMs = 0;
+    this.totalElapsedMs = 0;
   }
 
   update(deltaMs) {
     this.stateElapsedMs += deltaMs;
+    this.totalElapsedMs += deltaMs;
     const duration = this.getStateDurationMs(this.state);
     if (this.stateElapsedMs < duration) {
       return false;
@@ -57,16 +60,24 @@ export class DirectorSystem {
     return this.stateElapsedMs / this.getStateDurationMs(this.state);
   }
 
-  getSpawnRateMultiplier(difficultyTier = 0) {
+  getElapsedMinutes() {
+    return this.totalElapsedMs / 60000;
+  }
+
+  getDifficultyMultiplier() {
+    return DIRECTOR_DIFFICULTY_SCALING.base + this.getElapsedMinutes() * DIRECTOR_DIFFICULTY_SCALING.perMinute;
+  }
+
+  getSpawnRateMultiplier() {
+    const difficulty = this.getDifficultyMultiplier();
+
     if (this.state === DIRECTOR_STATE.BUILD) {
-      return lerp(DIRECTOR_SPAWN_RATE.buildStart, DIRECTOR_SPAWN_RATE.buildEnd, this.getStateProgress());
+      return lerp(DIRECTOR_SPAWN_RATE.buildStart, DIRECTOR_SPAWN_RATE.buildEnd, this.getStateProgress()) * difficulty;
     }
     if (this.state === DIRECTOR_STATE.PEAK) {
-      const tier = Math.max(0, Math.floor(difficultyTier));
-      const peakDifficultyBonus = 1 + Math.min(DIRECTOR_SPAWN_RATE.peakTierBonusCap, tier * DIRECTOR_SPAWN_RATE.peakTierBonusPerTier);
-      return DIRECTOR_SPAWN_RATE.peakBase * peakDifficultyBonus;
+      return DIRECTOR_SPAWN_RATE.peakBase * difficulty;
     }
-    return DIRECTOR_SPAWN_RATE.relief;
+    return DIRECTOR_SPAWN_RATE.relief * difficulty;
   }
 
   getEnemySpeedMultiplier() {
@@ -87,6 +98,14 @@ export class DirectorSystem {
       return DIRECTOR_ELITE_CHANCE.peak;
     }
     return DIRECTOR_ELITE_CHANCE.relief;
+  }
+
+  getEnemyHpMultiplier() {
+    return this.getDifficultyMultiplier();
+  }
+
+  getEnemyDamageMultiplier() {
+    return this.getDifficultyMultiplier();
   }
 }
 

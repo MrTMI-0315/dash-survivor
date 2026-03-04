@@ -5,11 +5,6 @@ export const SAFE_RADIUS = 300;
 export const BASE_SPAWN_CHECK_INTERVAL_MS = 250;
 export const BOSS_SPAWN_INTERVAL_MS = 90000;
 
-export const DIFFICULTY_STEP_MS = 120000;
-export const HP_SCALING_PER_STEP = 0.1;
-export const SPEED_SCALING_PER_STEP = 0.05;
-export const SPAWN_SCALING_PER_STEP = 0.1;
-
 export const TARGET_ENEMY_CURVE = [
   { startSec: 0, endSec: 20, from: 3, to: 7 },
   { startSec: 20, endSec: 60, from: 7, to: 16 },

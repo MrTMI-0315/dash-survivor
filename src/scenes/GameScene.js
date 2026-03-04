@@ -8,13 +8,9 @@ import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS } from "../config/enemies.j
 import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
   BOSS_SPAWN_INTERVAL_MS,
-  DIFFICULTY_STEP_MS,
   ENEMY_POOL_SIZE,
-  HP_SCALING_PER_STEP,
   SAFE_RADIUS,
   SPAWN_BURST_CONFIG,
-  SPAWN_SCALING_PER_STEP,
-  SPEED_SCALING_PER_STEP,
   TARGET_ENEMY_CURVE,
   TARGET_ENEMY_FALLBACK,
   WORLD_HEIGHT,
@@ -271,8 +267,13 @@ export class GameScene extends Phaser.Scene {
     this.performAutoAttack(time);
 
     const speedMultiplier = this.getEffectiveEnemySpeedMultiplier();
+    const damageMultiplier = this.director.getEnemyDamageMultiplier();
     this.enemies.getChildren().forEach((enemy) => {
+      if (!enemy.active) {
+        return;
+      }
       enemy.speed = enemy.baseSpeed * speedMultiplier;
+      enemy.damage = Math.max(1, Math.round(enemy.baseDamage * damageMultiplier));
       enemy.chase(this.player, delta, time);
       enemy.tryApplyPoisonAura(this.player, time);
     });
@@ -374,30 +375,12 @@ export class GameScene extends Phaser.Scene {
     return Math.min(deficit, burst);
   }
 
-  getDifficultyTier() {
-    return Math.floor(this.runTimeMs / DIFFICULTY_STEP_MS);
-  }
-
-  getDifficultyMultipliers() {
-    const tier = this.getDifficultyTier();
-    return {
-      tier,
-      hpMultiplier: 1 + tier * HP_SCALING_PER_STEP,
-      speedMultiplier: 1 + tier * SPEED_SCALING_PER_STEP,
-      spawnMultiplier: 1 + tier * SPAWN_SCALING_PER_STEP
-    };
-  }
-
   getEffectiveSpawnRateMultiplier() {
-    const difficulty = this.getDifficultyMultipliers();
-    const directorSpawn = this.director.getSpawnRateMultiplier(difficulty.tier);
-    return directorSpawn * difficulty.spawnMultiplier;
+    return this.director.getSpawnRateMultiplier();
   }
 
   getEffectiveEnemySpeedMultiplier() {
-    const difficulty = this.getDifficultyMultipliers();
-    const directorSpeed = this.director.getEnemySpeedMultiplier();
-    return directorSpeed * difficulty.speedMultiplier;
+    return this.director.getEnemySpeedMultiplier();
   }
 
   maintainEnemyDensity() {
@@ -428,9 +411,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     const type = this.pickEnemyArchetype();
-    const difficulty = this.getDifficultyMultipliers();
+    const hpMultiplier = this.director.getEnemyHpMultiplier();
     const baseHp = ENEMY_ARCHETYPE_CONFIGS[type]?.hp ?? ENEMY_ARCHETYPE_CONFIGS.chaser.hp;
-    const scaledHp = Math.max(1, Math.round(baseHp * difficulty.hpMultiplier));
+    const scaledHp = Math.max(1, Math.round(baseHp * hpMultiplier));
     const groupCount = type === "swarm" ? Phaser.Math.Between(3, 5) : 1;
     const anchor = this.getSpawnPosition();
 
@@ -477,8 +460,8 @@ export class GameScene extends Phaser.Scene {
   spawnBossEnemy() {
     const spawnPosition = this.getSpawnPosition();
     const boss = new BossEnemy(this, spawnPosition.x, spawnPosition.y);
-    const difficulty = this.getDifficultyMultipliers();
-    boss.hp = Math.max(1, Math.round(boss.hp * difficulty.hpMultiplier));
+    const hpMultiplier = this.director.getEnemyHpMultiplier();
+    boss.hp = Math.max(1, Math.round(boss.hp * hpMultiplier));
     boss.setData("lastDashHitId", -1);
     boss.setData("archetype", "boss");
     this.enemies.add(boss);
