@@ -23,6 +23,7 @@ const TERRAIN_OBSTACLE_MAX_COUNT = 10;
 const TERRAIN_OBSTACLE_WORLD_MARGIN = 120;
 const TERRAIN_OBSTACLE_SAFE_RADIUS_FROM_PLAYER = 220;
 const TERRAIN_OBSTACLE_MIN_GAP = 130;
+const XP_MAGNET_RADIUS_PER_LEVEL = 6;
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -1011,7 +1012,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   pullXpOrbsToPlayer() {
-    const pickupRadius = Math.max(0, this.player.pickupRadius || 0);
+    const basePickupRadius = Math.max(0, this.player.pickupRadius || 0);
+    const levelBonusRadius = Math.max(0, this.level - 1) * XP_MAGNET_RADIUS_PER_LEVEL;
+    const pickupRadius = basePickupRadius + levelBonusRadius;
     if (pickupRadius <= 0) {
       return;
     }
