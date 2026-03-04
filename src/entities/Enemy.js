@@ -10,7 +10,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
+    this.setCollideWorldBounds(true);
+    this.resetForSpawn(config);
+  }
 
+  resetForSpawn(config = {}) {
     this.type = config.type ?? "chaser";
     const archetype = getArchetypeConfig(this.type);
 
@@ -28,13 +32,37 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.dashVx = 0;
     this.dashVy = 0;
     this.nextPoisonTickAtMs = 0;
-    this.flashToken = 0;
+    this.flashToken = (this.flashToken ?? 0) + 1;
 
     this.baseTint = config.tint ?? archetype.tint;
     this.setScale(config.scale ?? archetype.scale);
     this.setCircle(config.radius ?? archetype.radius, 0, 0);
-    this.setCollideWorldBounds(true);
+    const spawnX = config.x ?? this.x;
+    const spawnY = config.y ?? this.y;
     this.setTint(this.baseTint);
+    this.setData("inPool", false);
+
+    if (this.body) {
+      this.enableBody(true, spawnX, spawnY, true, true);
+      this.body.setVelocity(0, 0);
+    } else {
+      this.setPosition(spawnX, spawnY);
+      this.setActive(true);
+      this.setVisible(true);
+    }
+  }
+
+  resetForPool() {
+    this.flashToken += 1;
+    this.knockbackVx = 0;
+    this.knockbackVy = 0;
+    this.dashVx = 0;
+    this.dashVy = 0;
+    this.abilityNextAtMs = 0;
+    this.abilityUntilMs = 0;
+    this.nextPoisonTickAtMs = 0;
+    this.setData("inPool", true);
+    this.disableBody(true, true);
   }
 
   chase(target, deltaMs = 0, nowMs = 0) {

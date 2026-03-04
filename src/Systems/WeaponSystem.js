@@ -444,6 +444,11 @@ export class WeaponSystem {
       return;
     }
 
+    if (this.scene.handleEnemyDefeat) {
+      this.scene.handleEnemyDefeat(enemy);
+      return;
+    }
+
     this.scene.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
     enemy.destroy();
   }

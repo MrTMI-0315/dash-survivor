@@ -1,14 +1,15 @@
 import { Player } from "../entities/Player.js";
-import { Enemy } from "../entities/Enemy.js";
 import { BossEnemy } from "../entities/BossEnemy.js";
 import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
 import { WeaponSystem } from "../Systems/WeaponSystem.js";
 import { MetaProgressionSystem } from "../Systems/MetaProgressionSystem.js";
+import { ObjectPool } from "../Systems/ObjectPool.js";
 import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS } from "../config/enemies.js";
 import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
   BOSS_SPAWN_INTERVAL_MS,
   DIFFICULTY_STEP_MS,
+  ENEMY_POOL_SIZE,
   HP_SCALING_PER_STEP,
   SAFE_RADIUS,
   SPAWN_BURST_CONFIG,
@@ -132,6 +133,7 @@ export class GameScene extends Phaser.Scene {
     this.runMetaCurrency = 0;
     this.lastRunMetaCurrency = 0;
     this.metaSettled = false;
+    this.enemyPool = null;
   }
 
   create() {
@@ -163,6 +165,7 @@ export class GameScene extends Phaser.Scene {
 
     this.player = new Player(this, WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
     this.enemies = this.add.group();
+    this.enemyPool = new ObjectPool(this, this.enemies, { initialSize: ENEMY_POOL_SIZE });
     this.xpOrbs = this.physics.add.group();
 
     this.keys = this.input.keyboard.addKeys({
@@ -443,7 +446,10 @@ export class GameScene extends Phaser.Scene {
         spawnY = fallback.y;
       }
 
-      const enemy = new Enemy(this, spawnX, spawnY, { type, hp: scaledHp });
+      const enemy = this.enemyPool.acquire(type, { x: spawnX, y: spawnY, hp: scaledHp });
+      if (!enemy) {
+        continue;
+      }
       enemy.setData("lastDashHitId", -1);
       enemy.setData("archetype", type);
 
@@ -458,7 +464,6 @@ export class GameScene extends Phaser.Scene {
         enemy.setElite(eliteType);
       }
 
-      this.enemies.add(enemy);
     }
   }
 
@@ -606,8 +611,7 @@ export class GameScene extends Phaser.Scene {
       enemy.applyKnockbackFrom(player.x, player.y, 360);
 
       if (enemy.isDead()) {
-        this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
-        enemy.destroy();
+        this.handleEnemyDefeat(enemy);
       }
       return;
     }
@@ -665,8 +669,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (nearestEnemy.isDead()) {
-      this.spawnXpOrb(nearestEnemy.x, nearestEnemy.y, nearestEnemy.xpValue);
-      nearestEnemy.destroy();
+      this.handleEnemyDefeat(nearestEnemy);
     }
   }
 
@@ -674,6 +677,21 @@ export class GameScene extends Phaser.Scene {
     const orb = this.xpOrbs.create(x, y, "xp_orb");
     orb.setCircle(6, 0, 0);
     orb.xpValue = value;
+  }
+
+  handleEnemyDefeat(enemy) {
+    if (!enemy || !enemy.active) {
+      return;
+    }
+
+    this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
+
+    if (enemy.getData("pooledEnemy") === true) {
+      this.enemyPool.release(enemy);
+      return;
+    }
+
+    enemy.destroy();
   }
 
   handleXpOrbPickup(_, orb) {
