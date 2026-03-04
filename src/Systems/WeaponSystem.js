@@ -1,4 +1,9 @@
-import { WEAPON_DEFINITIONS, WEAPON_EVOLUTION_RULES } from "../config/weapons.js";
+import {
+  PROJECTILE_POOL_SIZE_BY_TEXTURE,
+  PROJECTILE_TEXTURE_BY_WEAPON,
+  WEAPON_DEFINITIONS,
+  WEAPON_EVOLUTION_RULES
+} from "../config/weapons.js";
 
 function getWeaponDefinition(type) {
   return WEAPON_DEFINITIONS[type] ?? null;
@@ -8,6 +13,7 @@ export class WeaponSystem {
   constructor(scene, player) {
     this.scene = scene;
     this.player = player;
+    this.projectilePoolByTexture = new Map();
 
     this.projectiles = scene.physics.add.group({
       allowGravity: false,
@@ -19,8 +25,73 @@ export class WeaponSystem {
       immovable: true
     });
 
+    this.preallocateProjectilePool();
+
     scene.physics.add.overlap(this.projectiles, scene.enemies, this.handleProjectileHit, null, this);
     scene.physics.add.overlap(this.orbitBlades, scene.enemies, this.handleOrbitBladeHit, null, this);
+  }
+
+  preallocateProjectilePool() {
+    Object.entries(PROJECTILE_POOL_SIZE_BY_TEXTURE).forEach(([texture, size]) => {
+      const freeList = [];
+      for (let i = 0; i < size; i += 1) {
+        const projectile = this.projectiles.create(-1000, -1000, texture);
+        projectile.setData("poolTexture", texture);
+        projectile.setData("inProjectilePool", true);
+        projectile.speed = 0;
+        projectile.maxDistance = 0;
+        projectile.travelled = 0;
+        projectile.damage = 0;
+        projectile.knockbackForce = 0;
+        projectile.behavior = "fast";
+        projectile.explosionRadius = 0;
+        projectile.explosionDamage = 0;
+        projectile.body.setCircle(projectile.displayWidth * 0.45, 0, 0);
+        projectile.disableBody(true, true);
+        freeList.push(projectile);
+      }
+      this.projectilePoolByTexture.set(texture, freeList);
+    });
+  }
+
+  acquireProjectile(texture) {
+    const freeList = this.projectilePoolByTexture.get(texture);
+    if (!freeList || freeList.length === 0) {
+      return null;
+    }
+
+    const projectile = freeList.pop();
+    projectile.setData("inProjectilePool", false);
+    return projectile;
+  }
+
+  releaseProjectile(projectile) {
+    if (!projectile) {
+      return;
+    }
+
+    if (projectile.getData("inProjectilePool") === true) {
+      return;
+    }
+
+    const texture = projectile.getData("poolTexture") ?? projectile.texture.key;
+    const freeList = this.projectilePoolByTexture.get(texture);
+    if (!freeList) {
+      projectile.destroy();
+      return;
+    }
+
+    projectile.speed = 0;
+    projectile.maxDistance = 0;
+    projectile.travelled = 0;
+    projectile.damage = 0;
+    projectile.knockbackForce = 0;
+    projectile.behavior = "fast";
+    projectile.explosionRadius = 0;
+    projectile.explosionDamage = 0;
+    projectile.setData("inProjectilePool", true);
+    projectile.disableBody(true, true);
+    freeList.push(projectile);
   }
 
   addWeapon(baseType) {
@@ -181,7 +252,7 @@ export class WeaponSystem {
 
       projectile.travelled += (projectile.speed * delta) / 1000;
       if (projectile.travelled >= projectile.maxDistance) {
-        projectile.destroy();
+        this.releaseProjectile(projectile);
       }
     });
   }
@@ -256,20 +327,18 @@ export class WeaponSystem {
       return false;
     }
 
-    this.spawnProjectile({
-      texture: "proj_dagger",
-      sourceX: this.player.x,
-      sourceY: this.player.y,
-      targetX: target.x,
-      targetY: target.y,
-      speed: weapon.projectileSpeed,
-      maxDistance: weapon.range,
-      damage: weapon.damage,
-      knockbackForce: weapon.knockbackForce,
-      behavior: weapon.projectileBehavior
-    });
-
-    return true;
+    return this.spawnProjectile(
+      weapon.type,
+      { x: this.player.x, y: this.player.y },
+      { x: target.x - this.player.x, y: target.y - this.player.y },
+      {
+        speed: weapon.projectileSpeed,
+        maxDistance: weapon.range,
+        damage: weapon.damage,
+        knockbackForce: weapon.knockbackForce,
+        behavior: weapon.projectileBehavior
+      }
+    );
   }
 
   fireFireball(weapon) {
@@ -278,22 +347,20 @@ export class WeaponSystem {
       return false;
     }
 
-    this.spawnProjectile({
-      texture: "proj_fireball",
-      sourceX: this.player.x,
-      sourceY: this.player.y,
-      targetX: target.x,
-      targetY: target.y,
-      speed: weapon.projectileSpeed,
-      maxDistance: weapon.range,
-      damage: weapon.damage,
-      knockbackForce: weapon.knockbackForce,
-      behavior: weapon.projectileBehavior,
-      explosionRadius: weapon.explosionRadius,
-      explosionDamage: Math.round(weapon.damage * weapon.explosionDamageMultiplier)
-    });
-
-    return true;
+    return this.spawnProjectile(
+      weapon.type,
+      { x: this.player.x, y: this.player.y },
+      { x: target.x - this.player.x, y: target.y - this.player.y },
+      {
+        speed: weapon.projectileSpeed,
+        maxDistance: weapon.range,
+        damage: weapon.damage,
+        knockbackForce: weapon.knockbackForce,
+        behavior: weapon.projectileBehavior,
+        explosionRadius: weapon.explosionRadius,
+        explosionDamage: Math.round(weapon.damage * weapon.explosionDamageMultiplier)
+      }
+    );
   }
 
   fireMeteor(weapon) {
@@ -302,22 +369,20 @@ export class WeaponSystem {
       return false;
     }
 
-    this.spawnProjectile({
-      texture: "proj_meteor",
-      sourceX: this.player.x,
-      sourceY: this.player.y,
-      targetX: target.x,
-      targetY: target.y,
-      speed: weapon.projectileSpeed,
-      maxDistance: weapon.range,
-      damage: weapon.damage,
-      knockbackForce: weapon.knockbackForce,
-      behavior: weapon.projectileBehavior,
-      explosionRadius: weapon.explosionRadius,
-      explosionDamage: Math.round(weapon.damage * weapon.explosionDamageMultiplier)
-    });
-
-    return true;
+    return this.spawnProjectile(
+      weapon.type,
+      { x: this.player.x, y: this.player.y },
+      { x: target.x - this.player.x, y: target.y - this.player.y },
+      {
+        speed: weapon.projectileSpeed,
+        maxDistance: weapon.range,
+        damage: weapon.damage,
+        knockbackForce: weapon.knockbackForce,
+        behavior: weapon.projectileBehavior,
+        explosionRadius: weapon.explosionRadius,
+        explosionDamage: Math.round(weapon.damage * weapon.explosionDamageMultiplier)
+      }
+    );
   }
 
   fireLightning(weapon) {
@@ -357,11 +422,19 @@ export class WeaponSystem {
     return true;
   }
 
-  spawnProjectile(config) {
-    const projectile = this.projectiles.create(config.sourceX, config.sourceY, config.texture);
+  spawnProjectile(type, position, direction, config = {}) {
+    const texture = PROJECTILE_TEXTURE_BY_WEAPON[type];
+    if (!texture) {
+      return false;
+    }
 
-    const dx = config.targetX - config.sourceX;
-    const dy = config.targetY - config.sourceY;
+    const projectile = this.acquireProjectile(texture);
+    if (!projectile) {
+      return false;
+    }
+
+    const dx = direction.x ?? 0;
+    const dy = direction.y ?? 0;
     const dist = Math.hypot(dx, dy);
     const nx = dist > 0.0001 ? dx / dist : 1;
     const ny = dist > 0.0001 ? dy / dist : 0;
@@ -375,8 +448,9 @@ export class WeaponSystem {
     projectile.explosionRadius = config.explosionRadius ?? 0;
     projectile.explosionDamage = config.explosionDamage ?? 0;
 
-    projectile.body.setCircle(projectile.displayWidth * 0.45, 0, 0);
+    projectile.enableBody(true, position.x, position.y, true, true);
     projectile.body.setVelocity(nx * config.speed, ny * config.speed);
+    return true;
   }
 
   handleProjectileHit(projectile, enemy) {
@@ -384,13 +458,19 @@ export class WeaponSystem {
       return;
     }
 
-    this.applyDamage(enemy, projectile.damage, projectile.knockbackForce, projectile.x, projectile.y);
+    const hitX = projectile.x;
+    const hitY = projectile.y;
+    const explosionRadius = projectile.explosionRadius;
+    const explosionDamage = projectile.explosionDamage;
+    const behavior = projectile.behavior;
 
-    if (projectile.behavior === "explosion" || projectile.behavior === "meteor_explosion") {
-      this.triggerExplosion(projectile.x, projectile.y, projectile.explosionRadius, projectile.explosionDamage);
+    this.applyDamage(enemy, projectile.damage, projectile.knockbackForce, hitX, hitY);
+
+    if (behavior === "explosion" || behavior === "meteor_explosion") {
+      this.triggerExplosion(hitX, hitY, explosionRadius, explosionDamage);
     }
 
-    projectile.destroy();
+    this.releaseProjectile(projectile);
   }
 
   handleOrbitBladeHit(blade, enemy) {

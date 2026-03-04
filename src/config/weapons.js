@@ -67,3 +67,15 @@ export const WEAPON_EVOLUTION_RULES = [
     evolution: "orbit_blades"
   }
 ];
+
+export const PROJECTILE_TEXTURE_BY_WEAPON = {
+  dagger: "proj_dagger",
+  fireball: "proj_fireball",
+  meteor: "proj_meteor"
+};
+
+export const PROJECTILE_POOL_SIZE_BY_TEXTURE = {
+  proj_dagger: 520,
+  proj_fireball: 240,
+  proj_meteor: 180
+};
