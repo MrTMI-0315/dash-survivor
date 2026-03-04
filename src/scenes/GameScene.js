@@ -72,6 +72,11 @@ export class GameScene extends Phaser.Scene {
     this.terrainObstacleAnchors = [];
     this.gameOverRestartButton = null;
     this.gameOverRestartLabel = null;
+    this.hudBarsGraphics = null;
+    this.hudLevelText = null;
+    this.hudStatsText = null;
+    this.hudDashStatusText = null;
+    this.levelUpOptionActions = [];
   }
 
   create() {
@@ -133,16 +138,37 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
 
-    this.hudText = this.add
-      .text(16, 14, "", {
+    this.hudLevelText = this.add
+      .text(16, 12, "", {
         fontFamily: "Arial",
-        fontSize: "20px",
+        fontSize: "22px",
         color: "#f8fbff",
         stroke: "#0f1728",
         strokeThickness: 4
       })
       .setScrollFactor(0)
       .setDepth(10);
+    this.hudStatsText = this.add
+      .text(16, 38, "", {
+        fontFamily: "Arial",
+        fontSize: "16px",
+        color: "#d7ecff",
+        stroke: "#0f1728",
+        strokeThickness: 3
+      })
+      .setScrollFactor(0)
+      .setDepth(10);
+    this.hudDashStatusText = this.add
+      .text(16, 96, "", {
+        fontFamily: "Arial",
+        fontSize: "16px",
+        color: "#e8f5ff",
+        stroke: "#0f1728",
+        strokeThickness: 3
+      })
+      .setScrollFactor(0)
+      .setDepth(10);
+    this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
 
     this.gameOverText = this.add
       .text(640, 360, "GAME OVER", {
@@ -207,6 +233,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.isLeveling) {
+      this.handleLevelUpInput();
       this.player.body.setVelocity(0, 0);
       this.updateHud();
       return;
@@ -1094,22 +1121,32 @@ export class GameScene extends Phaser.Scene {
 
     this.pendingLevelUps -= 1;
     this.isLeveling = true;
+    this.levelUpOptionActions = [];
     this.physics.pause();
     this.player.body.setVelocity(0, 0);
 
     const centerX = 640;
     const centerY = 360;
     const panel = this.add
-      .rectangle(centerX, centerY, 520, 360, 0x070d18, 0.96)
+      .rectangle(centerX, centerY, 620, 420, 0x070d18, 0.96)
       .setStrokeStyle(2, 0x4f607d, 1)
       .setScrollFactor(0)
       .setDepth(30);
 
     const title = this.add
-      .text(centerX, centerY - 130, "Level Up - Choose One", {
+      .text(centerX, centerY - 158, "LEVEL UP", {
         fontFamily: "Arial",
-        fontSize: "30px",
+        fontSize: "38px",
         color: "#f8fbff"
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(31);
+    const subtitle = this.add
+      .text(centerX, centerY - 124, "Choose one upgrade", {
+        fontFamily: "Arial",
+        fontSize: "18px",
+        color: "#bfd7ef"
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -1119,21 +1156,30 @@ export class GameScene extends Phaser.Scene {
     const optionObjects = [];
 
     choices.forEach((upgrade, index) => {
-      const y = centerY - 45 + index * 92;
+      const y = centerY - 40 + index * 94;
       const box = this.add
-        .rectangle(centerX, y, 450, 72, 0x17233a, 1)
+        .rectangle(centerX, y, 530, 80, 0x17233a, 1)
         .setStrokeStyle(1, 0x4f607d, 1)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(31);
 
-      const label = this.add
-        .text(centerX, y, `${upgrade.label} - ${upgrade.description}`, {
+      const heading = this.add
+        .text(centerX - 244, y - 14, `[${index + 1}] ${upgrade.label}`, {
           fontFamily: "Arial",
-          fontSize: "21px",
-          color: "#e9f4ff"
+          fontSize: "24px",
+          color: "#eaf6ff"
         })
-        .setOrigin(0.5)
+        .setOrigin(0, 0.5)
+        .setScrollFactor(0)
+        .setDepth(32);
+      const description = this.add
+        .text(centerX - 244, y + 16, upgrade.description, {
+          fontFamily: "Arial",
+          fontSize: "16px",
+          color: "#c6dcf2"
+        })
+        .setOrigin(0, 0.5)
         .setScrollFactor(0)
         .setDepth(32);
 
@@ -1142,12 +1188,26 @@ export class GameScene extends Phaser.Scene {
         this.closeLevelUpChoices();
       };
       box.on("pointerdown", chooseUpgrade);
-      label.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
+      heading.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
+      description.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
+      this.levelUpOptionActions.push(chooseUpgrade);
 
-      optionObjects.push(box, label);
+      optionObjects.push(box, heading, description);
     });
 
-    this.levelUpUi = [panel, title, ...optionObjects];
+    this.levelUpUi = [panel, title, subtitle, ...optionObjects];
+  }
+
+  handleLevelUpInput() {
+    const indexes = [this.keys.meta1, this.keys.meta2, this.keys.meta3];
+    for (let i = 0; i < indexes.length; i += 1) {
+      if (Phaser.Input.Keyboard.JustDown(indexes[i])) {
+        const action = this.levelUpOptionActions[i];
+        if (action) {
+          action();
+        }
+      }
+    }
   }
 
   applyLevelUpUpgrade(upgrade) {
@@ -1208,6 +1268,7 @@ export class GameScene extends Phaser.Scene {
   closeLevelUpChoices() {
     this.levelUpUi.forEach((obj) => obj.destroy());
     this.levelUpUi = [];
+    this.levelUpOptionActions = [];
 
     this.isLeveling = false;
     this.physics.resume();
@@ -1319,8 +1380,45 @@ export class GameScene extends Phaser.Scene {
     const weaponCount = this.player.weapons.length;
     const passiveCount = Object.keys(this.player.passives).length;
     const metaLiveTotal = this.metaData.currency + this.runMetaCurrency;
-    this.hudText.setText(
-      `DIR ${directorState}   LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   META ${metaLiveTotal}   WPN ${weaponCount}/${this.player.maxWeaponSlots}   PAS ${passiveCount}   Enemies ${activeEnemies}/${this.targetEnemies}`
+    const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
+    const dashRatio = Phaser.Math.Clamp(this.player.getDashRatio(), 0, 1);
+    const barX = 16;
+    const xpBarY = 68;
+    const dashBarY = 92;
+    const barWidth = 280;
+    const barHeight = 14;
+
+    this.hudLevelText.setText(`LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   DIR ${directorState}`);
+    this.hudStatsText.setText(
+      `XP ${this.currentXp}/${this.xpToNext}   Enemies ${activeEnemies}/${this.targetEnemies}   WPN ${weaponCount}/${this.player.maxWeaponSlots}   PAS ${passiveCount}   META ${metaLiveTotal}`
     );
+
+    let dashStatus = `Dash Charging ${dashPercent}%`;
+    if (this.player.isDashing()) {
+      dashStatus = "Dash Active";
+    } else if (dashPercent >= 100) {
+      dashStatus = "Dash Ready";
+    }
+    this.hudDashStatusText.setText(dashStatus);
+
+    if (this.hudBarsGraphics) {
+      this.hudBarsGraphics.clear();
+      this.hudBarsGraphics.fillStyle(0x101c2e, 0.8);
+      this.hudBarsGraphics.fillRoundedRect(barX, xpBarY, barWidth, barHeight, 4);
+      this.hudBarsGraphics.fillRoundedRect(barX, dashBarY, barWidth, barHeight, 4);
+      this.hudBarsGraphics.fillStyle(0x66f5b2, 0.95);
+      this.hudBarsGraphics.fillRoundedRect(barX + 1, xpBarY + 1, Math.max(2, (barWidth - 2) * xpRatio), barHeight - 2, 3);
+      this.hudBarsGraphics.fillStyle(dashRatio >= 1 ? 0xffd166 : 0x7fd8ff, 0.95);
+      this.hudBarsGraphics.fillRoundedRect(
+        barX + 1,
+        dashBarY + 1,
+        Math.max(2, (barWidth - 2) * dashRatio),
+        barHeight - 2,
+        3
+      );
+      this.hudBarsGraphics.lineStyle(1, 0x91a6c8, 0.9);
+      this.hudBarsGraphics.strokeRoundedRect(barX, xpBarY, barWidth, barHeight, 4);
+      this.hudBarsGraphics.strokeRoundedRect(barX, dashBarY, barWidth, barHeight, 4);
+    }
   }
 }
