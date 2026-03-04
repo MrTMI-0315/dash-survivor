@@ -45,7 +45,12 @@ export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
 
-    this.spawnIntervalMs = 1100;
+    this.safeRadius = 300;
+    this.spawnCheckIntervalMs = 250;
+    this.spawnAccumulatorMs = 0;
+    this.runTimeMs = 0;
+    this.targetEnemies = 0;
+
     this.attackIntervalMs = 800;
     this.attackRange = 120;
     this.attackDamage = 10;
@@ -69,6 +74,9 @@ export class GameScene extends Phaser.Scene {
     this.pendingLevelUps = 0;
     this.isLeveling = false;
     this.levelUpUi = [];
+    this.spawnAccumulatorMs = 0;
+    this.runTimeMs = 0;
+    this.targetEnemies = 0;
 
     this.createTextures();
     this.drawArena();
@@ -90,17 +98,6 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, this.enemies, this.handlePlayerEnemyCollision, null, this);
     this.physics.add.overlap(this.player, this.xpOrbs, this.handleXpOrbPickup, null, this);
-
-    this.time.addEvent({
-      delay: this.spawnIntervalMs,
-      loop: true,
-      callback: this.spawnEnemy,
-      callbackScope: this
-    });
-
-    for (let i = 0; i < 4; i += 1) {
-      this.spawnEnemy();
-    }
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
@@ -130,6 +127,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(12)
       .setVisible(false);
 
+    this.maintainEnemyDensity();
     this.updateHud();
   }
 
@@ -145,6 +143,13 @@ export class GameScene extends Phaser.Scene {
       this.player.body.setVelocity(0, 0);
       this.updateHud();
       return;
+    }
+
+    this.runTimeMs += delta;
+    this.spawnAccumulatorMs += delta;
+    if (this.spawnAccumulatorMs >= this.spawnCheckIntervalMs) {
+      this.spawnAccumulatorMs = 0;
+      this.maintainEnemyDensity();
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.dash)) {
@@ -197,30 +202,66 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnEnemy() {
+  getTargetEnemyCount(seconds) {
+    if (seconds < 20) {
+      return Phaser.Math.Linear(3, 7, seconds / 20);
+    }
+    if (seconds < 60) {
+      return Phaser.Math.Linear(7, 16, (seconds - 20) / 40);
+    }
+    if (seconds < 100) {
+      return Phaser.Math.Linear(16, 26, (seconds - 60) / 40);
+    }
+    if (seconds < 150) {
+      return Phaser.Math.Linear(26, 18, (seconds - 100) / 50);
+    }
+    if (seconds < 240) {
+      return Phaser.Math.Linear(18, 24, (seconds - 150) / 90);
+    }
+    return 24;
+  }
+
+  getSpawnBurst(seconds, deficit) {
+    let burst = 1;
+    if (seconds >= 35) {
+      burst = 2;
+    }
+    if (seconds >= 70) {
+      burst = 3;
+    }
+    if (seconds >= 120) {
+      burst = 2;
+    }
+    return Math.min(deficit, burst);
+  }
+
+  maintainEnemyDensity() {
     if (this.isGameOver || this.isLeveling) {
       return;
     }
 
-    const side = Phaser.Math.Between(0, 3);
-    let x = 0;
-    let y = 0;
+    const seconds = this.runTimeMs / 1000;
+    this.targetEnemies = Math.round(this.getTargetEnemyCount(seconds));
 
-    if (side === 0) {
-      x = Phaser.Math.Between(0, WORLD_WIDTH);
-      y = 10;
-    } else if (side === 1) {
-      x = WORLD_WIDTH - 10;
-      y = Phaser.Math.Between(0, WORLD_HEIGHT);
-    } else if (side === 2) {
-      x = Phaser.Math.Between(0, WORLD_WIDTH);
-      y = WORLD_HEIGHT - 10;
-    } else {
-      x = 10;
-      y = Phaser.Math.Between(0, WORLD_HEIGHT);
+    const aliveEnemies = this.getAliveEnemyCount();
+    if (aliveEnemies >= this.targetEnemies) {
+      return;
     }
 
-    const enemy = new Enemy(this, x, y, {
+    const deficit = this.targetEnemies - aliveEnemies;
+    const spawnCount = this.getSpawnBurst(seconds, deficit);
+    for (let i = 0; i < spawnCount; i += 1) {
+      this.spawnEnemyFromEdge();
+    }
+  }
+
+  spawnEnemyFromEdge() {
+    if (this.isGameOver || this.isLeveling) {
+      return;
+    }
+
+    const spawnPosition = this.getSpawnPosition();
+    const enemy = new Enemy(this, spawnPosition.x, spawnPosition.y, {
       hp: 20,
       speed: 80,
       damage: 10,
@@ -229,6 +270,73 @@ export class GameScene extends Phaser.Scene {
     enemy.setData("lastDashHitId", -1);
 
     this.enemies.add(enemy);
+  }
+
+  getSpawnPosition() {
+    const view = this.cameras.main.worldView;
+    const margin = 90;
+
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      const side = Phaser.Math.Between(0, 3);
+      let x;
+      let y;
+
+      if (side === 0) {
+        x = Phaser.Math.Between(view.left, view.right);
+        y = view.top - margin;
+      } else if (side === 1) {
+        x = view.right + margin;
+        y = Phaser.Math.Between(view.top, view.bottom);
+      } else if (side === 2) {
+        x = Phaser.Math.Between(view.left, view.right);
+        y = view.bottom + margin;
+      } else {
+        x = view.left - margin;
+        y = Phaser.Math.Between(view.top, view.bottom);
+      }
+
+      x = Phaser.Math.Clamp(x, 12, WORLD_WIDTH - 12);
+      y = Phaser.Math.Clamp(y, 12, WORLD_HEIGHT - 12);
+
+      const isOutsideView = !Phaser.Geom.Rectangle.Contains(view, x, y);
+      const isOutsideSafeRadius = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > this.safeRadius;
+      if (isOutsideView && isOutsideSafeRadius) {
+        return { x, y };
+      }
+    }
+
+    const fallbackCandidates = [
+      {
+        x: Phaser.Math.Clamp(view.left - margin, 12, WORLD_WIDTH - 12),
+        y: Phaser.Math.Clamp(Phaser.Math.Between(view.top, view.bottom), 12, WORLD_HEIGHT - 12)
+      },
+      {
+        x: Phaser.Math.Clamp(view.right + margin, 12, WORLD_WIDTH - 12),
+        y: Phaser.Math.Clamp(Phaser.Math.Between(view.top, view.bottom), 12, WORLD_HEIGHT - 12)
+      },
+      {
+        x: Phaser.Math.Clamp(Phaser.Math.Between(view.left, view.right), 12, WORLD_WIDTH - 12),
+        y: Phaser.Math.Clamp(view.top - margin, 12, WORLD_HEIGHT - 12)
+      },
+      {
+        x: Phaser.Math.Clamp(Phaser.Math.Between(view.left, view.right), 12, WORLD_WIDTH - 12),
+        y: Phaser.Math.Clamp(view.bottom + margin, 12, WORLD_HEIGHT - 12)
+      }
+    ];
+
+    let best = fallbackCandidates[0];
+    let bestScore = Number.NEGATIVE_INFINITY;
+    fallbackCandidates.forEach((candidate) => {
+      const outsideBonus = Phaser.Geom.Rectangle.Contains(view, candidate.x, candidate.y) ? 0 : 100000;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, candidate.x, candidate.y);
+      const score = outsideBonus + distance;
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+    });
+
+    return best;
   }
 
   handlePlayerEnemyCollision(player, enemy) {
@@ -427,11 +535,15 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  getAliveEnemyCount() {
+    return this.enemies.getChildren().filter((enemy) => enemy.active).length;
+  }
+
   updateHud() {
-    const activeEnemies = this.enemies.getChildren().filter((enemy) => enemy.active).length;
+    const activeEnemies = this.getAliveEnemyCount();
     const dashPercent = Math.floor(this.player.getDashRatio() * 100);
     this.hudText.setText(
-      `LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   Enemies ${activeEnemies}`
+      `LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   Enemies ${activeEnemies}/${this.targetEnemies}`
     );
   }
 }
