@@ -71,11 +71,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.dashVx = 0;
     this.dashVy = 0;
     this.nextPoisonTickAtMs = 0;
+    this.flashToken = 0;
 
+    this.baseTint = config.tint ?? archetype.tint;
     this.setScale(config.scale ?? archetype.scale);
     this.setCircle(config.radius ?? archetype.radius, 0, 0);
     this.setCollideWorldBounds(true);
-    this.setTint(config.tint ?? archetype.tint);
+    this.setTint(this.baseTint);
   }
 
   chase(target, deltaMs = 0, nowMs = 0) {
@@ -139,11 +141,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(amount) {
     this.hp = Math.max(0, this.hp - amount);
+    this.flashToken += 1;
+    const flashToken = this.flashToken;
 
     this.setTint(0xffffff);
+    if (this.scene.spawnDamageParticles) {
+      this.scene.spawnDamageParticles(this.x, this.y, this.isElite ? 8 : 5);
+    }
     this.scene.time.delayedCall(80, () => {
-      if (this.active) {
-        this.clearTint();
+      if (this.active && this.flashToken === flashToken) {
+        this.setTint(this.baseTint);
       }
     });
   }
@@ -182,7 +189,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.xpValue = Math.round(this.xpValue * 2.2);
 
     this.setScale(this.scaleX * 1.14, this.scaleY * 1.14);
-    this.setTint(eliteConfig.tint);
+    this.baseTint = eliteConfig.tint;
+    this.setTint(this.baseTint);
   }
 
   tryApplyPoisonAura(target, nowMs) {

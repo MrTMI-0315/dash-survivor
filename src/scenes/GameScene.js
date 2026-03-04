@@ -117,6 +117,7 @@ export class GameScene extends Phaser.Scene {
     this.isLeveling = false;
     this.levelUpUi = [];
     this.isGameOver = false;
+    this.damageEmitter = null;
   }
 
   create() {
@@ -141,6 +142,7 @@ export class GameScene extends Phaser.Scene {
 
     this.createTextures();
     this.drawArena();
+    this.createDamageEmitter();
 
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
@@ -273,6 +275,34 @@ export class GameScene extends Phaser.Scene {
     this.generateCircleTexture("proj_fireball", 8, 0xff944d, 0xa84d1b);
     this.generateCircleTexture("proj_meteor", 11, 0xff8b44, 0x70220d);
     this.generateCircleTexture("proj_orbit_blade", 7, 0xc6e5ff, 0x5884ad);
+    this.generateCircleTexture("hit_particle", 2, 0xffffff, 0xffffff);
+  }
+
+  createDamageEmitter() {
+    if (this.damageEmitter) {
+      this.damageEmitter.destroy();
+    }
+
+    this.damageEmitter = this.add.particles(0, 0, "hit_particle", {
+      emitting: false,
+      quantity: 0,
+      frequency: -1,
+      speed: { min: 45, max: 180 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 90, max: 220 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 0.95, end: 0 },
+      tint: [0xffffff, 0xffd6ad, 0xffb87f],
+      blendMode: "ADD"
+    });
+    this.damageEmitter.setDepth(9);
+  }
+
+  spawnDamageParticles(x, y, count = 5) {
+    if (!this.damageEmitter) {
+      return;
+    }
+    this.damageEmitter.explode(Math.max(3, Math.min(12, count)), x, y);
   }
 
   generateCircleTexture(key, radius, fillColor, strokeColor) {
@@ -413,7 +443,7 @@ export class GameScene extends Phaser.Scene {
     boss.setData("archetype", "boss");
     this.enemies.add(boss);
 
-    this.cameras.main.shake(260, 0.0065);
+    this.cameras.main.shake(210, 0.0048);
     this.showHudAlert("BOSS INCOMING");
   }
 
@@ -551,6 +581,7 @@ export class GameScene extends Phaser.Scene {
     if (!damaged) {
       return;
     }
+    this.cameras.main.shake(85, 0.0019);
 
     if (!player.isDead()) {
       return;
