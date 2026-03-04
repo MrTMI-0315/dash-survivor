@@ -24,6 +24,11 @@ const TERRAIN_OBSTACLE_WORLD_MARGIN = 120;
 const TERRAIN_OBSTACLE_SAFE_RADIUS_FROM_PLAYER = 220;
 const TERRAIN_OBSTACLE_MIN_GAP = 130;
 const XP_MAGNET_RADIUS_PER_LEVEL = 6;
+const ELITE_BONUS_XP_ORB_MIN = 2;
+const ELITE_BONUS_XP_ORB_MAX = 4;
+const ELITE_BONUS_XP_ORB_VALUE_FACTOR = 0.35;
+const ELITE_UPGRADE_DROP_CHANCE = 0.28;
+const ELITE_BONUS_UPGRADE_IDS = ["weapon_damage", "attack_speed", "movement_speed", "pickup_radius", "projectile_count"];
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -50,6 +55,7 @@ export class GameScene extends Phaser.Scene {
     this.isGameOver = false;
     this.damageEmitter = null;
     this.killEmitter = null;
+    this.eliteKillEmitter = null;
     this.dashTrailEmitter = null;
     this.dashTrailTickMs = 0;
     this.metaSystem = new MetaProgressionSystem();
@@ -302,6 +308,12 @@ export class GameScene extends Phaser.Scene {
       { x: 9, y: 40 },
       { x: 9, y: 16 }
     ], 0x8a8f9f, 0x4f5568);
+    this.generatePolygonTexture("upgrade_orb", 10, [
+      { x: 10, y: 2 },
+      { x: 18, y: 10 },
+      { x: 10, y: 18 },
+      { x: 2, y: 10 }
+    ], 0xfff2a0, 0xb8831e);
     this.generateCircleTexture("xp_orb", 6, 0x66f5b2, 0x1f8d63);
     this.generateCircleTexture("proj_dagger", 4, 0xeef7ff, 0x7895af);
     this.generateCircleTexture("proj_fireball", 8, 0xff944d, 0xa84d1b);
@@ -316,6 +328,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.killEmitter) {
       this.killEmitter.destroy();
+    }
+    if (this.eliteKillEmitter) {
+      this.eliteKillEmitter.destroy();
     }
     if (this.dashTrailEmitter) {
       this.dashTrailEmitter.destroy();
@@ -349,6 +364,20 @@ export class GameScene extends Phaser.Scene {
     });
     this.killEmitter.setDepth(10);
 
+    this.eliteKillEmitter = this.add.particles(0, 0, "hit_particle", {
+      emitting: false,
+      quantity: 0,
+      frequency: -1,
+      speed: { min: 120, max: 300 },
+      angle: { min: 0, max: 360 },
+      lifespan: { min: 180, max: 360 },
+      scale: { start: 1.35, end: 0 },
+      alpha: { start: 1, end: 0 },
+      tint: [0xffffff, 0xa5f3ff, 0xc8a8ff],
+      blendMode: "ADD"
+    });
+    this.eliteKillEmitter.setDepth(11);
+
     this.dashTrailEmitter = this.add.particles(0, 0, "hit_particle", {
       emitting: false,
       quantity: 0,
@@ -376,6 +405,13 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.killEmitter.explode(Math.max(6, Math.min(20, count)), x, y);
+  }
+
+  spawnEliteKillParticles(x, y, count = 18) {
+    if (!this.eliteKillEmitter) {
+      return;
+    }
+    this.eliteKillEmitter.explode(Math.max(12, Math.min(28, count)), x, y);
   }
 
   emitDashTrail(delta) {
@@ -860,10 +896,55 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnXpOrb(x, y, value) {
-    const orb = this.xpOrbs.create(x, y, "xp_orb");
-    orb.setCircle(6, 0, 0);
+  spawnXpOrb(x, y, value, config = {}) {
+    const texture = config.texture ?? "xp_orb";
+    const orb = this.xpOrbs.create(x, y, texture);
+    const radius = config.radius ?? (config.pickupType === "elite_upgrade" ? 8 : 6);
+    orb.setCircle(radius, 0, 0);
     orb.xpValue = value;
+    if (config.pickupType) {
+      orb.setData("pickupType", config.pickupType);
+    } else {
+      orb.setData("pickupType", null);
+    }
+    orb.setData("rewardUpgradeId", config.rewardUpgradeId ?? null);
+  }
+
+  spawnEliteBonusXpOrbs(enemy) {
+    const orbCount = Phaser.Math.Between(ELITE_BONUS_XP_ORB_MIN, ELITE_BONUS_XP_ORB_MAX);
+    const perOrbValue = Math.max(3, Math.round((enemy.xpValue ?? 10) * ELITE_BONUS_XP_ORB_VALUE_FACTOR));
+    for (let i = 0; i < orbCount; i += 1) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Phaser.Math.Between(10, 26);
+      const x = enemy.x + Math.cos(angle) * distance;
+      const y = enemy.y + Math.sin(angle) * distance;
+      this.spawnXpOrb(x, y, perOrbValue);
+    }
+  }
+
+  spawnEliteUpgradePickup(x, y) {
+    if (Math.random() >= ELITE_UPGRADE_DROP_CHANCE) {
+      return false;
+    }
+
+    const rewardUpgradeId = Phaser.Utils.Array.GetRandom(ELITE_BONUS_UPGRADE_IDS);
+    this.spawnXpOrb(x, y, 0, {
+      texture: "upgrade_orb",
+      pickupType: "elite_upgrade",
+      rewardUpgradeId,
+      radius: 8
+    });
+    return true;
+  }
+
+  applyEliteUpgradeReward(rewardUpgradeId) {
+    const rewardUpgrade = LEVEL_UP_UPGRADES.find((upgrade) => upgrade.id === rewardUpgradeId);
+    if (!rewardUpgrade) {
+      return false;
+    }
+    this.applyLevelUpUpgrade(rewardUpgrade);
+    this.showHudAlert(`ELITE ${rewardUpgrade.label.toUpperCase()}`, 1200);
+    return true;
   }
 
   handleEnemyDefeat(enemy) {
@@ -871,8 +952,18 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (enemy.isElite) {
+      this.spawnEliteKillParticles(enemy.x, enemy.y, 20);
+    }
     this.spawnKillParticles(enemy.x, enemy.y, enemy.isElite ? 14 : 10);
     this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
+    if (enemy.isElite) {
+      this.spawnEliteBonusXpOrbs(enemy);
+      const droppedUpgrade = this.spawnEliteUpgradePickup(enemy.x, enemy.y);
+      if (droppedUpgrade) {
+        this.showHudAlert("ELITE LOOT", 1000);
+      }
+    }
 
     if (enemy.getData("pooledEnemy") === true) {
       this.enemyPool.release(enemy);
@@ -887,7 +978,15 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.gainXp(orb.xpValue ?? 0);
+    const xpValue = orb.xpValue ?? 0;
+    if (xpValue > 0) {
+      this.gainXp(xpValue);
+    }
+
+    const pickupType = orb.getData("pickupType");
+    if (pickupType === "elite_upgrade") {
+      this.applyEliteUpgradeReward(orb.getData("rewardUpgradeId"));
+    }
     orb.destroy();
   }
 
