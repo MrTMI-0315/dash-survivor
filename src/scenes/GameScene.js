@@ -210,8 +210,31 @@ export class GameScene extends Phaser.Scene {
   }
 
   createTextures() {
-    this.generateCircleTexture("player", 16, 0x53d8fb, 0x1f7fa5);
-    this.generateCircleTexture("enemy", 14, 0xff6d6d, 0xad3434);
+    this.generatePlayerTriangleTexture("player_triangle", 18, 0x54dafe, 0x1f7fa5, 0x98eeff);
+    this.generateCircleTexture("enemy_swarm", 12, 0xff8a9c, 0xb84060);
+    this.generatePolygonTexture("enemy_tank", 20, [
+      { x: 5, y: 5 },
+      { x: 35, y: 5 },
+      { x: 35, y: 35 },
+      { x: 5, y: 35 }
+    ], 0xffb05b, 0x8d4f10);
+    this.generatePolygonTexture("enemy_hunter", 20, [
+      { x: 20, y: 3 },
+      { x: 37, y: 20 },
+      { x: 20, y: 37 },
+      { x: 3, y: 20 }
+    ], 0x6db8ff, 0x1f5692);
+    this.generateCircleTexture("enemy_chaser", 14, 0xff6d6d, 0xad3434);
+    this.generatePolygonTexture("enemy_boss", 24, [
+      { x: 12, y: 4 },
+      { x: 36, y: 4 },
+      { x: 44, y: 12 },
+      { x: 44, y: 36 },
+      { x: 36, y: 44 },
+      { x: 12, y: 44 },
+      { x: 4, y: 36 },
+      { x: 4, y: 12 }
+    ], 0x6d34ff, 0x2f116f);
     this.generateCircleTexture("xp_orb", 6, 0x66f5b2, 0x1f8d63);
     this.generateCircleTexture("proj_dagger", 4, 0xeef7ff, 0x7895af);
     this.generateCircleTexture("proj_fireball", 8, 0xff944d, 0xa84d1b);
@@ -258,6 +281,49 @@ export class GameScene extends Phaser.Scene {
     gfx.lineStyle(2, strokeColor, 1);
     gfx.strokeCircle(radius, radius, radius);
     gfx.generateTexture(key, radius * 2, radius * 2);
+    gfx.destroy();
+  }
+
+  generatePolygonTexture(key, size, points, fillColor, strokeColor) {
+    if (this.textures.exists(key)) {
+      return;
+    }
+
+    const gfx = this.make.graphics({ x: 0, y: 0, add: false });
+    const shapePoints = points.map((point) => new Phaser.Geom.Point(point.x, point.y));
+    gfx.fillStyle(fillColor, 1);
+    gfx.fillPoints(shapePoints, true);
+    gfx.lineStyle(2, strokeColor, 1);
+    gfx.strokePoints(shapePoints, true, true);
+    gfx.generateTexture(key, size * 2, size * 2);
+    gfx.destroy();
+  }
+
+  generatePlayerTriangleTexture(key, size, fillColor, strokeColor, glowColor) {
+    if (this.textures.exists(key)) {
+      return;
+    }
+
+    const center = size;
+    const outerPoints = [
+      new Phaser.Geom.Point(center, center - size + 1),
+      new Phaser.Geom.Point(center + size - 2, center + size - 4),
+      new Phaser.Geom.Point(center - size + 2, center + size - 4)
+    ];
+    const innerPoints = [
+      new Phaser.Geom.Point(center, center - size + 4),
+      new Phaser.Geom.Point(center + size - 6, center + size - 8),
+      new Phaser.Geom.Point(center - size + 6, center + size - 8)
+    ];
+
+    const gfx = this.make.graphics({ x: 0, y: 0, add: false });
+    gfx.fillStyle(glowColor, 0.26);
+    gfx.fillPoints(outerPoints, true);
+    gfx.fillStyle(fillColor, 1);
+    gfx.fillPoints(innerPoints, true);
+    gfx.lineStyle(2, strokeColor, 1);
+    gfx.strokePoints(innerPoints, true, true);
+    gfx.generateTexture(key, size * 2, size * 2);
     gfx.destroy();
   }
 

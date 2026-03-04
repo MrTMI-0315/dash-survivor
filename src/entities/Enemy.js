@@ -7,9 +7,25 @@ function getArchetypeConfig(type) {
   return ENEMY_ARCHETYPE_CONFIGS[type] ?? ENEMY_ARCHETYPE_CONFIGS.chaser;
 }
 
+function getEnemyTextureKey(type) {
+  if (type === "swarm") {
+    return "enemy_swarm";
+  }
+  if (type === "tank") {
+    return "enemy_tank";
+  }
+  if (type === "hunter") {
+    return "enemy_hunter";
+  }
+  if (type === "boss") {
+    return "enemy_boss";
+  }
+  return "enemy_chaser";
+}
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config = {}) {
-    super(scene, x, y, "enemy");
+    super(scene, x, y, getEnemyTextureKey(config.type ?? "chaser"));
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -42,6 +58,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     );
 
     this.baseTint = config.tint ?? archetype.tint;
+    this.setTexture(getEnemyTextureKey(this.type));
     this.setScale(config.scale ?? archetype.scale);
     this.setCircle(config.radius ?? archetype.radius, 0, 0);
     const spawnX = config.x ?? this.x;
