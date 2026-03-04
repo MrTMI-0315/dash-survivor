@@ -29,6 +29,12 @@ const ELITE_BONUS_XP_ORB_MAX = 4;
 const ELITE_BONUS_XP_ORB_VALUE_FACTOR = 0.35;
 const ELITE_UPGRADE_DROP_CHANCE = 0.28;
 const ELITE_BONUS_UPGRADE_IDS = ["weapon_damage", "attack_speed", "movement_speed", "pickup_radius", "projectile_count"];
+const SFX_THROTTLE_MS = {
+  enemy_hit: 42,
+  enemy_death: 55,
+  dash: 90,
+  level_up: 220
+};
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -77,6 +83,7 @@ export class GameScene extends Phaser.Scene {
     this.hudStatsText = null;
     this.hudDashStatusText = null;
     this.levelUpOptionActions = [];
+    this.sfxLastPlayedAt = {};
   }
 
   create() {
@@ -99,6 +106,7 @@ export class GameScene extends Phaser.Scene {
     this.metaSettled = false;
     this.director = new DirectorSystem();
     this.dashTrailTickMs = 0;
+    this.sfxLastPlayedAt = {};
 
     this.createTextures();
     this.drawArena();
@@ -523,6 +531,106 @@ export class GameScene extends Phaser.Scene {
       const trailX = this.player.x - vx * 0.017;
       const trailY = this.player.y - vy * 0.017;
       this.dashTrailEmitter.explode(2, trailX, trailY);
+    }
+  }
+
+  playSfxTone({ wave = "sine", startFreq = 440, endFreq = 220, duration = 0.1, gain = 0.04, curve = "exponential" }) {
+    if (!this.sound || !this.sound.context) {
+      return;
+    }
+
+    const audioContext = this.sound.context;
+    if (audioContext.state === "suspended" && audioContext.resume) {
+      audioContext.resume().catch(() => {});
+      if (audioContext.state === "suspended") {
+        return;
+      }
+    }
+
+    const startAt = audioContext.currentTime;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.type = wave;
+    oscillator.frequency.setValueAtTime(Math.max(40, startFreq), startAt);
+    if (curve === "linear") {
+      oscillator.frequency.linearRampToValueAtTime(Math.max(40, endFreq), startAt + duration);
+    } else {
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(40, endFreq), startAt + duration);
+    }
+
+    gainNode.gain.setValueAtTime(0.0001, startAt);
+    gainNode.gain.exponentialRampToValueAtTime(Math.max(0.0001, gain), startAt + 0.01);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    oscillator.start(startAt);
+    oscillator.stop(startAt + duration + 0.01);
+  }
+
+  playSfx(type, options = {}) {
+    const now = this.time?.now ?? Date.now();
+    const throttleMs = SFX_THROTTLE_MS[type] ?? 0;
+    const lastPlayed = this.sfxLastPlayedAt[type] ?? Number.NEGATIVE_INFINITY;
+    if (now - lastPlayed < throttleMs) {
+      return;
+    }
+    this.sfxLastPlayedAt[type] = now;
+
+    if (type === "enemy_hit") {
+      this.playSfxTone({
+        wave: "square",
+        startFreq: 900,
+        endFreq: 520,
+        duration: 0.045,
+        gain: options.elite ? 0.045 : 0.03
+      });
+      return;
+    }
+
+    if (type === "enemy_death") {
+      this.playSfxTone({
+        wave: options.elite ? "sawtooth" : "triangle",
+        startFreq: options.elite ? 280 : 240,
+        endFreq: options.elite ? 110 : 90,
+        duration: options.elite ? 0.2 : 0.14,
+        gain: options.elite ? 0.07 : 0.045
+      });
+      return;
+    }
+
+    if (type === "dash") {
+      this.playSfxTone({
+        wave: "sawtooth",
+        startFreq: 150,
+        endFreq: 380,
+        duration: 0.12,
+        gain: 0.05,
+        curve: "linear"
+      });
+      return;
+    }
+
+    if (type === "level_up") {
+      this.playSfxTone({
+        wave: "triangle",
+        startFreq: 430,
+        endFreq: 620,
+        duration: 0.08,
+        gain: 0.045,
+        curve: "linear"
+      });
+      this.time.delayedCall(75, () => {
+        this.playSfxTone({
+          wave: "triangle",
+          startFreq: 620,
+          endFreq: 900,
+          duration: 0.11,
+          gain: 0.05,
+          curve: "linear"
+        });
+      });
     }
   }
 
@@ -1046,6 +1154,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.playSfx("enemy_death", { elite: enemy.isElite });
     if (enemy.isElite) {
       this.spawnEliteKillParticles(enemy.x, enemy.y, 20);
     }
@@ -1095,11 +1204,17 @@ export class GameScene extends Phaser.Scene {
     this.totalXp += effectiveAmount;
     this.currentXp += effectiveAmount;
 
+    let hasLeveledUp = false;
     while (this.currentXp >= this.xpToNext) {
       this.currentXp -= this.xpToNext;
       this.level += 1;
       this.pendingLevelUps += 1;
       this.xpToNext = this.getXpRequirement(this.level);
+      hasLeveledUp = true;
+    }
+
+    if (hasLeveledUp) {
+      this.playSfx("level_up");
     }
 
     if (!this.isLeveling && this.pendingLevelUps > 0) {

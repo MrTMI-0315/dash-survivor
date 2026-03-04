@@ -102,6 +102,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const dashSpeed = this.speed * this.dashSpeedMultiplier;
     this.body.setVelocity(dir.x * dashSpeed, dir.y * dashSpeed);
     this.setTint(0xfff2a6);
+    if (this.scene.playSfx) {
+      this.scene.playSfx("dash");
+    }
     return true;
   }
 

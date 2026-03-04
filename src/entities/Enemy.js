@@ -161,6 +161,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const flashToken = this.flashToken;
 
     this.setTint(0xffffff);
+    if (this.scene.playSfx) {
+      this.scene.playSfx("enemy_hit", { elite: this.isElite });
+    }
     if (this.scene.spawnDamageParticles) {
       this.scene.spawnDamageParticles(this.x, this.y, this.isElite ? 8 : 5);
     }
