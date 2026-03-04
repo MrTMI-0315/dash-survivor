@@ -3,6 +3,7 @@ import { Enemy, ENEMY_ARCHETYPE_CONFIGS } from "../entities/Enemy.js";
 import { BossEnemy } from "../entities/BossEnemy.js";
 import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
 import { WeaponSystem } from "../Systems/WeaponSystem.js";
+import { MetaProgressionSystem } from "../Systems/MetaProgressionSystem.js";
 
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1350;
@@ -122,6 +123,12 @@ export class GameScene extends Phaser.Scene {
     this.levelUpUi = [];
     this.isGameOver = false;
     this.damageEmitter = null;
+    this.metaSystem = new MetaProgressionSystem();
+    this.metaData = this.metaSystem.getData();
+    this.metaXpMultiplier = 1;
+    this.runMetaCurrency = 0;
+    this.lastRunMetaCurrency = 0;
+    this.metaSettled = false;
   }
 
   create() {
@@ -138,6 +145,11 @@ export class GameScene extends Phaser.Scene {
     this.targetEnemies = 0;
     this.nextBossSpawnAtMs = BOSS_SPAWN_INTERVAL_MS;
     this.hudAlertHideEvent = null;
+    this.metaData = this.metaSystem.getData();
+    this.metaXpMultiplier = 1;
+    this.runMetaCurrency = 0;
+    this.lastRunMetaCurrency = 0;
+    this.metaSettled = false;
     this.director = new DirectorSystem({
       buildMs: 30000,
       peakMs: 15000,
@@ -160,7 +172,11 @@ export class GameScene extends Phaser.Scene {
       left: Phaser.Input.Keyboard.KeyCodes.A,
       right: Phaser.Input.Keyboard.KeyCodes.D,
       dash: Phaser.Input.Keyboard.KeyCodes.SPACE,
-      restart: Phaser.Input.Keyboard.KeyCodes.R
+      restart: Phaser.Input.Keyboard.KeyCodes.R,
+      meta1: Phaser.Input.Keyboard.KeyCodes.ONE,
+      meta2: Phaser.Input.Keyboard.KeyCodes.TWO,
+      meta3: Phaser.Input.Keyboard.KeyCodes.THREE,
+      meta4: Phaser.Input.Keyboard.KeyCodes.FOUR
     });
 
     this.physics.add.overlap(this.player, this.enemies, this.handlePlayerEnemyCollision, null, this);
@@ -168,6 +184,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponSystem = new WeaponSystem(this, this.player);
     this.weaponSystem.addWeapon("dagger");
     this.weaponSystem.addWeapon("fireball");
+    this.applyMetaBonusesForRun();
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
@@ -184,9 +201,9 @@ export class GameScene extends Phaser.Scene {
       .setDepth(10);
 
     this.gameOverText = this.add
-      .text(640, 360, "GAME OVER\nPress R to restart", {
+      .text(640, 360, "GAME OVER", {
         fontFamily: "Arial",
-        fontSize: "44px",
+        fontSize: "28px",
         color: "#ffdad7",
         align: "center",
         stroke: "#1a1010",
@@ -216,9 +233,7 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     if (this.isGameOver) {
-      if (Phaser.Input.Keyboard.JustDown(this.keys.restart)) {
-        this.scene.restart();
-      }
+      this.handleGameOverInput();
       return;
     }
 
@@ -261,10 +276,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     if (this.player.isDead()) {
-      this.isGameOver = true;
-      this.physics.pause();
-      this.player.body.setVelocity(0, 0);
-      this.gameOverText.setVisible(true);
+      this.triggerGameOver();
       return;
     }
 
@@ -621,11 +633,7 @@ export class GameScene extends Phaser.Scene {
     if (!player.isDead()) {
       return;
     }
-
-    this.isGameOver = true;
-    this.physics.pause();
-    this.player.body.setVelocity(0, 0);
-    this.gameOverText.setVisible(true);
+    this.triggerGameOver();
   }
 
   performAutoAttack(now) {
@@ -690,8 +698,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   gainXp(amount) {
-    this.totalXp += amount;
-    this.currentXp += amount;
+    const baseAmount = Math.max(0, Math.round(amount));
+    const effectiveAmount = Math.max(0, Math.round(baseAmount * this.metaXpMultiplier));
+
+    if (baseAmount > 0) {
+      this.runMetaCurrency += Math.max(1, Math.floor(baseAmount / 10));
+    }
+
+    this.totalXp += effectiveAmount;
+    this.currentXp += effectiveAmount;
 
     while (this.currentXp >= this.xpToNext) {
       this.currentXp -= this.xpToNext;
@@ -793,6 +808,89 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  applyMetaBonusesForRun() {
+    const bonuses = this.metaSystem.getRunBonuses();
+    this.metaXpMultiplier = bonuses.xpMultiplier;
+
+    this.player.maxHp += bonuses.maxHpFlat;
+    this.player.hp = this.player.maxHp;
+    this.player.speed += bonuses.speedFlat;
+
+    if (bonuses.startingWeaponBonus > 0) {
+      this.weaponSystem.addWeapon("lightning");
+    }
+  }
+
+  finalizeMetaRun() {
+    if (this.metaSettled) {
+      return;
+    }
+
+    this.metaSettled = true;
+    this.lastRunMetaCurrency = this.runMetaCurrency;
+    this.metaSystem.addCurrency(this.lastRunMetaCurrency);
+    this.metaData = this.metaSystem.getData();
+    this.runMetaCurrency = 0;
+  }
+
+  triggerGameOver() {
+    if (this.isGameOver) {
+      return;
+    }
+
+    this.isGameOver = true;
+    this.physics.pause();
+    this.player.body.setVelocity(0, 0);
+    this.finalizeMetaRun();
+    this.refreshGameOverText();
+    this.gameOverText.setVisible(true);
+  }
+
+  handleGameOverInput() {
+    if (Phaser.Input.Keyboard.JustDown(this.keys.meta1)) {
+      this.tryPurchaseMetaUpgrade("max_hp");
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.meta2)) {
+      this.tryPurchaseMetaUpgrade("move_speed");
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.meta3)) {
+      this.tryPurchaseMetaUpgrade("xp_gain");
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.meta4)) {
+      this.tryPurchaseMetaUpgrade("starting_weapon");
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.restart)) {
+      this.scene.restart();
+    }
+  }
+
+  tryPurchaseMetaUpgrade(upgradeKey) {
+    const result = this.metaSystem.purchaseUpgrade(upgradeKey);
+    if (!result.success) {
+      return;
+    }
+
+    this.metaData = this.metaSystem.getData();
+    this.refreshGameOverText();
+  }
+
+  refreshGameOverText() {
+    const options = this.metaSystem.getUpgradeOptions();
+    const formatCost = (option) => (option.isMaxed ? "MAX" : `${option.cost}C`);
+
+    this.gameOverText.setText(
+      [
+        "GAME OVER",
+        `META +${this.lastRunMetaCurrency}   BANK ${this.metaData.currency}`,
+        `[1] Max HP Lv${options.max_hp.level} (${formatCost(options.max_hp)})`,
+        `[2] Move Speed Lv${options.move_speed.level} (${formatCost(options.move_speed)})`,
+        `[3] XP Gain Lv${options.xp_gain.level} (${formatCost(options.xp_gain)})`,
+        `[4] Start Lightning Lv${options.starting_weapon.level} (${formatCost(options.starting_weapon)})`,
+        "Press R to restart"
+      ].join("\n")
+    );
+  }
+
   getAliveEnemyCount() {
     return this.enemies.getChildren().filter((enemy) => enemy.active).length;
   }
@@ -803,8 +901,9 @@ export class GameScene extends Phaser.Scene {
     const directorState = this.director.getState();
     const weaponCount = this.player.weapons.length;
     const passiveCount = Object.keys(this.player.passives).length;
+    const metaLiveTotal = this.metaData.currency + this.runMetaCurrency;
     this.hudText.setText(
-      `DIR ${directorState}   LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   WPN ${weaponCount}/${this.player.maxWeaponSlots}   PAS ${passiveCount}   Enemies ${activeEnemies}/${this.targetEnemies}`
+      `DIR ${directorState}   LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   XP ${this.currentXp}/${this.xpToNext}   DASH ${dashPercent}%   META ${metaLiveTotal}   WPN ${weaponCount}/${this.player.maxWeaponSlots}   PAS ${passiveCount}   Enemies ${activeEnemies}/${this.targetEnemies}`
     );
   }
 }
