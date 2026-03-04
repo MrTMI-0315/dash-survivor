@@ -14,9 +14,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.dashGaugeMax = 100;
     this.dashGauge = 0;
-    this.dashChargeRate = 20;
+    this.dashCooldownMs = 4000;
+    this.dashChargeRate = this.dashGaugeMax / (this.dashCooldownMs / 1000);
     this.dashDurationMs = 250;
     this.dashRemainingMs = 0;
+    this.dashInvulnerabilityMs = 200;
+    this.dashInvulnerabilityRemainingMs = 0;
     this.dashSpeedMultiplier = 4;
     this.dashDamage = 20;
     this.currentDashId = 0;
@@ -64,7 +67,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   updateDash(delta) {
     if (this.isDashing()) {
       this.dashRemainingMs = Math.max(0, this.dashRemainingMs - delta);
+      this.dashInvulnerabilityRemainingMs = Math.max(0, this.dashInvulnerabilityRemainingMs - delta);
       if (!this.isDashing()) {
+        this.dashInvulnerabilityRemainingMs = 0;
         this.clearTint();
       }
       return;
@@ -84,6 +89,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.dashGauge = 0;
     this.dashRemainingMs = this.dashDurationMs;
+    this.dashInvulnerabilityRemainingMs = this.dashInvulnerabilityMs;
     this.currentDashId += 1;
 
     const dir = this.lastMoveDir.clone();
@@ -101,6 +107,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   isDashing() {
     return this.dashRemainingMs > 0;
+  }
+
+  isDashInvulnerable() {
+    return this.dashInvulnerabilityRemainingMs > 0;
   }
 
   getDashRatio() {

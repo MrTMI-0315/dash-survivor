@@ -522,18 +522,19 @@ export class GameScene extends Phaser.Scene {
   handlePlayerEnemyCollision(player, enemy) {
     if (player.isDashing()) {
       const lastDashHitId = enemy.getData("lastDashHitId") ?? -1;
-      if (lastDashHitId === player.currentDashId) {
+      if (lastDashHitId !== player.currentDashId) {
+        enemy.setData("lastDashHitId", player.currentDashId);
+        enemy.takeDamage(player.dashDamage);
+        enemy.applyKnockbackFrom(player.x, player.y, 360);
+
+        if (enemy.isDead()) {
+          this.handleEnemyDefeat(enemy);
+        }
+      }
+
+      if (player.isDashInvulnerable()) {
         return;
       }
-
-      enemy.setData("lastDashHitId", player.currentDashId);
-      enemy.takeDamage(player.dashDamage);
-      enemy.applyKnockbackFrom(player.x, player.y, 360);
-
-      if (enemy.isDead()) {
-        this.handleEnemyDefeat(enemy);
-      }
-      return;
     }
 
     const damaged = player.takeDamage(enemy.damage, this.time.now);
