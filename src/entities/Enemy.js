@@ -1,3 +1,37 @@
+const ENEMY_ARCHETYPE_CONFIGS = {
+  chaser: {
+    speed: 110,
+    hp: 14,
+    damage: 10,
+    xpValue: 10,
+    radius: 14,
+    scale: 1.0,
+    tint: 0xff6d6d
+  },
+  tank: {
+    speed: 52,
+    hp: 70,
+    damage: 14,
+    xpValue: 20,
+    radius: 18,
+    scale: 1.28,
+    tint: 0xffb05b
+  },
+  swarm: {
+    speed: 84,
+    hp: 8,
+    damage: 5,
+    xpValue: 4,
+    radius: 10,
+    scale: 0.8,
+    tint: 0xff8a9c
+  }
+};
+
+function getArchetypeConfig(type) {
+  return ENEMY_ARCHETYPE_CONFIGS[type] ?? ENEMY_ARCHETYPE_CONFIGS.chaser;
+}
+
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, config = {}) {
     super(scene, x, y, "enemy");
@@ -5,16 +39,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.speed = config.speed ?? 80;
+    this.type = config.type ?? "chaser";
+    const archetype = getArchetypeConfig(this.type);
+
+    this.speed = config.speed ?? archetype.speed;
     this.baseSpeed = this.speed;
-    this.damage = config.damage ?? 10;
-    this.hp = config.hp ?? 20;
-    this.xpValue = config.xpValue ?? 10;
+    this.damage = config.damage ?? archetype.damage;
+    this.hp = config.hp ?? archetype.hp;
+    this.xpValue = config.xpValue ?? archetype.xpValue;
     this.knockbackVx = 0;
     this.knockbackVy = 0;
 
-    this.setCircle(14, 0, 0);
+    this.setScale(config.scale ?? archetype.scale);
+    this.setCircle(config.radius ?? archetype.radius, 0, 0);
     this.setCollideWorldBounds(true);
+    this.setTint(config.tint ?? archetype.tint);
   }
 
   chase(target, deltaMs = 0) {
@@ -84,3 +123,5 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     return this.hp <= 0;
   }
 }
+
+export { ENEMY_ARCHETYPE_CONFIGS };

@@ -4,6 +4,11 @@ import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
 
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1350;
+const ENEMY_TYPE_WEIGHTS = [
+  { type: "chaser", weight: 50 },
+  { type: "tank", weight: 25 },
+  { type: "swarm", weight: 25 }
+];
 const UPGRADE_POOL = [
   {
     label: "Attack Speed",
@@ -278,23 +283,41 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const spawnPosition = this.getSpawnPosition();
-    const eliteChance = this.director.getEliteChance();
-    const isElite = Math.random() < eliteChance;
-    const enemy = new Enemy(this, spawnPosition.x, spawnPosition.y, {
-      hp: isElite ? 36 : 20,
-      speed: isElite ? 92 : 80,
-      damage: isElite ? 16 : 10,
-      xpValue: isElite ? 18 : 10
-    });
-    enemy.setData("lastDashHitId", -1);
-    enemy.setData("isElite", isElite);
-    if (isElite) {
-      enemy.setScale(1.2);
-      enemy.setTint(0xffbc5c);
-    }
+    const type = this.pickEnemyArchetype();
+    const groupCount = type === "swarm" ? Phaser.Math.Between(3, 5) : 1;
+    const anchor = this.getSpawnPosition();
 
-    this.enemies.add(enemy);
+    for (let i = 0; i < groupCount; i += 1) {
+      const jitter = type === "swarm" ? Phaser.Math.Between(12, 48) : 0;
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      let spawnX = Phaser.Math.Clamp(anchor.x + Math.cos(angle) * jitter, 12, WORLD_WIDTH - 12);
+      let spawnY = Phaser.Math.Clamp(anchor.y + Math.sin(angle) * jitter, 12, WORLD_HEIGHT - 12);
+
+      if (!this.isValidSpawnPoint(spawnX, spawnY)) {
+        const fallback = this.getSpawnPosition();
+        spawnX = fallback.x;
+        spawnY = fallback.y;
+      }
+
+      const enemy = new Enemy(this, spawnX, spawnY, { type });
+      enemy.setData("lastDashHitId", -1);
+      enemy.setData("archetype", type);
+
+      const eliteChance = this.director.getEliteChance();
+      const isElite = type !== "swarm" && Math.random() < eliteChance;
+      enemy.setData("isElite", isElite);
+      if (isElite) {
+        enemy.hp = Math.round(enemy.hp * 1.65);
+        enemy.damage = Math.round(enemy.damage * 1.35);
+        enemy.speed *= 1.08;
+        enemy.baseSpeed = enemy.speed;
+        enemy.xpValue = Math.round(enemy.xpValue * 1.6);
+        enemy.setScale(enemy.scaleX * 1.1, enemy.scaleY * 1.1);
+        enemy.setTint(0xffc36a);
+      }
+
+      this.enemies.add(enemy);
+    }
   }
 
   getSpawnPosition() {
@@ -362,6 +385,27 @@ export class GameScene extends Phaser.Scene {
     });
 
     return best;
+  }
+
+  isValidSpawnPoint(x, y) {
+    const view = this.cameras.main.worldView;
+    const isOutsideView = !Phaser.Geom.Rectangle.Contains(view, x, y);
+    const isOutsideSafeRadius = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > this.safeRadius;
+    return isOutsideView && isOutsideSafeRadius;
+  }
+
+  pickEnemyArchetype() {
+    const totalWeight = ENEMY_TYPE_WEIGHTS.reduce((sum, entry) => sum + entry.weight, 0);
+    let roll = Math.random() * totalWeight;
+
+    for (let i = 0; i < ENEMY_TYPE_WEIGHTS.length; i += 1) {
+      roll -= ENEMY_TYPE_WEIGHTS[i].weight;
+      if (roll <= 0) {
+        return ENEMY_TYPE_WEIGHTS[i].type;
+      }
+    }
+
+    return "chaser";
   }
 
   handlePlayerEnemyCollision(player, enemy) {
