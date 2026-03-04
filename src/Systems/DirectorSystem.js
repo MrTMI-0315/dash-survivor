@@ -1,4 +1,5 @@
 import {
+  DIRECTOR_BOSS_SPAWN,
   DIRECTOR_DEFAULT_DURATIONS_MS,
   DIRECTOR_DIFFICULTY_SCALING,
   DIRECTOR_ELITE_CHANCE,
@@ -28,11 +29,16 @@ export class DirectorSystem {
     this.state = DIRECTOR_STATE.BUILD;
     this.stateElapsedMs = 0;
     this.totalElapsedMs = 0;
+    this.bossSpawnIntervalMs = config.bossSpawnIntervalMs ?? DIRECTOR_BOSS_SPAWN.intervalMs;
+    this.nextBossSpawnAtMs = this.bossSpawnIntervalMs;
+    this.pendingBossSpawnCount = 0;
   }
 
   update(deltaMs) {
     this.stateElapsedMs += deltaMs;
     this.totalElapsedMs += deltaMs;
+    this.updateBossSpawnSchedule();
+
     const duration = this.getStateDurationMs(this.state);
     if (this.stateElapsedMs < duration) {
       return false;
@@ -47,6 +53,19 @@ export class DirectorSystem {
     const index = DIRECTOR_STATE_SEQUENCE.indexOf(this.state);
     const nextIndex = (index + 1) % DIRECTOR_STATE_SEQUENCE.length;
     this.state = DIRECTOR_STATE_SEQUENCE[nextIndex];
+  }
+
+  updateBossSpawnSchedule() {
+    while (this.totalElapsedMs >= this.nextBossSpawnAtMs) {
+      this.pendingBossSpawnCount += 1;
+      this.nextBossSpawnAtMs += this.bossSpawnIntervalMs;
+    }
+  }
+
+  consumeBossSpawnRequests() {
+    const pending = this.pendingBossSpawnCount;
+    this.pendingBossSpawnCount = 0;
+    return pending;
   }
 
   getState() {

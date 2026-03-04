@@ -12,6 +12,10 @@ export const DIRECTOR_DEFAULT_DURATIONS_MS = {
   [DIRECTOR_STATE.RELIEF]: 8000
 };
 
+export const DIRECTOR_BOSS_SPAWN = {
+  intervalMs: 180000
+};
+
 export const DIRECTOR_SPAWN_RATE = {
   buildStart: 0.85,
   buildEnd: 1.25,

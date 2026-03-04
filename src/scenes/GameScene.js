@@ -8,7 +8,6 @@ import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS } from "../config/enemies.j
 import { LEVEL_UP_UPGRADES } from "../config/weapons.js";
 import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
-  BOSS_SPAWN_INTERVAL_MS,
   ENEMY_POOL_SIZE,
   SAFE_RADIUS,
   SPAWN_BURST_CONFIG,
@@ -28,7 +27,6 @@ export class GameScene extends Phaser.Scene {
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
-    this.nextBossSpawnAtMs = BOSS_SPAWN_INTERVAL_MS;
     this.hudAlertHideEvent = null;
 
     this.attackIntervalMs = 800;
@@ -65,7 +63,6 @@ export class GameScene extends Phaser.Scene {
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
-    this.nextBossSpawnAtMs = BOSS_SPAWN_INTERVAL_MS;
     this.hudAlertHideEvent = null;
     this.metaData = this.metaSystem.getData();
     this.metaXpMultiplier = 1;
@@ -169,7 +166,7 @@ export class GameScene extends Phaser.Scene {
 
     this.runTimeMs += delta;
     this.spawnAccumulatorMs += delta;
-    this.updateBossSpawns();
+    this.processDirectorBossSpawns();
 
     const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
     const effectiveSpawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
@@ -198,6 +195,9 @@ export class GameScene extends Phaser.Scene {
       enemy.damage = Math.max(1, Math.round(enemy.baseDamage * damageMultiplier));
       enemy.chase(this.player, delta, time);
       enemy.tryApplyPoisonAura(this.player, time);
+      if (enemy.updateBossPattern) {
+        enemy.updateBossPattern(this.player, time);
+      }
     });
 
     if (this.player.isDead()) {
@@ -371,10 +371,10 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  updateBossSpawns() {
-    while (this.runTimeMs >= this.nextBossSpawnAtMs) {
+  processDirectorBossSpawns() {
+    const pendingBossSpawns = this.director.consumeBossSpawnRequests();
+    for (let i = 0; i < pendingBossSpawns; i += 1) {
       this.spawnBossEnemy();
-      this.nextBossSpawnAtMs += BOSS_SPAWN_INTERVAL_MS;
     }
   }
 

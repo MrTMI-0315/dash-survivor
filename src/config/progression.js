@@ -3,7 +3,6 @@ export const WORLD_HEIGHT = 1350;
 export const ENEMY_POOL_SIZE = 420;
 export const SAFE_RADIUS = 300;
 export const BASE_SPAWN_CHECK_INTERVAL_MS = 250;
-export const BOSS_SPAWN_INTERVAL_MS = 90000;
 
 export const TARGET_ENEMY_CURVE = [
   { startSec: 0, endSec: 20, from: 3, to: 7 },
