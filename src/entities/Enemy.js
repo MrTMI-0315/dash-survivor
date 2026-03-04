@@ -127,6 +127,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(amount) {
     this.hp = Math.max(0, this.hp - amount);
+    if (this.hp <= 0) {
+      this.die();
+    }
+
     this.flashToken += 1;
     const flashToken = this.flashToken;
 
@@ -139,6 +143,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setTint(this.baseTint);
       }
     });
+  }
+
+  die() {
+    this.hp = 0;
+  }
+
+  reset(config = {}) {
+    this.resetForSpawn(config);
   }
 
   applyKnockbackFrom(sourceX, sourceY, force) {

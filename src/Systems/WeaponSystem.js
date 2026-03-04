@@ -496,23 +496,32 @@ export class WeaponSystem {
   }
 
   handleProjectileHit(projectile, enemy) {
-    if (!projectile.active || !enemy.active) {
+    let hitProjectile = projectile;
+    let hitEnemy = enemy;
+
+    // Defensive guard: overlap callbacks can be wired in reverse in some setups.
+    if (typeof hitEnemy?.takeDamage !== "function" && typeof hitProjectile?.takeDamage === "function") {
+      hitProjectile = enemy;
+      hitEnemy = projectile;
+    }
+
+    if (!hitProjectile || !hitEnemy || !hitProjectile.active || !hitEnemy.active) {
       return;
     }
 
-    const hitX = projectile.x;
-    const hitY = projectile.y;
-    const explosionRadius = projectile.explosionRadius;
-    const explosionDamage = projectile.explosionDamage;
-    const behavior = projectile.behavior;
+    const hitX = hitProjectile.x;
+    const hitY = hitProjectile.y;
+    const explosionRadius = hitProjectile.explosionRadius;
+    const explosionDamage = hitProjectile.explosionDamage;
+    const behavior = hitProjectile.behavior;
 
-    this.applyDamage(enemy, projectile.damage, projectile.knockbackForce, hitX, hitY);
+    this.applyDamage(hitEnemy, hitProjectile.damage, hitProjectile.knockbackForce, hitX, hitY);
 
     if (behavior === "explosion" || behavior === "meteor_explosion") {
       this.triggerExplosion(hitX, hitY, explosionRadius, explosionDamage);
     }
 
-    this.releaseProjectile(projectile);
+    this.releaseProjectile(hitProjectile);
   }
 
   handleOrbitBladeHit(blade, enemy) {
@@ -559,10 +568,27 @@ export class WeaponSystem {
   }
 
   applyDamage(enemy, damage, knockbackForce, sourceX, sourceY) {
-    enemy.takeDamage(damage);
+    if (!enemy || !enemy.active) {
+      return;
+    }
+
+    const damageHandler =
+      typeof enemy.takeDamage === "function"
+        ? enemy.takeDamage
+        : typeof enemy.applyDamage === "function"
+          ? enemy.applyDamage
+          : typeof enemy.receiveDamage === "function"
+            ? enemy.receiveDamage
+            : null;
+    if (!damageHandler) {
+      return;
+    }
+
+    damageHandler.call(enemy, damage);
     enemy.applyKnockbackFrom(sourceX, sourceY, knockbackForce);
 
-    if (!enemy.isDead()) {
+    const dead = typeof enemy.isDead === "function" ? enemy.isDead() : (enemy.hp ?? 1) <= 0;
+    if (!dead) {
       return;
     }
 
