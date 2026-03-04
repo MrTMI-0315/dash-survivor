@@ -373,7 +373,7 @@ export class GameScene extends Phaser.Scene {
 
       enemy.setData("lastDashHitId", player.currentDashId);
       enemy.takeDamage(player.dashDamage);
-      enemy.applyKnockbackFrom(player.x, player.y, 340, 120);
+      enemy.applyKnockbackFrom(player.x, player.y, 360);
 
       if (enemy.isDead()) {
         this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
@@ -425,7 +425,7 @@ export class GameScene extends Phaser.Scene {
 
     this.lastAttackAt = now;
     nearestEnemy.takeDamage(this.attackDamage);
-    nearestEnemy.applyKnockbackFrom(this.player.x, this.player.y, 190, 75);
+    nearestEnemy.applyKnockbackFrom(this.player.x, this.player.y, 140);
 
     const flash = this.add.graphics();
     flash.lineStyle(2, 0x89e8ff, 1);
