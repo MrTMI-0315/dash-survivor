@@ -49,13 +49,23 @@ export const DIRECTOR_ELITE_TIME_SCALING = {
 
 export const DIRECTOR_DIFFICULTY_SCALING = {
   base: 1,
-  perMinute: 0.15
+  perMinute: 0.1
+};
+
+export const DIRECTOR_ENEMY_HP_SCALING = {
+  base: 1,
+  perMinute: 0.08
+};
+
+export const DIRECTOR_ENEMY_DAMAGE_SCALING = {
+  base: 1,
+  perMinute: 0.06
 };
 
 export const DIRECTOR_DENSITY_REWORK = {
-  spawnRateBoost: 1.4,
+  spawnRateBoost: 1.2,
   enemySpeedBoost: 1.2,
-  burstIntervalMs: 20000,
-  burstMinCount: 8,
-  burstMaxCount: 12
+  burstIntervalMs: 22000,
+  burstMinCount: 6,
+  burstMaxCount: 9
 };

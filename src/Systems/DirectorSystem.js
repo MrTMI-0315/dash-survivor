@@ -3,6 +3,8 @@ import {
   DIRECTOR_DENSITY_REWORK,
   DIRECTOR_DEFAULT_DURATIONS_MS,
   DIRECTOR_DIFFICULTY_SCALING,
+  DIRECTOR_ENEMY_DAMAGE_SCALING,
+  DIRECTOR_ENEMY_HP_SCALING,
   DIRECTOR_ELITE_CHANCE,
   DIRECTOR_ELITE_TIME_SCALING,
   DIRECTOR_ENEMY_SPEED,
@@ -139,6 +141,14 @@ export class DirectorSystem {
     return DIRECTOR_DIFFICULTY_SCALING.base + this.getElapsedMinutes() * DIRECTOR_DIFFICULTY_SCALING.perMinute;
   }
 
+  getEnemyHpDifficultyMultiplier() {
+    return DIRECTOR_ENEMY_HP_SCALING.base + this.getElapsedMinutes() * DIRECTOR_ENEMY_HP_SCALING.perMinute;
+  }
+
+  getEnemyDamageDifficultyMultiplier() {
+    return DIRECTOR_ENEMY_DAMAGE_SCALING.base + this.getElapsedMinutes() * DIRECTOR_ENEMY_DAMAGE_SCALING.perMinute;
+  }
+
   getSpawnRateMultiplier() {
     const difficulty = this.getDifficultyMultiplier();
 
@@ -179,11 +189,11 @@ export class DirectorSystem {
   }
 
   getEnemyHpMultiplier() {
-    return this.getDifficultyMultiplier();
+    return this.getEnemyHpDifficultyMultiplier();
   }
 
   getEnemyDamageMultiplier() {
-    return this.getDifficultyMultiplier();
+    return this.getEnemyDamageDifficultyMultiplier();
   }
 }
 

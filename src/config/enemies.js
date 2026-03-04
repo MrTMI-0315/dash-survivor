@@ -3,7 +3,7 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     speed: 110,
     hp: 14,
     damage: 10,
-    xpValue: 10,
+    xpValue: 12,
     radius: 14,
     scale: 1.0,
     tint: 0xff6d6d
@@ -12,7 +12,7 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     speed: 52,
     hp: 70,
     damage: 14,
-    xpValue: 20,
+    xpValue: 24,
     radius: 18,
     scale: 1.28,
     tint: 0xffb05b
@@ -21,7 +21,7 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     speed: 84,
     hp: 8,
     damage: 5,
-    xpValue: 4,
+    xpValue: 5,
     radius: 10,
     scale: 0.8,
     tint: 0xff8a9c
@@ -30,7 +30,7 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     speed: 176,
     hp: 9,
     damage: 6,
-    xpValue: 9,
+    xpValue: 11,
     radius: 11,
     scale: 0.92,
     tint: 0x6db8ff
