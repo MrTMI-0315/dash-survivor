@@ -1,9 +1,11 @@
 import { Player } from "../entities/Player.js";
 import { Enemy } from "../entities/Enemy.js";
+import { BossEnemy } from "../entities/BossEnemy.js";
 import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
 
 const WORLD_WIDTH = 2400;
 const WORLD_HEIGHT = 1350;
+const BOSS_SPAWN_INTERVAL_MS = 90000;
 const ENEMY_TYPE_WEIGHTS = [
   { type: "chaser", weight: 50 },
   { type: "tank", weight: 25 },
@@ -56,6 +58,8 @@ export class GameScene extends Phaser.Scene {
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
+    this.nextBossSpawnAtMs = BOSS_SPAWN_INTERVAL_MS;
+    this.hudAlertHideEvent = null;
 
     this.attackIntervalMs = 800;
     this.attackRange = 120;
@@ -83,6 +87,8 @@ export class GameScene extends Phaser.Scene {
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
+    this.nextBossSpawnAtMs = BOSS_SPAWN_INTERVAL_MS;
+    this.hudAlertHideEvent = null;
     this.director = new DirectorSystem({
       buildMs: 30000,
       peakMs: 15000,
@@ -138,6 +144,19 @@ export class GameScene extends Phaser.Scene {
       .setDepth(12)
       .setVisible(false);
 
+    this.hudAlertText = this.add
+      .text(640, 74, "", {
+        fontFamily: "Arial",
+        fontSize: "34px",
+        color: "#ffd76c",
+        stroke: "#2e1b08",
+        strokeThickness: 6
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(20)
+      .setVisible(false);
+
     this.maintainEnemyDensity();
     this.updateHud();
   }
@@ -163,6 +182,7 @@ export class GameScene extends Phaser.Scene {
 
     this.runTimeMs += delta;
     this.spawnAccumulatorMs += delta;
+    this.updateBossSpawns();
 
     const spawnRateMultiplier = this.director.getSpawnRateMultiplier();
     const effectiveSpawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
@@ -318,6 +338,37 @@ export class GameScene extends Phaser.Scene {
 
       this.enemies.add(enemy);
     }
+  }
+
+  updateBossSpawns() {
+    while (this.runTimeMs >= this.nextBossSpawnAtMs) {
+      this.spawnBossEnemy();
+      this.nextBossSpawnAtMs += BOSS_SPAWN_INTERVAL_MS;
+    }
+  }
+
+  spawnBossEnemy() {
+    const spawnPosition = this.getSpawnPosition();
+    const boss = new BossEnemy(this, spawnPosition.x, spawnPosition.y);
+    boss.setData("lastDashHitId", -1);
+    boss.setData("archetype", "boss");
+    this.enemies.add(boss);
+
+    this.cameras.main.shake(260, 0.0065);
+    this.showHudAlert("BOSS INCOMING");
+  }
+
+  showHudAlert(message, durationMs = 1600) {
+    this.hudAlertText.setText(message);
+    this.hudAlertText.setVisible(true);
+
+    if (this.hudAlertHideEvent) {
+      this.hudAlertHideEvent.remove(false);
+    }
+    this.hudAlertHideEvent = this.time.delayedCall(durationMs, () => {
+      this.hudAlertText.setVisible(false);
+      this.hudAlertHideEvent = null;
+    });
   }
 
   getSpawnPosition() {
