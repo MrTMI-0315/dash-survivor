@@ -9,14 +9,17 @@
 ## Systems
 
 ### Director State Machine (Code-Synced)
-| State | Duration | Spawn Pressure | Enemy Speed | Elite Chance Base |
+| State | Duration | Spawn Pressure | Enemy Speed (Phase Base) | Enemy Speed (Effective, `*1.2`) | Elite Chance Base |
 |---|---:|---|---|---:|
-| `BUILD` | 30000ms | ramps from low to mid | ramps `1.00 -> 1.08` | 0.04 |
-| `PEAK` | 15000ms | highest | `1.16` | 0.22 |
-| `RELIEF` | 8000ms | low breathing window | `1.00` | 0.01 |
+| `BUILD` | 30000ms | density gradually increases | ramps `1.00 -> 1.08` | ramps `1.20 -> 1.296` | 0.04 |
+| `PEAK` | 15000ms | maximum pressure | `1.16` | `1.392` | 0.22 |
+| `RELIEF` | 8000ms | reduced pressure window | `1.00` | `1.20` | 0.01 |
 
 - State order: `BUILD -> PEAK -> RELIEF -> repeat`.
 - Director tracks `totalElapsedMs` and schedules boss/miniboss/spawn-burst requests.
+- Enemy speed formula (runtime):
+  - `effectiveSpeed = baseSpeed * phaseMultiplier * enemySpeedBoost`
+  - `enemySpeedBoost = 1.2`
 
 ### Runtime Variables (Current)
 - `totalElapsedMs`, `state`, `stateElapsedMs`
@@ -34,7 +37,11 @@
   - `effectiveSpawnIntervalMs = baseSpawnCheckIntervalMs / max(0.2, spawnRateMultiplier)`
 - Density target:
   - `targetEnemies = min(160, round(baseTargetFromCurve * spawnRateMultiplier))`
-- Base target curve (`TARGET_ENEMY_CURVE`) increases over time, then stabilizes.
+- Pacing loop is cyclical and state-driven:
+  - `BUILD`: enemy density increases
+  - `PEAK`: maximum spawn pressure
+  - `RELIEF`: reduced spawn pressure
+  - return to `BUILD` and pressure resumes
 - Per-check spawn count uses `SPAWN_BURST_CONFIG` steps (`1 -> 2 -> 3 -> 2`).
 - Additional director burst event:
   - every `22000ms`, add random `6..9` extra spawn requests.
