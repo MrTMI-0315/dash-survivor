@@ -53,11 +53,33 @@ const OFFSCREEN_INDICATOR_MAX = 42;
 const COMBO_RESET_WINDOW_MS = 2000;
 const BOSS_BULLET_MAX = 220;
 const BOSS_BULLET_LIFETIME_MS = 2800;
+const SFX_AUDIO_FILES = {
+  dash: "assets/audio/dash.wav",
+  enemy_hit: "assets/audio/enemy_hit.wav",
+  enemy_death: "assets/audio/enemy_die.wav",
+  level_up: "assets/audio/level_up.wav",
+  boss_warning: "assets/audio/boss_warning.wav"
+};
+const SFX_KEY_BY_TYPE = {
+  dash: "dash",
+  enemy_hit: "enemy_hit",
+  enemy_death: "enemy_death",
+  level_up: "level_up",
+  boss_warning: "boss_warning"
+};
+const SFX_VOLUME = {
+  dash: 0.12,
+  enemy_hit: 0.1,
+  enemy_death: 0.12,
+  level_up: 0.13,
+  boss_warning: 0.13
+};
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
   dash: 90,
-  level_up: 220
+  level_up: 220,
+  boss_warning: 300
 };
 const START_WEAPON_OPTIONS = [
   {
@@ -381,6 +403,15 @@ export class GameScene extends Phaser.Scene {
     this.openWeaponSelection();
     this.maintainEnemyDensity();
     this.updateHud();
+  }
+
+  preload() {
+    Object.entries(SFX_AUDIO_FILES).forEach(([key, path]) => {
+      if (this.cache?.audio?.exists(key)) {
+        return;
+      }
+      this.load.audio(key, path);
+    });
   }
 
   update(time, delta) {
@@ -799,6 +830,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.sfxLastPlayedAt[type] = now;
+
+    const key = SFX_KEY_BY_TYPE[type];
+    const baseVolume = SFX_VOLUME[type] ?? 0.1;
+    const safeVolume = Phaser.Math.Clamp(baseVolume * (options.elite ? 1.08 : 1), 0.01, 0.24);
+    if (key && this.cache?.audio?.exists(key) && this.sound) {
+      this.sound.play(key, { volume: safeVolume });
+      return;
+    }
 
     if (type === "enemy_hit") {
       this.playSfxTone({
@@ -1379,6 +1418,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.bossApproachWarnedCycleIndex = nextBossCycleIndex;
+    this.playSfx("boss_warning");
     this.showHudAlert("BOSS APPROACHING", 1500);
   }
 
