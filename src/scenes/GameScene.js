@@ -43,6 +43,7 @@ const PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY = "particle_fallback";
 const BOSS_WARNING_LEAD_MS = 5000;
 const META_COINS_STORAGE_KEY = "dashsurvivor_coins";
 const META_STORAGE_KEY = "dashsurvivor_meta_v1";
+const BEST_TIME_STORAGE_KEY = "dashsurvivor_best_time_ms";
 const SHOP_UPGRADES_STORAGE_KEY = "dashsurvivor_shop_upgrades_v1";
 const WEAPON_UNLOCK_STORAGE_KEY = "dashsurvivor_weapon_unlocks_v1";
 const DEBUG_HUD_X = 16;
@@ -2558,6 +2559,7 @@ export class GameScene extends Phaser.Scene {
     this.isGameOver = true;
     this.physics.pause();
     this.player.body?.setVelocity(0, 0);
+    this.updateBestTimeRecord(this.runTimeMs);
     this.finalizeMetaRun();
     this.refreshGameOverText();
     this.gameOverText.setVisible(true);
@@ -2653,6 +2655,23 @@ export class GameScene extends Phaser.Scene {
       return 0;
     }
     return Math.floor(parsed);
+  }
+
+  updateBestTimeRecord(timeMs) {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+
+    const safeTime = Math.max(0, Math.floor(Number(timeMs) || 0));
+    try {
+      const prev = Number(window.localStorage.getItem(BEST_TIME_STORAGE_KEY));
+      const prevBest = Number.isFinite(prev) && prev > 0 ? Math.floor(prev) : 0;
+      if (safeTime > prevBest) {
+        window.localStorage.setItem(BEST_TIME_STORAGE_KEY, String(safeTime));
+      }
+    } catch (_error) {
+      // Ignore storage failures to keep runtime stable.
+    }
   }
 
   saveCoinBank(amount) {
