@@ -41,6 +41,7 @@ const PARTICLE_TEXTURE_KEY = "hit_particle";
 const PARTICLE_FALLBACK_TEXTURE_KEY = "__WHITE";
 const PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY = "particle_fallback";
 const BOSS_WARNING_LEAD_MS = 5000;
+const META_COINS_STORAGE_KEY = "dashsurvivor_coins";
 const DEBUG_HUD_X = 16;
 const DEBUG_HUD_Y = 116;
 const OFFSCREEN_INDICATOR_INSET = 18;
@@ -151,6 +152,7 @@ export class GameScene extends Phaser.Scene {
     this.xpDisplayRatio = 0;
     this.bossApproachWarnedCycleIndex = 0;
     this.metaData = this.metaSystem.getData();
+    this.syncCoinStorageWithMeta();
     this.metaXpMultiplier = 1;
     this.runMetaCurrency = 0;
     this.lastRunMetaCurrency = 0;
@@ -1898,10 +1900,6 @@ export class GameScene extends Phaser.Scene {
     const baseAmount = Math.max(0, Math.round(amount));
     const effectiveAmount = Math.max(0, Math.round(baseAmount * this.metaXpMultiplier));
 
-    if (baseAmount > 0) {
-      this.runMetaCurrency += Math.max(1, Math.floor(baseAmount / 10));
-    }
-
     this.totalXp += effectiveAmount;
     this.currentXp += effectiveAmount;
 
@@ -2118,9 +2116,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.metaSettled = true;
-    this.lastRunMetaCurrency = this.runMetaCurrency;
+    this.lastRunMetaCurrency = this.calculateRunCoinReward();
     this.metaSystem.addCurrency(this.lastRunMetaCurrency);
     this.metaData = this.metaSystem.getData();
+    this.saveCoinBank(this.metaData.currency);
     this.runMetaCurrency = 0;
   }
 
@@ -2144,7 +2143,9 @@ export class GameScene extends Phaser.Scene {
       timeSurvivedMs: this.runTimeMs,
       enemiesKilled: this.totalKills,
       maxCombo: this.maxKillCombo,
-      levelReached: this.level
+      levelReached: this.level,
+      coinsEarned: this.lastRunMetaCurrency,
+      totalCoins: this.metaData.currency
     };
     if (this.scene.isActive("RunSummaryScene")) {
       this.scene.stop("RunSummaryScene");
@@ -2185,6 +2186,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.metaData = this.metaSystem.getData();
+    this.saveCoinBank(this.metaData.currency);
     this.refreshGameOverText();
   }
 
@@ -2195,7 +2197,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverText.setText(
       [
         "GAME OVER",
-        `META +${this.lastRunMetaCurrency}   BANK ${this.metaData.currency}`,
+        `COINS +${this.lastRunMetaCurrency}   BANK ${this.metaData.currency}`,
         `[1] Max HP Lv${options.max_hp.level} (${formatCost(options.max_hp)})`,
         `[2] Move Speed Lv${options.move_speed.level} (${formatCost(options.move_speed)})`,
         `[3] XP Gain Lv${options.xp_gain.level} (${formatCost(options.xp_gain)})`,
@@ -2207,6 +2209,57 @@ export class GameScene extends Phaser.Scene {
 
   getAliveEnemyCount() {
     return this.enemies.getChildren().filter((enemy) => enemy.active).length;
+  }
+
+  loadCoinBank() {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return 0;
+    }
+
+    const raw = window.localStorage.getItem(META_COINS_STORAGE_KEY);
+    if (raw === null || raw === undefined) {
+      return 0;
+    }
+
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return 0;
+    }
+    return Math.floor(parsed);
+  }
+
+  saveCoinBank(amount) {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+
+    const safeAmount = Number.isFinite(amount) ? Math.max(0, Math.floor(amount)) : 0;
+    try {
+      window.localStorage.setItem(META_COINS_STORAGE_KEY, String(safeAmount));
+    } catch (_error) {
+      // Ignore storage failures to keep runtime stable.
+    }
+  }
+
+  syncCoinStorageWithMeta() {
+    const storedCoins = this.loadCoinBank();
+    const metaCoins = Math.max(0, Math.floor(this.metaData?.currency ?? 0));
+
+    if (storedCoins > metaCoins) {
+      this.metaSystem.addCurrency(storedCoins - metaCoins);
+      this.metaData = this.metaSystem.getData();
+      this.saveCoinBank(this.metaData.currency);
+      return;
+    }
+
+    this.saveCoinBank(metaCoins);
+  }
+
+  calculateRunCoinReward() {
+    const timeSurvivedSec = Math.max(0, Math.floor(this.runTimeMs / 1000));
+    const timeReward = Math.floor(timeSurvivedSec / 10);
+    const killReward = this.totalKills * 0.1;
+    return Math.max(0, Math.round(timeReward + killReward));
   }
 
   updateHud() {

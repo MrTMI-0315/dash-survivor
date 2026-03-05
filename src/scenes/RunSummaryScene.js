@@ -14,7 +14,9 @@ export class RunSummaryScene extends Phaser.Scene {
       timeSurvivedMs: data.timeSurvivedMs ?? 0,
       enemiesKilled: data.enemiesKilled ?? 0,
       maxCombo: data.maxCombo ?? 0,
-      levelReached: data.levelReached ?? 1
+      levelReached: data.levelReached ?? 1,
+      coinsEarned: data.coinsEarned ?? 0,
+      totalCoins: this.resolveTotalCoins(data.totalCoins)
     };
 
     this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x000000, 0.64).setDepth(1);
@@ -38,7 +40,9 @@ export class RunSummaryScene extends Phaser.Scene {
       `Time Survived: ${this.formatTime(stats.timeSurvivedMs)}`,
       `Enemies Killed: ${stats.enemiesKilled}`,
       `Max Combo: x${Math.max(0, stats.maxCombo)}`,
-      `Level Reached: ${stats.levelReached}`
+      `Level Reached: ${stats.levelReached}`,
+      `Coins Earned: +${stats.coinsEarned}`,
+      `Coin Bank: ${stats.totalCoins}`
     ];
 
     this.add
@@ -104,5 +108,21 @@ export class RunSummaryScene extends Phaser.Scene {
     const minutes = Math.floor(totalSec / 60);
     const seconds = totalSec % 60;
     return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  resolveTotalCoins(payloadCoins) {
+    if (Number.isFinite(payloadCoins) && payloadCoins >= 0) {
+      return Math.floor(payloadCoins);
+    }
+    if (typeof window === "undefined" || !window.localStorage) {
+      return 0;
+    }
+
+    const raw = window.localStorage.getItem("dashsurvivor_coins");
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      return 0;
+    }
+    return Math.floor(parsed);
   }
 }
