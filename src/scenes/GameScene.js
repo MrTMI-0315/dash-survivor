@@ -11,6 +11,7 @@ import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
   ENEMY_POOL_SIZE,
   SAFE_RADIUS,
+  SPAWN_LANES,
   SPAWN_LANE_KEYS,
   SPAWN_LANE_RULES,
   SPAWN_BURST_CONFIG,
@@ -47,6 +48,7 @@ const SHIP_DECK_OBSTACLE_LAYOUT = [
   { type: "terrain_pillar", x: 2130, y: 675, scale: 0.84 },
   { type: "terrain_pillar", x: 2130, y: 1060, scale: 0.84 }
 ];
+const BOSS_ENTRY_LANES = Object.freeze([SPAWN_LANES.BOW, SPAWN_LANES.STERN]);
 const XP_MAGNET_RADIUS_PER_LEVEL = 6;
 const ELITE_BONUS_XP_ORB_MIN = 2;
 const ELITE_BONUS_XP_ORB_MAX = 4;
@@ -1352,14 +1354,14 @@ export class GameScene extends Phaser.Scene {
   processDirectorBossSpawns() {
     const pendingBossSpawns = this.director.consumeBossSpawnRequests();
     for (let i = 0; i < pendingBossSpawns; i += 1) {
-      this.spawnBossEnemy(this.director?.chooseSpawnLane?.() ?? null);
+      this.spawnBossEnemy();
     }
   }
 
   processDirectorMiniBossSpawns() {
     const pendingMiniBossSpawns = this.director.consumeMiniBossSpawnRequests();
     for (let i = 0; i < pendingMiniBossSpawns; i += 1) {
-      this.spawnMiniBossEnemy(this.director?.chooseSpawnLane?.() ?? null);
+      this.spawnMiniBossEnemy();
     }
   }
 
@@ -1370,9 +1372,32 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  getOppositeBossEntryLane(lane) {
+    if (lane === SPAWN_LANES.BOW) {
+      return SPAWN_LANES.STERN;
+    }
+    return SPAWN_LANES.BOW;
+  }
+
+  getBossEntrySpawn(preferredLane = null) {
+    const safePreferredLane = BOSS_ENTRY_LANES.includes(preferredLane) ? preferredLane : Phaser.Utils.Array.GetRandom(BOSS_ENTRY_LANES);
+    const fallbackLane = this.getOppositeBossEntryLane(safePreferredLane);
+    const primary = this.getSpawnPosition(safePreferredLane);
+    if (this.isValidSpawnPoint(primary.x, primary.y)) {
+      return { lane: safePreferredLane, position: primary };
+    }
+
+    const fallback = this.getSpawnPosition(fallbackLane);
+    return {
+      lane: fallbackLane,
+      position: fallback
+    };
+  }
+
   spawnBossEnemy(preferredLane = null) {
-    const lane = this.director?.chooseSpawnLane?.(preferredLane) ?? null;
-    const spawnPosition = this.getSpawnPosition(lane);
+    const spawn = this.getBossEntrySpawn(preferredLane);
+    const lane = spawn.lane;
+    const spawnPosition = spawn.position;
     const boss = new BossEnemy(this, spawnPosition.x, spawnPosition.y);
     const hpMultiplier = this.director.getEnemyHpMultiplier();
     boss.hp = Math.max(1, Math.round(boss.hp * hpMultiplier));
@@ -1386,8 +1411,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnMiniBossEnemy(preferredLane = null) {
-    const lane = this.director?.chooseSpawnLane?.(preferredLane) ?? null;
-    const spawnPosition = this.getSpawnPosition(lane);
+    const spawn = this.getBossEntrySpawn(preferredLane);
+    const lane = spawn.lane;
+    const spawnPosition = spawn.position;
     const miniBoss = new BossEnemy(this, spawnPosition.x, spawnPosition.y, { variant: "mini" });
     const hpMultiplier = this.director.getEnemyHpMultiplier();
     miniBoss.hp = Math.max(1, Math.round(miniBoss.hp * hpMultiplier));
