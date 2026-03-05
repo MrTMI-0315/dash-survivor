@@ -10,6 +10,9 @@ import { DIRECTOR_BOSS_SPAWN } from "../config/director.js";
 import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
   ENEMY_POOL_SIZE,
+  PLAYTEST_SPAWN_PACING_DEFAULT,
+  PLAYTEST_SPAWN_PACING_ORDER,
+  PLAYTEST_SPAWN_PACING_PRESETS,
   SAFE_RADIUS,
   SPAWN_LANES,
   SPAWN_LANE_KEYS,
@@ -96,6 +99,7 @@ const META_STORAGE_KEY = "dashsurvivor_meta_v1";
 const BEST_TIME_STORAGE_KEY = "dashsurvivor_best_time_ms";
 const SHOP_UPGRADES_STORAGE_KEY = "dashsurvivor_shop_upgrades_v1";
 const WEAPON_UNLOCK_STORAGE_KEY = "dashsurvivor_weapon_unlocks_v1";
+const PLAYTEST_SPAWN_PACING_STORAGE_KEY = "dashsurvivor_playtest_spawn_pacing_v1";
 const DEBUG_HUD_X = 16;
 const DEBUG_HUD_Y = 116;
 const OFFSCREEN_INDICATOR_INSET = 18;
@@ -228,6 +232,10 @@ export class GameScene extends Phaser.Scene {
     this.hudStatsText = null;
     this.hudDashStatusText = null;
     this.debugDirectorText = null;
+    this.debugOverlayEnabled = true;
+    this.cameraFollowEnabled = true;
+    this.spawnPacingPresetKey = PLAYTEST_SPAWN_PACING_DEFAULT;
+    this.spawnPacingPreset = PLAYTEST_SPAWN_PACING_PRESETS[PLAYTEST_SPAWN_PACING_DEFAULT];
     this.offscreenIndicatorGraphics = null;
     this.damageNumberPool = [];
     this.hudAlertPool = [];
@@ -306,6 +314,15 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionActions = [];
     this.weaponUnlocks = this.loadWeaponUnlocks();
     this.selectedStartWeaponId = null;
+    this.debugOverlayEnabled = true;
+    this.cameraFollowEnabled = true;
+    this.spawnPacingPresetKey = this.loadSpawnPacingPresetKey();
+    this.spawnPacingPreset =
+      PLAYTEST_SPAWN_PACING_PRESETS[this.spawnPacingPresetKey] ?? PLAYTEST_SPAWN_PACING_PRESETS[PLAYTEST_SPAWN_PACING_DEFAULT];
+    this.baseSpawnCheckIntervalMs = Math.max(
+      60,
+      BASE_SPAWN_CHECK_INTERVAL_MS * (this.spawnPacingPreset?.spawnIntervalScale ?? 1)
+    );
     this.performanceDamageEvents = [];
     this.performanceKillEvents = [];
     this.performanceDamageTotal = 0;
@@ -331,6 +348,9 @@ export class GameScene extends Phaser.Scene {
       right: Phaser.Input.Keyboard.KeyCodes.D,
       dash: Phaser.Input.Keyboard.KeyCodes.SPACE,
       restart: Phaser.Input.Keyboard.KeyCodes.R,
+      debugToggle: Phaser.Input.Keyboard.KeyCodes.F2,
+      pacingPreset: Phaser.Input.Keyboard.KeyCodes.F3,
+      cameraToggle: Phaser.Input.Keyboard.KeyCodes.F4,
       meta1: Phaser.Input.Keyboard.KeyCodes.ONE,
       meta2: Phaser.Input.Keyboard.KeyCodes.TWO,
       meta3: Phaser.Input.Keyboard.KeyCodes.THREE,
@@ -403,6 +423,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(19);
+    this.debugDirectorText.setVisible(this.debugOverlayEnabled);
     this.createHudAlertPool();
 
     this.gameOverText = this.add
@@ -461,6 +482,7 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     this.updateSeaWaves(time);
+    this.handlePlaytestHotkeys();
 
     if (this.isGameOver) {
       this.updateBossProjectiles(time);
@@ -1534,7 +1556,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     const seconds = this.runTimeMs / 1000;
-    const baseTarget = this.getTargetEnemyCount(seconds);
+    const pacingTargetScale = Math.max(0.5, Number(this.spawnPacingPreset?.targetCountScale) || 1);
+    const baseTarget = this.getTargetEnemyCount(seconds) * pacingTargetScale;
     const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
     const scaledTarget = baseTarget * spawnRateMultiplier;
     const performance = this.getPerformanceMetrics();
@@ -2010,8 +2033,92 @@ export class GameScene extends Phaser.Scene {
     return `${m}:${String(s).padStart(2, "0")}`;
   }
 
+  loadSpawnPacingPresetKey() {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return PLAYTEST_SPAWN_PACING_DEFAULT;
+    }
+
+    const saved = window.localStorage.getItem(PLAYTEST_SPAWN_PACING_STORAGE_KEY);
+    if (saved && PLAYTEST_SPAWN_PACING_PRESETS[saved]) {
+      return saved;
+    }
+    return PLAYTEST_SPAWN_PACING_DEFAULT;
+  }
+
+  saveSpawnPacingPresetKey(key) {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+    window.localStorage.setItem(PLAYTEST_SPAWN_PACING_STORAGE_KEY, key);
+  }
+
+  applySpawnPacingPreset(key) {
+    const preset = PLAYTEST_SPAWN_PACING_PRESETS[key];
+    if (!preset) {
+      return false;
+    }
+
+    this.spawnPacingPresetKey = key;
+    this.spawnPacingPreset = preset;
+    this.baseSpawnCheckIntervalMs = Math.max(60, BASE_SPAWN_CHECK_INTERVAL_MS * (preset.spawnIntervalScale ?? 1));
+    this.saveSpawnPacingPresetKey(key);
+    return true;
+  }
+
+  cycleSpawnPacingPresetAtRunStart() {
+    if (this.runTimeMs > 0) {
+      this.showHudAlert("PACING LOCKED IN RUN", 900);
+      return;
+    }
+
+    const currentIdx = Math.max(0, PLAYTEST_SPAWN_PACING_ORDER.indexOf(this.spawnPacingPresetKey));
+    const nextKey = PLAYTEST_SPAWN_PACING_ORDER[(currentIdx + 1) % PLAYTEST_SPAWN_PACING_ORDER.length];
+    if (!this.applySpawnPacingPreset(nextKey)) {
+      return;
+    }
+    this.showHudAlert(`PACING ${nextKey}`, 1000);
+    this.maintainEnemyDensity();
+    this.updateDebugDirectorOverlay();
+  }
+
+  toggleDebugOverlay() {
+    this.debugOverlayEnabled = !this.debugOverlayEnabled;
+    this.debugDirectorText?.setVisible(this.debugOverlayEnabled);
+    this.showHudAlert(this.debugOverlayEnabled ? "DEBUG HUD ON" : "DEBUG HUD OFF", 850);
+  }
+
+  toggleCameraFollow() {
+    if (!this.player || !this.cameras?.main) {
+      return;
+    }
+    const camera = this.cameras.main;
+    this.cameraFollowEnabled = !this.cameraFollowEnabled;
+    if (this.cameraFollowEnabled) {
+      camera.startFollow(this.player, true, 0.08, 0.08);
+    } else {
+      camera.stopFollow();
+    }
+    this.showHudAlert(this.cameraFollowEnabled ? "CAM FOLLOW ON" : "CAM FOLLOW OFF", 900);
+  }
+
+  handlePlaytestHotkeys() {
+    if (!this.keys) {
+      return;
+    }
+
+    if (Phaser.Input.Keyboard.JustDown(this.keys.debugToggle)) {
+      this.toggleDebugOverlay();
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.pacingPreset)) {
+      this.cycleSpawnPacingPresetAtRunStart();
+    }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.cameraToggle)) {
+      this.toggleCameraFollow();
+    }
+  }
+
   updateDebugDirectorOverlay() {
-    if (!this.debugDirectorText || !this.director) {
+    if (!this.debugDirectorText || !this.director || !this.debugOverlayEnabled) {
       return;
     }
 
@@ -2022,6 +2129,7 @@ export class GameScene extends Phaser.Scene {
     this.debugDirectorText.setText(
       [
         `Enemies: ${alive}/${this.targetEnemies}`,
+        `Pacing: ${this.spawnPacingPresetKey}`,
         `EliteChance: ${(eliteChance * 100).toFixed(1)}%`,
         `SpawnInterval: ${Math.round(spawnIntervalMs)}ms`,
         `GameTime: ${this.formatRunTime(this.runTimeMs)}`

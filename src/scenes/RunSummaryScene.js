@@ -8,7 +8,7 @@ export class RunSummaryScene extends Phaser.Scene {
     const centerX = camera.width * 0.5;
     const centerY = camera.height * 0.5;
     const cardWidth = 400;
-    const cardHeight = 380;
+    const cardHeight = 430;
 
     const stats = {
       timeSurvivedMs: data.timeSurvivedMs ?? 0,
@@ -44,6 +44,7 @@ export class RunSummaryScene extends Phaser.Scene {
       `Coins Earned: +${stats.coinsEarned}`,
       `Coin Bank: ${stats.totalCoins}`
     ];
+    const copyText = ["DashSurvivor Run Summary", ...lines].join("\n");
 
     this.add
       .text(centerX, centerY - 46, lines.join("\n"), {
@@ -56,13 +57,29 @@ export class RunSummaryScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(3);
 
-    this.createActionButton(centerX, centerY + 94, "RETRY", () => {
+    this.copyStatusText = this.add
+      .text(centerX, centerY + 88, "", {
+        fontFamily: "Arial",
+        fontSize: "16px",
+        color: "#c9e8ff",
+        stroke: "#0f1d2e",
+        strokeThickness: 4
+      })
+      .setOrigin(0.5)
+      .setDepth(4)
+      .setVisible(false);
+
+    this.createActionButton(centerX, centerY + 122, "COPY STATS", () => {
+      this.copyRunSummaryStats(copyText);
+    });
+
+    this.createActionButton(centerX, centerY + 174, "RETRY", () => {
       this.scene.stop("RunSummaryScene");
       this.scene.stop("GameScene");
       this.scene.start("GameScene");
     });
 
-    this.createActionButton(centerX, centerY + 152, "MAIN MENU", () => {
+    this.createActionButton(centerX, centerY + 226, "MAIN MENU", () => {
       this.scene.stop("RunSummaryScene");
       const hasMainMenuScene = Boolean(this.scene.manager?.keys?.MainMenuScene);
       if (hasMainMenuScene) {
@@ -73,6 +90,52 @@ export class RunSummaryScene extends Phaser.Scene {
       this.scene.stop("GameScene");
       this.scene.start("GameScene");
     });
+  }
+
+  copyRunSummaryStats(text) {
+    if (!text) {
+      return;
+    }
+
+    const showStatus = (message) => {
+      if (!this.copyStatusText) {
+        return;
+      }
+      this.copyStatusText.setText(message);
+      this.copyStatusText.setVisible(true);
+      const previousHideTimer = this.copyStatusText.getData("hideTimer");
+      if (previousHideTimer) {
+        previousHideTimer.remove(false);
+      }
+      const hideTimer = this.time.delayedCall(1200, () => {
+        if (this.copyStatusText) {
+          this.copyStatusText.setVisible(false);
+          this.copyStatusText.setData("hideTimer", null);
+        }
+      });
+      this.copyStatusText.setData("hideTimer", hideTimer);
+    };
+
+    const fallbackLog = () => {
+      // Keep fallback available in non-secure contexts.
+      console.log(`[RunSummary] COPY STATS\n${text}`);
+      showStatus("Stats logged to console");
+    };
+
+    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
+      fallbackLog();
+      return;
+    }
+
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        console.log(`[RunSummary] COPY STATS\n${text}`);
+        showStatus("Stats copied");
+      })
+      .catch(() => {
+        fallbackLog();
+      });
   }
 
   createActionButton(x, y, label, onClick) {

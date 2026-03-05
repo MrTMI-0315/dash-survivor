@@ -3,6 +3,22 @@ export const WORLD_HEIGHT = 1350;
 export const ENEMY_POOL_SIZE = 420;
 export const SAFE_RADIUS = 300;
 export const BASE_SPAWN_CHECK_INTERVAL_MS = 250;
+export const PLAYTEST_SPAWN_PACING_PRESETS = Object.freeze({
+  EASY: Object.freeze({
+    spawnIntervalScale: 1.15,
+    targetCountScale: 0.85
+  }),
+  NORMAL: Object.freeze({
+    spawnIntervalScale: 1,
+    targetCountScale: 1
+  }),
+  HARD: Object.freeze({
+    spawnIntervalScale: 0.85,
+    targetCountScale: 1.2
+  })
+});
+export const PLAYTEST_SPAWN_PACING_ORDER = Object.freeze(["EASY", "NORMAL", "HARD"]);
+export const PLAYTEST_SPAWN_PACING_DEFAULT = "NORMAL";
 
 export const SPAWN_LANES = Object.freeze({
   BOW: "BOW",
