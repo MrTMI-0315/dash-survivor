@@ -24,29 +24,29 @@ import {
 
 const SHIP_DECK_OBSTACLE_LAYOUT = [
   // Mast: central large anchor that promotes circular kiting.
-  { type: "terrain_pillar", x: 1080, y: 675, scale: 1.7 },
+  { type: "terrain_pillar", role: "mast", x: 1080, y: 675, scale: 1.7 },
 
   // Crate cluster A (mid-right).
-  { type: "terrain_rock", x: 1490, y: 520, scale: 1.02 },
-  { type: "terrain_pillar", x: 1570, y: 565, scale: 0.94 },
-  { type: "terrain_rock", x: 1410, y: 590, scale: 0.9 },
+  { type: "terrain_rock", role: "crate", x: 1490, y: 520, scale: 1.02 },
+  { type: "terrain_pillar", role: "crate", x: 1570, y: 565, scale: 0.94 },
+  { type: "terrain_rock", role: "crate", x: 1410, y: 590, scale: 0.9 },
 
   // Crate cluster B (lower-right), leaves center lane open.
-  { type: "terrain_pillar", x: 1620, y: 900, scale: 1.0 },
-  { type: "terrain_rock", x: 1700, y: 960, scale: 0.9 },
-  { type: "terrain_rock", x: 1540, y: 980, scale: 0.88 },
-  { type: "terrain_rock", x: 1320, y: 980, scale: 0.85 },
-  { type: "terrain_pillar", x: 1390, y: 1040, scale: 0.82 },
+  { type: "terrain_pillar", role: "crate", x: 1620, y: 900, scale: 1.0 },
+  { type: "terrain_rock", role: "crate", x: 1700, y: 960, scale: 0.9 },
+  { type: "terrain_rock", role: "crate", x: 1540, y: 980, scale: 0.88 },
+  { type: "terrain_rock", role: "crate", x: 1320, y: 980, scale: 0.85 },
+  { type: "terrain_pillar", role: "crate", x: 1390, y: 1040, scale: 0.82 },
 
   // Cannons (port/left rail).
-  { type: "terrain_pillar", x: 270, y: 290, scale: 0.84 },
-  { type: "terrain_pillar", x: 270, y: 675, scale: 0.84 },
-  { type: "terrain_pillar", x: 270, y: 1060, scale: 0.84 },
+  { type: "terrain_pillar", role: "cannon", x: 270, y: 290, scale: 0.84 },
+  { type: "terrain_pillar", role: "cannon", x: 270, y: 675, scale: 0.84 },
+  { type: "terrain_pillar", role: "cannon", x: 270, y: 1060, scale: 0.84 },
 
   // Cannons (starboard/right rail).
-  { type: "terrain_pillar", x: 2130, y: 290, scale: 0.84 },
-  { type: "terrain_pillar", x: 2130, y: 675, scale: 0.84 },
-  { type: "terrain_pillar", x: 2130, y: 1060, scale: 0.84 }
+  { type: "terrain_pillar", role: "cannon", x: 2130, y: 290, scale: 0.84 },
+  { type: "terrain_pillar", role: "cannon", x: 2130, y: 675, scale: 0.84 },
+  { type: "terrain_pillar", role: "cannon", x: 2130, y: 1060, scale: 0.84 }
 ];
 const BOSS_ENTRY_LANES = Object.freeze([SPAWN_LANES.BOW, SPAWN_LANES.STERN]);
 const HATCH_BREACH_POINT = Object.freeze({ x: 1200, y: 1090 });
@@ -68,6 +68,13 @@ const DECK_RAIL_POST_WIDTH = 8;
 const DECK_RAIL_POST_LENGTH = 24;
 const SEA_WAVE_MIN = 6;
 const SEA_WAVE_MAX = 10;
+const DECK_PASSAGE_SAMPLE_DISTANCES = Object.freeze([220, 340, 460]);
+const DECK_PASSAGE_MIN_OPEN_DIRECTIONS = 2;
+const DECK_PASSAGE_REPAIR_MAX_STEPS = 18;
+const DECK_PASSAGE_REPAIR_NUDGE = 40;
+const ENEMY_JAM_STUCK_WINDOW_MS = 900;
+const ENEMY_JAM_MIN_PROGRESS_PX = 4;
+const ENEMY_JAM_PUSH_FORCE = 150;
 const ELITE_BONUS_XP_ORB_MIN = 2;
 const ELITE_BONUS_XP_ORB_MAX = 4;
 const ELITE_BONUS_XP_ORB_VALUE_FACTOR = 0.35;
@@ -242,6 +249,7 @@ export class GameScene extends Phaser.Scene {
     this.performanceKillTotal = 0;
     this.seaWaveGraphics = null;
     this.seaWaves = [];
+    this.devAntiJamEnabled = false;
   }
 
   create() {
@@ -288,6 +296,7 @@ export class GameScene extends Phaser.Scene {
     this.performanceKillEvents = [];
     this.performanceDamageTotal = 0;
     this.performanceKillTotal = 0;
+    this.devAntiJamEnabled = this.resolveDevAntiJamEnabled();
 
     this.createTextures();
     this.drawArena();
@@ -543,6 +552,7 @@ export class GameScene extends Phaser.Scene {
       if (enemy.updateBossPattern) {
         enemy.updateBossPattern(this.player, time);
       }
+      this.applyEnemyAntiJam(enemy, time);
     });
 
     if (this.player.isDead()) {
@@ -1322,6 +1332,7 @@ export class GameScene extends Phaser.Scene {
 
     this.terrainObstacleAnchors = [];
     SHIP_DECK_OBSTACLE_LAYOUT.forEach((entry) => this.spawnTerrainObstacle(entry));
+    this.ensureNavigableDeckPassages();
   }
 
   spawnTerrainObstacle(config = {}) {
@@ -1330,6 +1341,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const obstacleType = config.type === "terrain_pillar" ? "terrain_pillar" : "terrain_rock";
+    const role = config.role ?? "misc";
     const x = Phaser.Math.Clamp(Number(config.x) || WORLD_WIDTH * 0.5, 12, WORLD_WIDTH - 12);
     const y = Phaser.Math.Clamp(Number(config.y) || WORLD_HEIGHT * 0.5, 12, WORLD_HEIGHT - 12);
     const scale = Phaser.Math.Clamp(Number(config.scale) || 1, 0.72, 1.9);
@@ -1341,14 +1353,159 @@ export class GameScene extends Phaser.Scene {
 
     obstacle.setScale(scale);
     obstacle.setDepth(2);
+    obstacle.setData("obstacleRole", role);
     obstacle.refreshBody();
 
     const anchorRadius = obstacleType === "terrain_rock" ? 36 : 40;
     this.terrainObstacleAnchors.push({
       x,
       y,
-      radius: anchorRadius * scale
+      radius: anchorRadius * scale,
+      obstacle,
+      role
     });
+  }
+
+  resolveDevAntiJamEnabled() {
+    if (typeof window === "undefined") {
+      return false;
+    }
+    try {
+      const params = new URLSearchParams(window.location?.search ?? "");
+      if (params.get("dev_jam") === "1") {
+        return true;
+      }
+    } catch (_error) {
+      // Ignore URL parsing failures.
+    }
+    return Boolean(window.__DEV__);
+  }
+
+  getDeckPassageOpenDirectionCount() {
+    const centerX = WORLD_WIDTH * 0.5;
+    const centerY = WORLD_HEIGHT * 0.5;
+    const directions = [
+      { x: -1, y: 0 },
+      { x: 1, y: 0 },
+      { x: 0, y: -1 },
+      { x: 0, y: 1 }
+    ];
+    let openDirections = 0;
+
+    directions.forEach((dir) => {
+      let clearSamples = 0;
+      DECK_PASSAGE_SAMPLE_DISTANCES.forEach((distance) => {
+        const sampleX = centerX + dir.x * distance;
+        const sampleY = centerY + dir.y * distance;
+        if (!this.isObstacleBlockedAt(sampleX, sampleY, 24)) {
+          clearSamples += 1;
+        }
+      });
+      if (clearSamples >= 2) {
+        openDirections += 1;
+      }
+    });
+
+    return openDirections;
+  }
+
+  canRepositionObstacleAnchor(anchor, nextX, nextY) {
+    if (!anchor) {
+      return false;
+    }
+
+    if (nextX < 12 || nextX > WORLD_WIDTH - 12 || nextY < 12 || nextY > WORLD_HEIGHT - 12) {
+      return false;
+    }
+    const distFromCenter = Phaser.Math.Distance.Between(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5, nextX, nextY);
+    if (distFromCenter < 120) {
+      return false;
+    }
+
+    return this.terrainObstacleAnchors.every((other) => {
+      if (other === anchor) {
+        return true;
+      }
+      const gap = Phaser.Math.Distance.Between(other.x, other.y, nextX, nextY);
+      return gap >= other.radius + anchor.radius + 20;
+    });
+  }
+
+  ensureNavigableDeckPassages() {
+    if (!Array.isArray(this.terrainObstacleAnchors) || this.terrainObstacleAnchors.length === 0) {
+      return;
+    }
+
+    const movableAnchors = this.terrainObstacleAnchors.filter((anchor) => anchor.role === "crate" && anchor.obstacle?.active);
+    if (movableAnchors.length === 0) {
+      return;
+    }
+
+    let openDirectionCount = this.getDeckPassageOpenDirectionCount();
+    if (openDirectionCount >= DECK_PASSAGE_MIN_OPEN_DIRECTIONS) {
+      return;
+    }
+
+    for (let i = 0; i < DECK_PASSAGE_REPAIR_MAX_STEPS; i += 1) {
+      const anchor = Phaser.Utils.Array.GetRandom(movableAnchors);
+      const nextX = Phaser.Math.Clamp(anchor.x + Phaser.Math.Between(-DECK_PASSAGE_REPAIR_NUDGE, DECK_PASSAGE_REPAIR_NUDGE), 16, WORLD_WIDTH - 16);
+      const nextY = Phaser.Math.Clamp(anchor.y + Phaser.Math.Between(-DECK_PASSAGE_REPAIR_NUDGE, DECK_PASSAGE_REPAIR_NUDGE), 16, WORLD_HEIGHT - 16);
+      if (!this.canRepositionObstacleAnchor(anchor, nextX, nextY)) {
+        continue;
+      }
+
+      anchor.x = nextX;
+      anchor.y = nextY;
+      if (anchor.obstacle) {
+        anchor.obstacle.setPosition(nextX, nextY);
+        anchor.obstacle.refreshBody();
+      }
+
+      openDirectionCount = this.getDeckPassageOpenDirectionCount();
+      if (openDirectionCount >= DECK_PASSAGE_MIN_OPEN_DIRECTIONS) {
+        return;
+      }
+    }
+  }
+
+  applyEnemyAntiJam(enemy, nowMs) {
+    if (!this.devAntiJamEnabled || !enemy?.active || !enemy?.body) {
+      return;
+    }
+
+    if (enemy.getData("isBoss")) {
+      return;
+    }
+
+    const lastX = enemy.getData("jamLastX");
+    const lastY = enemy.getData("jamLastY");
+    if (lastX === undefined || lastY === undefined) {
+      enemy.setData("jamLastX", enemy.x);
+      enemy.setData("jamLastY", enemy.y);
+      enemy.setData("jamLastMoveAtMs", nowMs);
+      return;
+    }
+
+    const distanceMoved = Phaser.Math.Distance.Between(lastX, lastY, enemy.x, enemy.y);
+    const desiredSpeed = Math.hypot(enemy.body.velocity.x, enemy.body.velocity.y);
+    const lastMoveAtMs = enemy.getData("jamLastMoveAtMs") ?? nowMs;
+    if (distanceMoved > ENEMY_JAM_MIN_PROGRESS_PX) {
+      enemy.setData("jamLastMoveAtMs", nowMs);
+    } else {
+      const stuckDuration = nowMs - lastMoveAtMs;
+      if (desiredSpeed > Math.max(40, enemy.speed * 0.35) && stuckDuration >= ENEMY_JAM_STUCK_WINDOW_MS) {
+        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const sourceX = enemy.x - Math.cos(angle) * 18;
+        const sourceY = enemy.y - Math.sin(angle) * 18;
+        if (typeof enemy.applyKnockbackFrom === "function") {
+          enemy.applyKnockbackFrom(sourceX, sourceY, ENEMY_JAM_PUSH_FORCE);
+        }
+        enemy.setData("jamLastMoveAtMs", nowMs);
+      }
+    }
+
+    enemy.setData("jamLastX", enemy.x);
+    enemy.setData("jamLastY", enemy.y);
   }
 
   getTargetEnemyCount(seconds) {
