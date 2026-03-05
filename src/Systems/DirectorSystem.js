@@ -14,6 +14,7 @@ import {
   DIRECTOR_STATE,
   DIRECTOR_STATE_SEQUENCE
 } from "../config/director.js";
+import { SPAWN_LANE_KEYS } from "../config/progression.js";
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
@@ -27,6 +28,13 @@ function randomIntInclusive(min, max) {
   const safeMin = Math.ceil(min);
   const safeMax = Math.floor(max);
   return Math.floor(Math.random() * (safeMax - safeMin + 1)) + safeMin;
+}
+
+function randomArrayItem(items) {
+  if (!Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+  return items[Math.floor(Math.random() * items.length)] ?? null;
 }
 
 export class DirectorSystem {
@@ -217,6 +225,13 @@ export class DirectorSystem {
     const negativeOffset = Math.min(0, this.adaptivePerformance) * (safeBaseTarget * cfg.maxNegativeScale);
     const offset = Math.round(positiveOffset + negativeOffset);
     return Math.max(cfg.minOffset, Math.min(cfg.maxOffset, offset));
+  }
+
+  chooseSpawnLane(preferredLane = null) {
+    if (preferredLane && SPAWN_LANE_KEYS.includes(preferredLane)) {
+      return preferredLane;
+    }
+    return randomArrayItem(SPAWN_LANE_KEYS);
   }
 }
 

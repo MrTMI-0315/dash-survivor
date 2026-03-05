@@ -11,6 +11,8 @@ import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
   ENEMY_POOL_SIZE,
   SAFE_RADIUS,
+  SPAWN_LANE_KEYS,
+  SPAWN_LANE_RULES,
   SPAWN_BURST_CONFIG,
   TARGET_ENEMY_CURVE,
   TARGET_ENEMY_FALLBACK,
@@ -1276,7 +1278,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnEnemyFromEdge() {
+  spawnEnemyFromEdge(preferredLane = null) {
     if (this.isGameOver || this.isLeveling || this.isWeaponSelecting) {
       return;
     }
@@ -1289,7 +1291,8 @@ export class GameScene extends Phaser.Scene {
     const baseHp = ENEMY_ARCHETYPE_CONFIGS[type]?.hp ?? ENEMY_ARCHETYPE_CONFIGS.chaser.hp;
     const scaledHp = Math.max(1, Math.round(baseHp * hpMultiplier));
     const groupCount = type === "swarm" ? Phaser.Math.Between(3, 5) : 1;
-    const anchor = this.getSpawnPosition();
+    const lane = this.director?.chooseSpawnLane?.(preferredLane) ?? null;
+    const anchor = this.getSpawnPosition(lane);
 
     for (let i = 0; i < groupCount; i += 1) {
       if (this.getAliveEnemyCount() >= PERFORMANCE_MAX_ACTIVE_ENEMIES) {
@@ -1301,7 +1304,7 @@ export class GameScene extends Phaser.Scene {
       let spawnY = Phaser.Math.Clamp(anchor.y + Math.sin(angle) * jitter, 12, WORLD_HEIGHT - 12);
 
       if (!this.isValidSpawnPoint(spawnX, spawnY)) {
-        const fallback = this.getSpawnPosition();
+        const fallback = this.getSpawnPosition(lane);
         spawnX = fallback.x;
         spawnY = fallback.y;
       }
@@ -1312,6 +1315,7 @@ export class GameScene extends Phaser.Scene {
       }
       enemy.setData("lastDashHitId", -1);
       enemy.setData("archetype", type);
+      enemy.setData("spawnLane", lane);
 
       const eliteChance = this.director.getEliteChance();
       const isElite = type !== "swarm" && Math.random() < eliteChance;
@@ -1348,14 +1352,14 @@ export class GameScene extends Phaser.Scene {
   processDirectorBossSpawns() {
     const pendingBossSpawns = this.director.consumeBossSpawnRequests();
     for (let i = 0; i < pendingBossSpawns; i += 1) {
-      this.spawnBossEnemy();
+      this.spawnBossEnemy(this.director?.chooseSpawnLane?.() ?? null);
     }
   }
 
   processDirectorMiniBossSpawns() {
     const pendingMiniBossSpawns = this.director.consumeMiniBossSpawnRequests();
     for (let i = 0; i < pendingMiniBossSpawns; i += 1) {
-      this.spawnMiniBossEnemy();
+      this.spawnMiniBossEnemy(this.director?.chooseSpawnLane?.() ?? null);
     }
   }
 
@@ -1366,26 +1370,30 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnBossEnemy() {
-    const spawnPosition = this.getSpawnPosition();
+  spawnBossEnemy(preferredLane = null) {
+    const lane = this.director?.chooseSpawnLane?.(preferredLane) ?? null;
+    const spawnPosition = this.getSpawnPosition(lane);
     const boss = new BossEnemy(this, spawnPosition.x, spawnPosition.y);
     const hpMultiplier = this.director.getEnemyHpMultiplier();
     boss.hp = Math.max(1, Math.round(boss.hp * hpMultiplier));
     boss.setData("lastDashHitId", -1);
     boss.setData("archetype", "boss");
+    boss.setData("spawnLane", lane);
     this.enemies.add(boss);
 
     this.cameras.main.shake(210, 0.0048);
     this.showHudAlert("BOSS INCOMING");
   }
 
-  spawnMiniBossEnemy() {
-    const spawnPosition = this.getSpawnPosition();
+  spawnMiniBossEnemy(preferredLane = null) {
+    const lane = this.director?.chooseSpawnLane?.(preferredLane) ?? null;
+    const spawnPosition = this.getSpawnPosition(lane);
     const miniBoss = new BossEnemy(this, spawnPosition.x, spawnPosition.y, { variant: "mini" });
     const hpMultiplier = this.director.getEnemyHpMultiplier();
     miniBoss.hp = Math.max(1, Math.round(miniBoss.hp * hpMultiplier));
     miniBoss.setData("lastDashHitId", -1);
     miniBoss.setData("archetype", "mini_boss");
+    miniBoss.setData("spawnLane", lane);
     this.enemies.add(miniBoss);
 
     this.cameras.main.shake(160, 0.0036);
@@ -1661,59 +1669,62 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  getSpawnPosition() {
+  getSpawnCandidateForLane(lane, view) {
+    const rule = SPAWN_LANE_RULES[lane];
+    if (!rule) {
+      return null;
+    }
+
+    const width = Math.max(1, view.right - view.left);
+    const height = Math.max(1, view.bottom - view.top);
+    const rangeStart = Phaser.Math.Clamp(rule.rangeStart ?? 0, 0, 1);
+    const rangeEnd = Phaser.Math.Clamp(rule.rangeEnd ?? 1, rangeStart, 1);
+    const offset = Math.max(24, Number(rule.offscreenOffset) || 90);
+
+    let x = view.centerX;
+    let y = view.centerY;
+    if (rule.edge === "top") {
+      x = Phaser.Math.Between(view.left + width * rangeStart, view.left + width * rangeEnd);
+      y = view.top - offset;
+    } else if (rule.edge === "bottom") {
+      x = Phaser.Math.Between(view.left + width * rangeStart, view.left + width * rangeEnd);
+      y = view.bottom + offset;
+    } else if (rule.edge === "left") {
+      x = view.left - offset;
+      y = Phaser.Math.Between(view.top + height * rangeStart, view.top + height * rangeEnd);
+    } else if (rule.edge === "right") {
+      x = view.right + offset;
+      y = Phaser.Math.Between(view.top + height * rangeStart, view.top + height * rangeEnd);
+    }
+
+    return {
+      x: Phaser.Math.Clamp(x, 12, WORLD_WIDTH - 12),
+      y: Phaser.Math.Clamp(y, 12, WORLD_HEIGHT - 12),
+      lane
+    };
+  }
+
+  getSpawnPosition(lane = null) {
     const view = this.cameras.main.worldView;
-    const margin = 90;
+    const hasRequestedLane = Boolean(lane && SPAWN_LANE_RULES[lane]);
+    const lanes = hasRequestedLane ? [lane] : SPAWN_LANE_KEYS;
 
     for (let attempt = 0; attempt < 24; attempt += 1) {
-      const side = Phaser.Math.Between(0, 3);
-      let x;
-      let y;
-
-      if (side === 0) {
-        x = Phaser.Math.Between(view.left, view.right);
-        y = view.top - margin;
-      } else if (side === 1) {
-        x = view.right + margin;
-        y = Phaser.Math.Between(view.top, view.bottom);
-      } else if (side === 2) {
-        x = Phaser.Math.Between(view.left, view.right);
-        y = view.bottom + margin;
-      } else {
-        x = view.left - margin;
-        y = Phaser.Math.Between(view.top, view.bottom);
+      const laneForAttempt = hasRequestedLane ? lane : Phaser.Utils.Array.GetRandom(lanes);
+      const candidate = this.getSpawnCandidateForLane(laneForAttempt, view);
+      if (!candidate) {
+        continue;
       }
-
-      x = Phaser.Math.Clamp(x, 12, WORLD_WIDTH - 12);
-      y = Phaser.Math.Clamp(y, 12, WORLD_HEIGHT - 12);
-
-      const isOutsideView = !Phaser.Geom.Rectangle.Contains(view, x, y);
-      const isOutsideSafeRadius = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > this.safeRadius;
-      if (isOutsideView && isOutsideSafeRadius) {
-        return { x, y };
+      if (this.isValidSpawnPoint(candidate.x, candidate.y)) {
+        return candidate;
       }
     }
 
-    const fallbackCandidates = [
-      {
-        x: Phaser.Math.Clamp(view.left - margin, 12, WORLD_WIDTH - 12),
-        y: Phaser.Math.Clamp(Phaser.Math.Between(view.top, view.bottom), 12, WORLD_HEIGHT - 12)
-      },
-      {
-        x: Phaser.Math.Clamp(view.right + margin, 12, WORLD_WIDTH - 12),
-        y: Phaser.Math.Clamp(Phaser.Math.Between(view.top, view.bottom), 12, WORLD_HEIGHT - 12)
-      },
-      {
-        x: Phaser.Math.Clamp(Phaser.Math.Between(view.left, view.right), 12, WORLD_WIDTH - 12),
-        y: Phaser.Math.Clamp(view.top - margin, 12, WORLD_HEIGHT - 12)
-      },
-      {
-        x: Phaser.Math.Clamp(Phaser.Math.Between(view.left, view.right), 12, WORLD_WIDTH - 12),
-        y: Phaser.Math.Clamp(view.bottom + margin, 12, WORLD_HEIGHT - 12)
-      }
-    ];
+    const fallbackCandidates = lanes
+      .map((laneKey) => this.getSpawnCandidateForLane(laneKey, view))
+      .filter(Boolean);
 
-    let best = fallbackCandidates[0];
+    let best = fallbackCandidates[0] ?? { x: this.player.x, y: this.player.y };
     let bestScore = Number.NEGATIVE_INFINITY;
     fallbackCandidates.forEach((candidate) => {
       const outsideBonus = Phaser.Geom.Rectangle.Contains(view, candidate.x, candidate.y) ? 0 : 100000;
