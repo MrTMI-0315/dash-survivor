@@ -19,11 +19,32 @@ import {
   XP_REQUIREMENTS
 } from "../config/progression.js";
 
-const TERRAIN_OBSTACLE_MIN_COUNT = 5;
-const TERRAIN_OBSTACLE_MAX_COUNT = 10;
-const TERRAIN_OBSTACLE_WORLD_MARGIN = 120;
-const TERRAIN_OBSTACLE_SAFE_RADIUS_FROM_PLAYER = 220;
-const TERRAIN_OBSTACLE_MIN_GAP = 130;
+const SHIP_DECK_OBSTACLE_LAYOUT = [
+  // Mast: central large anchor that promotes circular kiting.
+  { type: "terrain_pillar", x: 1080, y: 675, scale: 1.7 },
+
+  // Crate cluster A (mid-right).
+  { type: "terrain_rock", x: 1490, y: 520, scale: 1.02 },
+  { type: "terrain_pillar", x: 1570, y: 565, scale: 0.94 },
+  { type: "terrain_rock", x: 1410, y: 590, scale: 0.9 },
+
+  // Crate cluster B (lower-right), leaves center lane open.
+  { type: "terrain_pillar", x: 1620, y: 900, scale: 1.0 },
+  { type: "terrain_rock", x: 1700, y: 960, scale: 0.9 },
+  { type: "terrain_rock", x: 1540, y: 980, scale: 0.88 },
+  { type: "terrain_rock", x: 1320, y: 980, scale: 0.85 },
+  { type: "terrain_pillar", x: 1390, y: 1040, scale: 0.82 },
+
+  // Cannons (port/left rail).
+  { type: "terrain_pillar", x: 270, y: 290, scale: 0.84 },
+  { type: "terrain_pillar", x: 270, y: 675, scale: 0.84 },
+  { type: "terrain_pillar", x: 270, y: 1060, scale: 0.84 },
+
+  // Cannons (starboard/right rail).
+  { type: "terrain_pillar", x: 2130, y: 290, scale: 0.84 },
+  { type: "terrain_pillar", x: 2130, y: 675, scale: 0.84 },
+  { type: "terrain_pillar", x: 2130, y: 1060, scale: 0.84 }
+];
 const XP_MAGNET_RADIUS_PER_LEVEL = 6;
 const ELITE_BONUS_XP_ORB_MIN = 2;
 const ELITE_BONUS_XP_ORB_MAX = 4;
@@ -1170,52 +1191,34 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.terrainObstacleAnchors = [];
-    const count = Phaser.Math.Between(TERRAIN_OBSTACLE_MIN_COUNT, TERRAIN_OBSTACLE_MAX_COUNT);
-    for (let i = 0; i < count; i += 1) {
-      this.spawnTerrainObstacle();
-    }
+    SHIP_DECK_OBSTACLE_LAYOUT.forEach((entry) => this.spawnTerrainObstacle(entry));
   }
 
-  spawnTerrainObstacle() {
-    const obstacleType = Math.random() < 0.56 ? "terrain_rock" : "terrain_pillar";
-    const minRadius = obstacleType === "terrain_rock" ? 30 : 34;
-    const maxRadius = obstacleType === "terrain_rock" ? 42 : 46;
-    const anchorRadius = Phaser.Math.Between(minRadius, maxRadius);
-
-    for (let attempt = 0; attempt < 36; attempt += 1) {
-      const x = Phaser.Math.Between(TERRAIN_OBSTACLE_WORLD_MARGIN, WORLD_WIDTH - TERRAIN_OBSTACLE_WORLD_MARGIN);
-      const y = Phaser.Math.Between(TERRAIN_OBSTACLE_WORLD_MARGIN, WORLD_HEIGHT - TERRAIN_OBSTACLE_WORLD_MARGIN);
-
-      const distFromPlayer = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y);
-      if (distFromPlayer <= TERRAIN_OBSTACLE_SAFE_RADIUS_FROM_PLAYER + anchorRadius) {
-        continue;
-      }
-
-      const overlapsExisting = this.terrainObstacleAnchors.some((anchor) => {
-        const gap = Phaser.Math.Distance.Between(anchor.x, anchor.y, x, y);
-        return gap < anchor.radius + anchorRadius + TERRAIN_OBSTACLE_MIN_GAP;
-      });
-      if (overlapsExisting) {
-        continue;
-      }
-
-      const obstacle = this.obstacles.create(x, y, obstacleType);
-      if (!obstacle) {
-        return;
-      }
-
-      const scale = Phaser.Math.FloatBetween(0.8, 1.15);
-      obstacle.setScale(scale);
-      obstacle.setDepth(2);
-      obstacle.refreshBody();
-
-      this.terrainObstacleAnchors.push({
-        x,
-        y,
-        radius: anchorRadius * scale
-      });
+  spawnTerrainObstacle(config = {}) {
+    if (!this.obstacles) {
       return;
     }
+
+    const obstacleType = config.type === "terrain_pillar" ? "terrain_pillar" : "terrain_rock";
+    const x = Phaser.Math.Clamp(Number(config.x) || WORLD_WIDTH * 0.5, 12, WORLD_WIDTH - 12);
+    const y = Phaser.Math.Clamp(Number(config.y) || WORLD_HEIGHT * 0.5, 12, WORLD_HEIGHT - 12);
+    const scale = Phaser.Math.Clamp(Number(config.scale) || 1, 0.72, 1.9);
+
+    const obstacle = this.obstacles.create(x, y, obstacleType);
+    if (!obstacle) {
+      return;
+    }
+
+    obstacle.setScale(scale);
+    obstacle.setDepth(2);
+    obstacle.refreshBody();
+
+    const anchorRadius = obstacleType === "terrain_rock" ? 36 : 40;
+    this.terrainObstacleAnchors.push({
+      x,
+      y,
+      radius: anchorRadius * scale
+    });
   }
 
   getTargetEnemyCount(seconds) {
