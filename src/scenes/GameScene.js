@@ -61,6 +61,10 @@ const LADDER_SPAWN_POINTS = Object.freeze({
   ])
 });
 const XP_MAGNET_RADIUS_PER_LEVEL = 6;
+const DECK_RAIL_INSET = 12;
+const DECK_RAIL_POST_GAP = 120;
+const DECK_RAIL_POST_WIDTH = 8;
+const DECK_RAIL_POST_LENGTH = 24;
 const ELITE_BONUS_XP_ORB_MIN = 2;
 const ELITE_BONUS_XP_ORB_MAX = 4;
 const ELITE_BONUS_XP_ORB_VALUE_FACTOR = 0.35;
@@ -1003,6 +1007,39 @@ export class GameScene extends Phaser.Scene {
     }
     for (let y = 0; y <= WORLD_HEIGHT; y += grid) {
       graphics.lineBetween(0, y, WORLD_WIDTH, y);
+    }
+
+    this.drawDeckRails();
+  }
+
+  drawDeckRails() {
+    const rail = this.add.graphics();
+    rail.setDepth(1);
+
+    const left = DECK_RAIL_INSET;
+    const top = DECK_RAIL_INSET;
+    const width = WORLD_WIDTH - DECK_RAIL_INSET * 2;
+    const height = WORLD_HEIGHT - DECK_RAIL_INSET * 2;
+    const right = left + width;
+    const bottom = top + height;
+
+    // Main rail body and highlight.
+    rail.lineStyle(12, 0x503724, 0.95);
+    rail.strokeRect(left, top, width, height);
+    rail.lineStyle(4, 0x8e6340, 0.9);
+    rail.strokeRect(left + 4, top + 4, width - 8, height - 8);
+
+    // Post segments along port/starboard.
+    rail.fillStyle(0x6d4b30, 1);
+    for (let y = top + 30; y <= bottom - 30; y += DECK_RAIL_POST_GAP) {
+      rail.fillRect(left - 2, y - DECK_RAIL_POST_LENGTH / 2, DECK_RAIL_POST_WIDTH, DECK_RAIL_POST_LENGTH);
+      rail.fillRect(right - DECK_RAIL_POST_WIDTH + 2, y - DECK_RAIL_POST_LENGTH / 2, DECK_RAIL_POST_WIDTH, DECK_RAIL_POST_LENGTH);
+    }
+
+    // Post segments along bow/stern.
+    for (let x = left + 34; x <= right - 34; x += DECK_RAIL_POST_GAP) {
+      rail.fillRect(x - DECK_RAIL_POST_LENGTH / 2, top - 2, DECK_RAIL_POST_LENGTH, DECK_RAIL_POST_WIDTH);
+      rail.fillRect(x - DECK_RAIL_POST_LENGTH / 2, bottom - DECK_RAIL_POST_WIDTH + 2, DECK_RAIL_POST_LENGTH, DECK_RAIL_POST_WIDTH);
     }
   }
 
