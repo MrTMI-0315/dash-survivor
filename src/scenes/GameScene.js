@@ -110,6 +110,8 @@ export class GameScene extends Phaser.Scene {
     this.comboTextTween = null;
     this.killCombo = 0;
     this.lastKillAtMs = Number.NEGATIVE_INFINITY;
+    this.maxKillCombo = 0;
+    this.totalKills = 0;
     this.xpDisplayRatio = 0;
     this.bossApproachWarnedCycleIndex = 0;
     this.levelUpOptionActions = [];
@@ -143,6 +145,8 @@ export class GameScene extends Phaser.Scene {
     this.hudAlertHideEvent = null;
     this.killCombo = 0;
     this.lastKillAtMs = Number.NEGATIVE_INFINITY;
+    this.maxKillCombo = 0;
+    this.totalKills = 0;
     this.comboTextTween = null;
     this.xpDisplayRatio = 0;
     this.bossApproachWarnedCycleIndex = 0;
@@ -1784,6 +1788,7 @@ export class GameScene extends Phaser.Scene {
       this.killCombo = 0;
     }
     this.killCombo += 1;
+    this.maxKillCombo = Math.max(this.maxKillCombo, this.killCombo);
     this.lastKillAtMs = nowMs;
 
     if (!this.comboText || this.killCombo < 3) {
@@ -1835,6 +1840,7 @@ export class GameScene extends Phaser.Scene {
       enemy.body.setVelocity(0, 0);
       enemy.body.enable = false;
     }
+    this.totalKills += 1;
 
     this.updateKillCombo();
 
@@ -2133,6 +2139,18 @@ export class GameScene extends Phaser.Scene {
       this.gameOverRestartButton.setVisible(true);
       this.gameOverRestartLabel.setVisible(true);
     }
+
+    const summaryPayload = {
+      timeSurvivedMs: this.runTimeMs,
+      enemiesKilled: this.totalKills,
+      maxCombo: this.maxKillCombo,
+      levelReached: this.level
+    };
+    if (this.scene.isActive("RunSummaryScene")) {
+      this.scene.stop("RunSummaryScene");
+    }
+    this.scene.launch("RunSummaryScene", summaryPayload);
+    this.scene.bringToTop("RunSummaryScene");
   }
 
   handleGameOverInput() {
@@ -2154,6 +2172,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   restartRun() {
+    if (this.scene.isActive("RunSummaryScene")) {
+      this.scene.stop("RunSummaryScene");
+    }
     this.scene.restart();
   }
 

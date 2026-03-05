@@ -1,4 +1,5 @@
 import { GameScene } from "./scenes/GameScene.js";
+import { RunSummaryScene } from "./scenes/RunSummaryScene.js";
 
 const config = {
   type: Phaser.AUTO,
@@ -33,7 +34,7 @@ const config = {
     width: 1280,
     height: 720
   },
-  scene: [GameScene]
+  scene: [GameScene, RunSummaryScene]
 };
 
 new Phaser.Game(config);
