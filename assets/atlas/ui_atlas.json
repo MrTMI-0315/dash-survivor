@@ -1,0 +1,19 @@
+{
+  "frames": {
+    "dot": {
+      "frame": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "rotated": false,
+      "trimmed": false,
+      "spriteSourceSize": { "x": 0, "y": 0, "w": 1, "h": 1 },
+      "sourceSize": { "w": 1, "h": 1 }
+    }
+  },
+  "meta": {
+    "app": "DashSurvivor",
+    "version": "1.0",
+    "image": "ui_atlas.png",
+    "format": "RGBA8888",
+    "size": { "w": 1, "h": 1 },
+    "scale": "1"
+  }
+}

@@ -33,6 +33,63 @@ body {
   position: relative;
 }
 
+#loading-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 30% 20%, #132443 0%, #070d19 70%);
+  transition: opacity 220ms ease;
+}
+
+#loading-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#loading-card {
+  width: min(84vw, 420px);
+  padding: 26px 24px;
+  border-radius: 14px;
+  background: rgba(9, 16, 30, 0.9);
+  border: 1px solid rgba(137, 190, 255, 0.35);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
+}
+
+#loading-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #f1f7ff;
+  text-align: center;
+}
+
+#loading-subtitle {
+  margin-top: 8px;
+  font-size: 15px;
+  color: #c4dfff;
+  text-align: center;
+}
+
+#loading-bar-track {
+  margin-top: 16px;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(17, 33, 57, 0.9);
+  border: 1px solid rgba(114, 164, 226, 0.38);
+}
+
+#loading-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #66c8ff 0%, #8ff3be 100%);
+  transition: width 120ms linear;
+}
+
 canvas {
   display: block;
   touch-action: none;

@@ -1,9 +1,34 @@
 const COIN_STORAGE_KEY = "dashsurvivor_coins";
 const BEST_TIME_STORAGE_KEY = "dashsurvivor_best_time_ms";
+const MENU_ATLAS_KEY = "ui_atlas";
+const MENU_ATLAS_IMAGE = "assets/atlas/ui_atlas.png";
+const MENU_ATLAS_DATA = "assets/atlas/ui_atlas.json";
+const SHARED_AUDIO_FILES = {
+  dash: "assets/audio/dash.wav",
+  enemy_hit: "assets/audio/enemy_hit.wav",
+  enemy_death: "assets/audio/enemy_die.wav",
+  level_up: "assets/audio/level_up.wav",
+  boss_warning: "assets/audio/boss_warning.wav"
+};
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
     super("MainMenuScene");
+  }
+
+  preload() {
+    this.bindLoadingScreenProgress();
+
+    if (!this.textures.exists(MENU_ATLAS_KEY)) {
+      this.load.atlas(MENU_ATLAS_KEY, MENU_ATLAS_IMAGE, MENU_ATLAS_DATA);
+    }
+
+    Object.entries(SHARED_AUDIO_FILES).forEach(([key, path]) => {
+      if (this.cache?.audio?.exists(key)) {
+        return;
+      }
+      this.load.audio(key, path);
+    });
   }
 
   create() {
@@ -12,6 +37,9 @@ export class MainMenuScene extends Phaser.Scene {
     const centerY = camera.height * 0.5;
 
     this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x0b1220, 1);
+    if (this.textures.exists(MENU_ATLAS_KEY)) {
+      this.add.image(centerX, 62, MENU_ATLAS_KEY, "dot").setScale(18, 18).setTint(0x78c7ff).setAlpha(0.75);
+    }
 
     this.add
       .text(centerX, 132, "DashSurvivor", {
@@ -42,6 +70,8 @@ export class MainMenuScene extends Phaser.Scene {
     this.createButton(centerX, 432, "UPGRADES", () => {
       this.scene.start("UpgradeScene");
     });
+
+    this.hideLoadingScreen();
   }
 
   createButton(x, y, label, onClick) {
@@ -102,5 +132,45 @@ export class MainMenuScene extends Phaser.Scene {
     const seconds = totalSec % 60;
     return `${minutes}:${String(seconds).padStart(2, "0")}`;
   }
-}
 
+  bindLoadingScreenProgress() {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const subtitle = document.getElementById("loading-subtitle");
+    const fill = document.getElementById("loading-bar-fill");
+    this.load.on("progress", (value) => {
+      if (fill) {
+        fill.style.width = `${Math.round(value * 100)}%`;
+      }
+      if (subtitle) {
+        subtitle.textContent = `Loading assets... ${Math.round(value * 100)}%`;
+      }
+    });
+  }
+
+  hideLoadingScreen() {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const loadingScreen = document.getElementById("loading-screen");
+    const fill = document.getElementById("loading-bar-fill");
+    const subtitle = document.getElementById("loading-subtitle");
+    if (fill) {
+      fill.style.width = "100%";
+    }
+    if (subtitle) {
+      subtitle.textContent = "Ready";
+    }
+    if (!loadingScreen) {
+      return;
+    }
+
+    loadingScreen.classList.add("hidden");
+    window.setTimeout(() => {
+      loadingScreen.style.display = "none";
+    }, 260);
+  }
+}
