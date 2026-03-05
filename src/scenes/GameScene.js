@@ -100,7 +100,9 @@ const DEBUG_HUD_X = 16;
 const DEBUG_HUD_Y = 116;
 const OFFSCREEN_INDICATOR_INSET = 18;
 const OFFSCREEN_INDICATOR_SIZE = 9;
-const OFFSCREEN_INDICATOR_MAX = 42;
+const OFFSCREEN_INDICATOR_MAX = 12;
+const OFFSCREEN_PRIORITY_BONUS_ELITE = 10000;
+const OFFSCREEN_PRIORITY_BONUS_BOSS = 20000;
 const COMBO_RESET_WINDOW_MS = 2000;
 const BOSS_BULLET_MAX = 220;
 const BOSS_BULLET_LIFETIME_MS = 2800;
@@ -2010,6 +2012,45 @@ export class GameScene extends Phaser.Scene {
     return marker;
   }
 
+  selectOffscreenIndicatorTargets(view, centerX, centerY) {
+    const selected = [];
+    const normalCandidates = [];
+    this.enemies.getChildren().forEach((enemy) => {
+      if (!enemy?.active) {
+        return;
+      }
+      if (Phaser.Geom.Rectangle.Contains(view, enemy.x, enemy.y)) {
+        return;
+      }
+
+      const dx = enemy.x - centerX;
+      const dy = enemy.y - centerY;
+      const distSq = dx * dx + dy * dy;
+      const isBoss = Boolean(enemy.getData?.("isBoss"));
+      const isElite = Boolean(enemy.isElite);
+      const priorityBonus = isBoss ? OFFSCREEN_PRIORITY_BONUS_BOSS : isElite ? OFFSCREEN_PRIORITY_BONUS_ELITE : 0;
+      const score = distSq - priorityBonus;
+      const candidate = { enemy, score };
+
+      if (priorityBonus > 0) {
+        selected.push(candidate);
+      } else {
+        normalCandidates.push(candidate);
+      }
+    });
+
+    selected.sort((a, b) => a.score - b.score);
+    if (selected.length >= OFFSCREEN_INDICATOR_MAX) {
+      return selected.slice(0, OFFSCREEN_INDICATOR_MAX).map((entry) => entry.enemy);
+    }
+
+    normalCandidates.sort((a, b) => a.score - b.score);
+    const remaining = OFFSCREEN_INDICATOR_MAX - selected.length;
+    return selected
+      .concat(normalCandidates.slice(0, remaining))
+      .map((entry) => entry.enemy);
+  }
+
   updateOffscreenEnemyIndicators() {
     if (!this.cameras?.main) {
       return;
@@ -2034,18 +2075,11 @@ export class GameScene extends Phaser.Scene {
     const edgeMinY = OFFSCREEN_INDICATOR_INSET;
     const edgeMaxY = sh - OFFSCREEN_INDICATOR_INSET;
 
-    let drawn = 0;
-    this.enemies.getChildren().forEach((enemy) => {
-      if (drawn >= OFFSCREEN_INDICATOR_MAX) {
-        return;
-      }
-      if (!enemy?.active) {
-        return;
-      }
-      if (Phaser.Geom.Rectangle.Contains(view, enemy.x, enemy.y)) {
-        return;
-      }
+    const targetX = this.player?.x ?? centerX;
+    const targetY = this.player?.y ?? centerY;
+    const offscreenTargets = this.selectOffscreenIndicatorTargets(view, targetX, targetY);
 
+    offscreenTargets.forEach((enemy) => {
       const dx = enemy.x - centerX;
       const dy = enemy.y - centerY;
       const length = Math.hypot(dx, dy);
@@ -2066,7 +2100,6 @@ export class GameScene extends Phaser.Scene {
       marker.setFillStyle(this.getOffscreenIndicatorColor(enemy), 0.95);
       marker.setVisible(true);
       marker.setActive(true);
-      drawn += 1;
     });
   }
 
