@@ -38,12 +38,12 @@ export const DIRECTOR_ENEMY_SPEED = {
 
 export const DIRECTOR_ELITE_CHANCE = {
   build: 0.04,
-  peak: 0.22,
+  peak: 0.045,
   relief: 0.01
 };
 
 export const DIRECTOR_ELITE_TIME_SCALING = {
-  perMinute: 0.02,
+  perMinute: 0.03,
   maxChance: 0.72
 };
 
