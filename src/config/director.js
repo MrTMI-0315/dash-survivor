@@ -69,3 +69,16 @@ export const DIRECTOR_DENSITY_REWORK = {
   burstMinCount: 6,
   burstMaxCount: 9
 };
+
+export const DIRECTOR_ADAPTIVE_DIFFICULTY = {
+  windowMs: 10000,
+  baselineDps: 60,
+  baselineKillRate: 0.65,
+  dpsWeight: 0.55,
+  killRateWeight: 0.45,
+  smoothing: 0.2,
+  maxPositiveScale: 0.18,
+  maxNegativeScale: 0.12,
+  minOffset: -4,
+  maxOffset: 8
+};

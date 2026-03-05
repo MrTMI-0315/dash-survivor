@@ -170,6 +170,10 @@ export class GameScene extends Phaser.Scene {
     this.weaponUnlocks = {};
     this.selectedStartWeaponId = null;
     this.bossProjectiles = null;
+    this.performanceDamageEvents = [];
+    this.performanceKillEvents = [];
+    this.performanceDamageTotal = 0;
+    this.performanceKillTotal = 0;
   }
 
   create() {
@@ -212,6 +216,10 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionActions = [];
     this.weaponUnlocks = this.loadWeaponUnlocks();
     this.selectedStartWeaponId = null;
+    this.performanceDamageEvents = [];
+    this.performanceKillEvents = [];
+    this.performanceDamageTotal = 0;
+    this.performanceKillTotal = 0;
 
     this.createTextures();
     this.drawArena();
@@ -1208,7 +1216,10 @@ export class GameScene extends Phaser.Scene {
     const seconds = this.runTimeMs / 1000;
     const baseTarget = this.getTargetEnemyCount(seconds);
     const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
-    this.targetEnemies = Math.min(PERFORMANCE_MAX_ACTIVE_ENEMIES, Math.round(baseTarget * spawnRateMultiplier));
+    const scaledTarget = baseTarget * spawnRateMultiplier;
+    const performance = this.getPerformanceMetrics();
+    const adaptiveOffset = this.director.getAdaptiveTargetOffset(scaledTarget, performance.dps, performance.killRate);
+    this.targetEnemies = Math.min(PERFORMANCE_MAX_ACTIVE_ENEMIES, Math.round(scaledTarget + adaptiveOffset));
 
     const aliveEnemies = this.getAliveEnemyCount();
     if (aliveEnemies >= this.targetEnemies) {
@@ -2040,6 +2051,7 @@ export class GameScene extends Phaser.Scene {
       enemy.body.enable = false;
     }
     this.totalKills += 1;
+    this.recordKillEvent();
 
     this.updateKillCombo();
 
@@ -2662,6 +2674,53 @@ export class GameScene extends Phaser.Scene {
     const timeReward = Math.floor(timeSurvivedSec / 10);
     const killReward = this.totalKills * 0.1;
     return Math.max(0, Math.round(timeReward + killReward));
+  }
+
+  recordPlayerDamage(amount) {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    if (safeAmount <= 0) {
+      return;
+    }
+    const nowMs = this.time?.now ?? 0;
+    this.performanceDamageEvents.push({ t: nowMs, amount: safeAmount });
+    this.performanceDamageTotal += safeAmount;
+    this.trimPerformanceMetrics(nowMs);
+  }
+
+  recordKillEvent() {
+    const nowMs = this.time?.now ?? 0;
+    this.performanceKillEvents.push(nowMs);
+    this.performanceKillTotal += 1;
+    this.trimPerformanceMetrics(nowMs);
+  }
+
+  trimPerformanceMetrics(nowMs) {
+    const windowMs = this.director?.getAdaptiveWindowMs?.() ?? 10000;
+    const threshold = nowMs - windowMs;
+
+    while (this.performanceDamageEvents.length > 0 && this.performanceDamageEvents[0].t < threshold) {
+      const expired = this.performanceDamageEvents.shift();
+      this.performanceDamageTotal -= expired?.amount ?? 0;
+    }
+    while (this.performanceKillEvents.length > 0 && this.performanceKillEvents[0] < threshold) {
+      this.performanceKillEvents.shift();
+      this.performanceKillTotal -= 1;
+    }
+
+    this.performanceDamageTotal = Math.max(0, this.performanceDamageTotal);
+    this.performanceKillTotal = Math.max(0, this.performanceKillTotal);
+  }
+
+  getPerformanceMetrics() {
+    const nowMs = this.time?.now ?? 0;
+    this.trimPerformanceMetrics(nowMs);
+    const windowMs = this.director?.getAdaptiveWindowMs?.() ?? 10000;
+    const windowSec = Math.max(1, windowMs / 1000);
+
+    return {
+      dps: this.performanceDamageTotal / windowSec,
+      killRate: this.performanceKillTotal / windowSec
+    };
   }
 
   loadWeaponUnlocks() {

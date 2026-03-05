@@ -153,7 +153,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
   takeDamage(amount) {
     const safeAmount = Number.isFinite(amount) ? amount : 0;
+    const hpBefore = this.hp;
+    const appliedDamage = Math.max(0, Math.min(hpBefore, safeAmount));
     this.hp = Math.max(0, this.hp - safeAmount);
+    if (appliedDamage > 0 && this.scene?.recordPlayerDamage) {
+      this.scene.recordPlayerDamage(appliedDamage);
+    }
     if (this.hp <= 0) {
       this.die();
     }

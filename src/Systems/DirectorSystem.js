@@ -1,4 +1,5 @@
 import {
+  DIRECTOR_ADAPTIVE_DIFFICULTY,
   DIRECTOR_BOSS_SPAWN,
   DIRECTOR_DENSITY_REWORK,
   DIRECTOR_DEFAULT_DURATIONS_MS,
@@ -48,6 +49,7 @@ export class DirectorSystem {
     this.spawnBurstIntervalMs = config.spawnBurstIntervalMs ?? DIRECTOR_DENSITY_REWORK.burstIntervalMs;
     this.nextSpawnBurstAtMs = this.spawnBurstIntervalMs;
     this.pendingSpawnBurstCount = 0;
+    this.adaptivePerformance = 0;
   }
 
   update(deltaMs) {
@@ -194,6 +196,27 @@ export class DirectorSystem {
 
   getEnemyDamageMultiplier() {
     return this.getEnemyDamageDifficultyMultiplier();
+  }
+
+  getAdaptiveWindowMs() {
+    return DIRECTOR_ADAPTIVE_DIFFICULTY.windowMs;
+  }
+
+  getAdaptiveTargetOffset(baseTarget, dpsEstimate, killRate) {
+    const cfg = DIRECTOR_ADAPTIVE_DIFFICULTY;
+    const safeBaseTarget = Math.max(1, Number(baseTarget) || 1);
+    const safeDps = Math.max(0, Number(dpsEstimate) || 0);
+    const safeKillRate = Math.max(0, Number(killRate) || 0);
+
+    const dpsNorm = (safeDps - cfg.baselineDps) / Math.max(1, cfg.baselineDps);
+    const killNorm = (safeKillRate - cfg.baselineKillRate) / Math.max(0.01, cfg.baselineKillRate);
+    const rawPerformance = Math.max(-1, Math.min(1, dpsNorm * cfg.dpsWeight + killNorm * cfg.killRateWeight));
+    this.adaptivePerformance = lerp(this.adaptivePerformance, rawPerformance, cfg.smoothing);
+
+    const positiveOffset = Math.max(0, this.adaptivePerformance) * (safeBaseTarget * cfg.maxPositiveScale);
+    const negativeOffset = Math.min(0, this.adaptivePerformance) * (safeBaseTarget * cfg.maxNegativeScale);
+    const offset = Math.round(positiveOffset + negativeOffset);
+    return Math.max(cfg.minOffset, Math.min(cfg.maxOffset, offset));
   }
 }
 
