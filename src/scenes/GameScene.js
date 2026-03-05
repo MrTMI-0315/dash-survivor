@@ -6,6 +6,7 @@ import { MetaProgressionSystem } from "../Systems/MetaProgressionSystem.js";
 import { ObjectPool } from "../Systems/ObjectPool.js";
 import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS, HUNTER_UNLOCK_TIME_SEC } from "../config/enemies.js";
 import { LEVEL_UP_UPGRADES } from "../config/weapons.js";
+import { DIRECTOR_BOSS_SPAWN } from "../config/director.js";
 import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
   ENEMY_POOL_SIZE,
@@ -39,6 +40,7 @@ const TOUCH_DASH_BUTTON_RADIUS = 58;
 const PARTICLE_TEXTURE_KEY = "hit_particle";
 const PARTICLE_FALLBACK_TEXTURE_KEY = "__WHITE";
 const PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY = "particle_fallback";
+const BOSS_WARNING_LEAD_MS = 5000;
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
@@ -89,9 +91,12 @@ export class GameScene extends Phaser.Scene {
     this.gameOverRestartButton = null;
     this.gameOverRestartLabel = null;
     this.hudBarsGraphics = null;
+    this.dashCooldownRingGraphics = null;
     this.hudLevelText = null;
     this.hudStatsText = null;
     this.hudDashStatusText = null;
+    this.xpDisplayRatio = 0;
+    this.bossApproachWarnedCycleIndex = 0;
     this.levelUpOptionActions = [];
     this.sfxLastPlayedAt = {};
     this.touchControlsEnabled = false;
@@ -121,6 +126,8 @@ export class GameScene extends Phaser.Scene {
     this.runTimeMs = 0;
     this.targetEnemies = 0;
     this.hudAlertHideEvent = null;
+    this.xpDisplayRatio = 0;
+    this.bossApproachWarnedCycleIndex = 0;
     this.metaData = this.metaSystem.getData();
     this.metaXpMultiplier = 1;
     this.runMetaCurrency = 0;
@@ -209,6 +216,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
+    this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
 
     this.gameOverText = this.add
       .text(640, 360, "GAME OVER", {
@@ -269,6 +277,7 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     if (this.isGameOver) {
+      this.updateDashCooldownRing();
       this.handleGameOverInput();
       return;
     }
@@ -276,6 +285,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isLeveling) {
       this.handleLevelUpInput();
       this.player.body?.setVelocity(0, 0);
+      this.updateDashCooldownRing();
       this.updateHud();
       return;
     }
@@ -286,6 +296,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.runTimeMs += delta;
+    this.updateBossApproachWarning();
     this.spawnAccumulatorMs += delta;
     this.processDirectorBossSpawns();
     this.processDirectorMiniBossSpawns();
@@ -329,6 +340,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.updateDashCooldownRing();
     this.updateHud();
   }
 
@@ -1214,6 +1226,107 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  updateBossApproachWarning() {
+    const intervalMs = DIRECTOR_BOSS_SPAWN.intervalMs;
+    if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
+      return;
+    }
+
+    const nextBossCycleIndex = Math.floor(this.runTimeMs / intervalMs) + 1;
+    const nextBossAtMs = nextBossCycleIndex * intervalMs;
+    const remainingMs = nextBossAtMs - this.runTimeMs;
+    if (remainingMs > BOSS_WARNING_LEAD_MS || remainingMs <= 0) {
+      return;
+    }
+    if (this.bossApproachWarnedCycleIndex === nextBossCycleIndex) {
+      return;
+    }
+
+    this.bossApproachWarnedCycleIndex = nextBossCycleIndex;
+    this.showHudAlert("BOSS APPROACHING", 1500);
+  }
+
+  lerpColor(fromHex, toHex, t) {
+    const blend = Phaser.Math.Clamp(t, 0, 1);
+    const fromR = (fromHex >> 16) & 0xff;
+    const fromG = (fromHex >> 8) & 0xff;
+    const fromB = fromHex & 0xff;
+    const toR = (toHex >> 16) & 0xff;
+    const toG = (toHex >> 8) & 0xff;
+    const toB = toHex & 0xff;
+
+    const r = Math.round(Phaser.Math.Linear(fromR, toR, blend));
+    const g = Math.round(Phaser.Math.Linear(fromG, toG, blend));
+    const b = Math.round(Phaser.Math.Linear(fromB, toB, blend));
+    return (r << 16) | (g << 8) | b;
+  }
+
+  updateDashCooldownRing() {
+    if (!this.dashCooldownRingGraphics) {
+      return;
+    }
+
+    this.dashCooldownRingGraphics.clear();
+    if (!this.player?.active) {
+      return;
+    }
+
+    const x = this.player.x;
+    const y = this.player.y;
+    const radius = 26;
+    const dashRatio = Phaser.Math.Clamp(this.player.getDashRatio(), 0, 1);
+    const nowMs = this.time?.now ?? 0;
+    const isReady = dashRatio >= 1 && !this.player.isDashing();
+
+    this.dashCooldownRingGraphics.lineStyle(2, 0x14253b, 0.7);
+    this.dashCooldownRingGraphics.strokeCircle(x, y, radius);
+
+    if (isReady) {
+      const pulse = (Math.sin(nowMs / 130) + 1) / 2;
+      const glowColor = this.lerpColor(0xffd166, 0xffffff, pulse * 0.65);
+      this.dashCooldownRingGraphics.lineStyle(4, glowColor, 0.24 + pulse * 0.28);
+      this.dashCooldownRingGraphics.strokeCircle(x, y, radius + 4 + pulse * 1.2);
+    }
+
+    if (dashRatio <= 0) {
+      return;
+    }
+
+    const ringColor = isReady ? 0xffd166 : 0x7fd8ff;
+    const ringAlpha = isReady ? 1 : 0.92;
+    this.dashCooldownRingGraphics.lineStyle(3, ringColor, ringAlpha);
+    this.dashCooldownRingGraphics.beginPath();
+    this.dashCooldownRingGraphics.arc(x, y, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * dashRatio, false);
+    this.dashCooldownRingGraphics.strokePath();
+  }
+
+  spawnDamageNumber(x, y, amount, isElite = false) {
+    const safeAmount = Math.max(0, Math.round(amount ?? 0));
+    if (safeAmount <= 0) {
+      return;
+    }
+
+    const text = this.add
+      .text(x, y, `${safeAmount}`, {
+        fontFamily: "Arial",
+        fontSize: isElite ? "20px" : "17px",
+        color: isElite ? "#ffe4b0" : "#ffe9d5",
+        stroke: "#2f1c14",
+        strokeThickness: 4
+      })
+      .setOrigin(0.5)
+      .setDepth(18);
+
+    this.tweens.add({
+      targets: text,
+      y: y - (isElite ? 36 : 28),
+      alpha: 0,
+      duration: isElite ? 420 : 320,
+      ease: "Cubic.easeOut",
+      onComplete: () => text.destroy()
+    });
+  }
+
   getSpawnPosition() {
     const view = this.cameras.main.worldView;
     const margin = 90;
@@ -1804,7 +1917,19 @@ export class GameScene extends Phaser.Scene {
     const passiveCount = Object.keys(this.player.passives).length;
     const metaLiveTotal = this.metaData.currency + this.runMetaCurrency;
     const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
+    if (xpRatio < this.xpDisplayRatio) {
+      this.xpDisplayRatio = xpRatio;
+    } else {
+      this.xpDisplayRatio = Phaser.Math.Linear(this.xpDisplayRatio, xpRatio, 0.22);
+    }
+    const displayedXpRatio = Phaser.Math.Clamp(this.xpDisplayRatio, 0, 1);
     const dashRatio = Phaser.Math.Clamp(this.player.getDashRatio(), 0, 1);
+    const nowMs = this.time?.now ?? 0;
+    const xpPulseActive = !this.isLeveling && xpRatio >= 0.9;
+    const xpPulse = xpPulseActive ? (Math.sin(nowMs / 120) + 1) / 2 : 0;
+    const xpFillColor = xpPulseActive ? this.lerpColor(0x66f5b2, 0xffe38a, xpPulse) : 0x66f5b2;
+    const xpFillAlpha = xpPulseActive ? 0.84 + xpPulse * 0.16 : 0.95;
+    const xpBorderColor = xpPulseActive ? this.lerpColor(0x91a6c8, 0xffeab0, xpPulse) : 0x91a6c8;
     const barX = 16;
     const xpBarY = 68;
     const dashBarY = 92;
@@ -1829,8 +1954,8 @@ export class GameScene extends Phaser.Scene {
       this.hudBarsGraphics.fillStyle(0x101c2e, 0.8);
       this.hudBarsGraphics.fillRoundedRect(barX, xpBarY, barWidth, barHeight, 4);
       this.hudBarsGraphics.fillRoundedRect(barX, dashBarY, barWidth, barHeight, 4);
-      this.hudBarsGraphics.fillStyle(0x66f5b2, 0.95);
-      this.hudBarsGraphics.fillRoundedRect(barX + 1, xpBarY + 1, Math.max(2, (barWidth - 2) * xpRatio), barHeight - 2, 3);
+      this.hudBarsGraphics.fillStyle(xpFillColor, xpFillAlpha);
+      this.hudBarsGraphics.fillRoundedRect(barX + 1, xpBarY + 1, Math.max(2, (barWidth - 2) * displayedXpRatio), barHeight - 2, 3);
       this.hudBarsGraphics.fillStyle(dashRatio >= 1 ? 0xffd166 : 0x7fd8ff, 0.95);
       this.hudBarsGraphics.fillRoundedRect(
         barX + 1,
@@ -1839,8 +1964,9 @@ export class GameScene extends Phaser.Scene {
         barHeight - 2,
         3
       );
-      this.hudBarsGraphics.lineStyle(1, 0x91a6c8, 0.9);
+      this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.9);
       this.hudBarsGraphics.strokeRoundedRect(barX, xpBarY, barWidth, barHeight, 4);
+      this.hudBarsGraphics.lineStyle(1, 0x91a6c8, 0.9);
       this.hudBarsGraphics.strokeRoundedRect(barX, dashBarY, barWidth, barHeight, 4);
     }
   }

@@ -168,6 +168,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.scene.spawnDamageParticles) {
       this.scene.spawnDamageParticles(this.x, this.y, this.isElite ? 8 : 5);
     }
+    if (this.scene.spawnDamageNumber) {
+      this.scene.spawnDamageNumber(this.x, this.y - (this.isElite ? 4 : 0), safeAmount, this.isElite);
+    }
     if (this.scene?.time?.delayedCall) {
       this.scene.time.delayedCall(80, () => {
         if (this.active && this.flashToken === flashToken) {
