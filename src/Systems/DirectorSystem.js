@@ -9,12 +9,14 @@ import {
   DIRECTOR_ELITE_CHANCE,
   DIRECTOR_ELITE_TIME_SCALING,
   DIRECTOR_ENEMY_SPEED,
+  DIRECTOR_HATCH_BREACH_EVENT,
+  DIRECTOR_LADDER_SPAWN_EVENT,
   DIRECTOR_MINI_BOSS_EVENT,
   DIRECTOR_SPAWN_RATE,
   DIRECTOR_STATE,
   DIRECTOR_STATE_SEQUENCE
 } from "../config/director.js";
-import { SPAWN_LANE_KEYS } from "../config/progression.js";
+import { SPAWN_LANE_KEYS, SPAWN_LANES } from "../config/progression.js";
 
 function clamp01(value) {
   return Math.max(0, Math.min(1, value));
@@ -57,6 +59,12 @@ export class DirectorSystem {
     this.spawnBurstIntervalMs = config.spawnBurstIntervalMs ?? DIRECTOR_DENSITY_REWORK.burstIntervalMs;
     this.nextSpawnBurstAtMs = this.spawnBurstIntervalMs;
     this.pendingSpawnBurstCount = 0;
+    this.ladderSpawnIntervalMs = config.ladderSpawnIntervalMs ?? DIRECTOR_LADDER_SPAWN_EVENT.intervalMs;
+    this.nextLadderSpawnAtMs = this.ladderSpawnIntervalMs;
+    this.pendingLadderSpawnCount = 0;
+    this.hatchBreachAtMs = randomIntInclusive(DIRECTOR_HATCH_BREACH_EVENT.minAtMs, DIRECTOR_HATCH_BREACH_EVENT.maxAtMs);
+    this.hasHatchBreachSpawned = false;
+    this.pendingHatchBreachSpawnCount = 0;
     this.adaptivePerformance = 0;
   }
 
@@ -66,6 +74,8 @@ export class DirectorSystem {
     this.updateBossSpawnSchedule();
     this.updateMiniBossSpawnSchedule();
     this.updateSpawnBurstSchedule();
+    this.updateLadderSpawnSchedule();
+    this.updateHatchBreachSchedule();
 
     const duration = this.getStateDurationMs(this.state);
     if (this.stateElapsedMs < duration) {
@@ -113,6 +123,31 @@ export class DirectorSystem {
     this.hasMiniBossSpawned = true;
   }
 
+  updateLadderSpawnSchedule() {
+    while (this.totalElapsedMs >= this.nextLadderSpawnAtMs) {
+      this.pendingLadderSpawnCount += randomIntInclusive(
+        DIRECTOR_LADDER_SPAWN_EVENT.minCount,
+        DIRECTOR_LADDER_SPAWN_EVENT.maxCount
+      );
+      this.nextLadderSpawnAtMs += this.ladderSpawnIntervalMs;
+    }
+  }
+
+  updateHatchBreachSchedule() {
+    if (this.hasHatchBreachSpawned) {
+      return;
+    }
+    if (this.totalElapsedMs < this.hatchBreachAtMs) {
+      return;
+    }
+
+    this.pendingHatchBreachSpawnCount = randomIntInclusive(
+      DIRECTOR_HATCH_BREACH_EVENT.minCount,
+      DIRECTOR_HATCH_BREACH_EVENT.maxCount
+    );
+    this.hasHatchBreachSpawned = true;
+  }
+
   consumeBossSpawnRequests() {
     const pending = this.pendingBossSpawnCount;
     this.pendingBossSpawnCount = 0;
@@ -128,6 +163,18 @@ export class DirectorSystem {
   consumeMiniBossSpawnRequests() {
     const pending = this.pendingMiniBossSpawnCount;
     this.pendingMiniBossSpawnCount = 0;
+    return pending;
+  }
+
+  consumeLadderSpawnRequests() {
+    const pending = this.pendingLadderSpawnCount;
+    this.pendingLadderSpawnCount = 0;
+    return pending;
+  }
+
+  consumeHatchBreachSpawnRequests() {
+    const pending = this.pendingHatchBreachSpawnCount;
+    this.pendingHatchBreachSpawnCount = 0;
     return pending;
   }
 
@@ -232,6 +279,14 @@ export class DirectorSystem {
       return preferredLane;
     }
     return randomArrayItem(SPAWN_LANE_KEYS);
+  }
+
+  chooseLadderLane(preferredLane = null) {
+    const ladderLanes = [SPAWN_LANES.PORT, SPAWN_LANES.STARBOARD];
+    if (preferredLane && ladderLanes.includes(preferredLane)) {
+      return preferredLane;
+    }
+    return randomArrayItem(ladderLanes);
   }
 }
 

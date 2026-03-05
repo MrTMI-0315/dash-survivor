@@ -20,6 +20,19 @@ export const DIRECTOR_MINI_BOSS_EVENT = {
   atMs: 90000
 };
 
+export const DIRECTOR_HATCH_BREACH_EVENT = {
+  minAtMs: 60000,
+  maxAtMs: 90000,
+  minCount: 6,
+  maxCount: 10
+};
+
+export const DIRECTOR_LADDER_SPAWN_EVENT = {
+  intervalMs: 45000,
+  minCount: 3,
+  maxCount: 5
+};
+
 export const DIRECTOR_SPAWN_RATE = {
   buildStart: 0.85,
   buildEnd: 1.25,

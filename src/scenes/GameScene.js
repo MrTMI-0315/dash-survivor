@@ -49,6 +49,17 @@ const SHIP_DECK_OBSTACLE_LAYOUT = [
   { type: "terrain_pillar", x: 2130, y: 1060, scale: 0.84 }
 ];
 const BOSS_ENTRY_LANES = Object.freeze([SPAWN_LANES.BOW, SPAWN_LANES.STERN]);
+const HATCH_BREACH_POINT = Object.freeze({ x: 1200, y: 1090 });
+const LADDER_SPAWN_POINTS = Object.freeze({
+  [SPAWN_LANES.PORT]: Object.freeze([
+    Object.freeze({ x: 76, y: 430 }),
+    Object.freeze({ x: 76, y: 910 })
+  ]),
+  [SPAWN_LANES.STARBOARD]: Object.freeze([
+    Object.freeze({ x: 2324, y: 430 }),
+    Object.freeze({ x: 2324, y: 910 })
+  ])
+});
 const XP_MAGNET_RADIUS_PER_LEVEL = 6;
 const ELITE_BONUS_XP_ORB_MIN = 2;
 const ELITE_BONUS_XP_ORB_MAX = 4;
@@ -486,6 +497,8 @@ export class GameScene extends Phaser.Scene {
     this.processDirectorBossSpawns();
     this.processDirectorMiniBossSpawns();
     this.processDirectorSpawnBursts();
+    this.processDirectorLadderSpawns();
+    this.processDirectorHatchBreaches();
 
     const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
     const effectiveSpawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
@@ -1310,25 +1323,14 @@ export class GameScene extends Phaser.Scene {
         spawnX = fallback.x;
         spawnY = fallback.y;
       }
+      if (!this.isValidSpawnPoint(spawnX, spawnY)) {
+        continue;
+      }
 
-      const enemy = this.enemyPool.acquire(type, { x: spawnX, y: spawnY, hp: scaledHp });
+      const enemy = this.spawnEnemyAtPosition(type, spawnX, spawnY, lane);
       if (!enemy) {
         continue;
       }
-      enemy.setData("lastDashHitId", -1);
-      enemy.setData("archetype", type);
-      enemy.setData("spawnLane", lane);
-
-      const eliteChance = this.director.getEliteChance();
-      const isElite = type !== "swarm" && Math.random() < eliteChance;
-      enemy.setData("isElite", isElite);
-      enemy.setData("eliteType", null);
-      if (isElite) {
-        const eliteType = this.pickEliteType();
-        enemy.setData("eliteType", eliteType);
-        enemy.setElite(eliteType);
-      }
-
     }
   }
 
@@ -1370,6 +1372,109 @@ export class GameScene extends Phaser.Scene {
     for (let i = 0; i < pendingBurstSpawns; i += 1) {
       this.spawnEnemyFromEdge();
     }
+  }
+
+  processDirectorLadderSpawns() {
+    const pendingLadderSpawns = this.director.consumeLadderSpawnRequests();
+    if (pendingLadderSpawns <= 0) {
+      return;
+    }
+
+    for (let i = 0; i < pendingLadderSpawns; i += 1) {
+      const lane = this.director.chooseLadderLane();
+      this.spawnEnemyFromEventPoint(lane, this.getLadderSpawnPoint(lane), "ladder");
+    }
+  }
+
+  processDirectorHatchBreaches() {
+    const pendingHatchSpawns = this.director.consumeHatchBreachSpawnRequests();
+    if (pendingHatchSpawns <= 0) {
+      return;
+    }
+
+    this.showHudAlert("HATCH BREACH", 1000);
+    for (let i = 0; i < pendingHatchSpawns; i += 1) {
+      this.spawnEnemyFromEventPoint(SPAWN_LANES.STERN, HATCH_BREACH_POINT, "hatch");
+    }
+  }
+
+  getLadderSpawnPoint(lane) {
+    const candidates = LADDER_SPAWN_POINTS[lane] ?? LADDER_SPAWN_POINTS[SPAWN_LANES.PORT];
+    return Phaser.Utils.Array.GetRandom(candidates);
+  }
+
+  isObstacleBlockedAt(x, y, padding = 18) {
+    return this.terrainObstacleAnchors.some((anchor) => {
+      const distance = Phaser.Math.Distance.Between(anchor.x, anchor.y, x, y);
+      return distance < anchor.radius + padding;
+    });
+  }
+
+  isValidEventSpawnPoint(x, y) {
+    const inBounds = x >= 12 && x <= WORLD_WIDTH - 12 && y >= 12 && y <= WORLD_HEIGHT - 12;
+    if (!inBounds) {
+      return false;
+    }
+    const isOutsideSafeRadius = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > this.safeRadius;
+    if (!isOutsideSafeRadius) {
+      return false;
+    }
+    return !this.isObstacleBlockedAt(x, y, 20);
+  }
+
+  spawnEnemyFromEventPoint(lane, anchor, eventType = "ladder") {
+    if (!anchor || this.getAliveEnemyCount() >= PERFORMANCE_MAX_ACTIVE_ENEMIES) {
+      return null;
+    }
+
+    const type = this.pickEnemyArchetype();
+    const spreadMin = eventType === "hatch" ? 28 : 16;
+    const spreadMax = eventType === "hatch" ? 86 : 52;
+    for (let attempt = 0; attempt < 14; attempt += 1) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Phaser.Math.Between(spreadMin, spreadMax);
+      const x = Phaser.Math.Clamp(anchor.x + Math.cos(angle) * distance, 12, WORLD_WIDTH - 12);
+      const y = Phaser.Math.Clamp(anchor.y + Math.sin(angle) * distance, 12, WORLD_HEIGHT - 12);
+      if (!this.isValidEventSpawnPoint(x, y)) {
+        continue;
+      }
+      return this.spawnEnemyAtPosition(type, x, y, lane);
+    }
+
+    const fallback = this.getSpawnPosition(lane);
+    if (!this.isValidSpawnPoint(fallback.x, fallback.y)) {
+      return null;
+    }
+    return this.spawnEnemyAtPosition(type, fallback.x, fallback.y, lane);
+  }
+
+  spawnEnemyAtPosition(type, x, y, lane = null) {
+    if (this.getAliveEnemyCount() >= PERFORMANCE_MAX_ACTIVE_ENEMIES) {
+      return null;
+    }
+    const hpMultiplier = this.director.getEnemyHpMultiplier();
+    const baseHp = ENEMY_ARCHETYPE_CONFIGS[type]?.hp ?? ENEMY_ARCHETYPE_CONFIGS.chaser.hp;
+    const scaledHp = Math.max(1, Math.round(baseHp * hpMultiplier));
+    const enemy = this.enemyPool.acquire(type, { x, y, hp: scaledHp });
+    if (!enemy) {
+      return null;
+    }
+
+    enemy.setData("lastDashHitId", -1);
+    enemy.setData("archetype", type);
+    enemy.setData("spawnLane", lane);
+
+    const eliteChance = this.director.getEliteChance();
+    const isElite = type !== "swarm" && Math.random() < eliteChance;
+    enemy.setData("isElite", isElite);
+    enemy.setData("eliteType", null);
+    if (isElite) {
+      const eliteType = this.pickEliteType();
+      enemy.setData("eliteType", eliteType);
+      enemy.setElite(eliteType);
+    }
+
+    return enemy;
   }
 
   getOppositeBossEntryLane(lane) {
@@ -1769,7 +1874,8 @@ export class GameScene extends Phaser.Scene {
     const view = this.cameras.main.worldView;
     const isOutsideView = !Phaser.Geom.Rectangle.Contains(view, x, y);
     const isOutsideSafeRadius = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > this.safeRadius;
-    return isOutsideView && isOutsideSafeRadius;
+    const noObstacleOverlap = !this.isObstacleBlockedAt(x, y, 18);
+    return isOutsideView && isOutsideSafeRadius && noObstacleOverlap;
   }
 
   pickEnemyArchetype() {
