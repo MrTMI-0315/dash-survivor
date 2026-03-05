@@ -7,7 +7,7 @@ export const BASE_SPAWN_CHECK_INTERVAL_MS = 250;
 export const TARGET_ENEMY_CURVE = [
   { startSec: 0, endSec: 20, from: 3, to: 7 },
   { startSec: 20, endSec: 60, from: 7, to: 16 },
-  { startSec: 60, endSec: 100, from: 16, to: 26 },
+  { startSec: 60, endSec: 100, from: 16, to: 20.5 },
   { startSec: 100, endSec: 150, from: 26, to: 18 },
   { startSec: 150, endSec: 240, from: 18, to: 24 }
 ];

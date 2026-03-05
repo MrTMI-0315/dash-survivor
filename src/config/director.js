@@ -23,7 +23,7 @@ export const DIRECTOR_MINI_BOSS_EVENT = {
 export const DIRECTOR_SPAWN_RATE = {
   buildStart: 0.85,
   buildEnd: 1.25,
-  peakBase: 1.8,
+  peakBase: 1.5,
   peakTierBonusPerTier: 0.08,
   peakTierBonusCap: 0.5,
   relief: 0.35
@@ -32,7 +32,7 @@ export const DIRECTOR_SPAWN_RATE = {
 export const DIRECTOR_ENEMY_SPEED = {
   buildStart: 1.0,
   buildEnd: 1.08,
-  peak: 1.16,
+  peak: 1.0833333333333333,
   relief: 1.0
 };
 
