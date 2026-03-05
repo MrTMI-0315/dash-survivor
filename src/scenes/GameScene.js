@@ -51,6 +51,8 @@ const OFFSCREEN_INDICATOR_INSET = 18;
 const OFFSCREEN_INDICATOR_SIZE = 9;
 const OFFSCREEN_INDICATOR_MAX = 42;
 const COMBO_RESET_WINDOW_MS = 2000;
+const BOSS_BULLET_MAX = 220;
+const BOSS_BULLET_LIFETIME_MS = 2800;
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
@@ -167,6 +169,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionActions = [];
     this.weaponUnlocks = {};
     this.selectedStartWeaponId = null;
+    this.bossProjectiles = null;
   }
 
   create() {
@@ -242,6 +245,12 @@ export class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, this.enemies, this.handlePlayerEnemyCollision, null, this);
     this.physics.add.overlap(this.player, this.xpOrbs, this.handleXpOrbPickup, null, this);
+    this.bossProjectiles = this.physics.add.group({
+      allowGravity: false,
+      immovable: true,
+      maxSize: BOSS_BULLET_MAX
+    });
+    this.physics.add.overlap(this.player, this.bossProjectiles, this.handleBossProjectileHit, null, this);
     this.physics.add.collider(this.player, this.obstacles);
     this.physics.add.collider(this.enemies, this.obstacles);
     this.weaponSystem = new WeaponSystem(this, this.player);
@@ -368,6 +377,7 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     if (this.isGameOver) {
+      this.updateBossProjectiles(time);
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
@@ -377,6 +387,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isLeveling) {
       this.handleLevelUpInput();
+      this.updateBossProjectiles(time);
       this.player.body?.setVelocity(0, 0);
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
@@ -387,6 +398,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isWeaponSelecting) {
       this.handleWeaponSelectionInput();
+      this.updateBossProjectiles(time);
       this.player.body?.setVelocity(0, 0);
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
@@ -422,6 +434,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.player.updateDash(delta);
+    this.updateBossProjectiles(time);
     this.emitDashTrail(delta);
     this.player.moveFromInput(this.keys, this.getTouchMoveInput());
     this.pullXpOrbsToPlayer();
@@ -512,6 +525,7 @@ export class GameScene extends Phaser.Scene {
     this.generateCircleTexture("proj_fireball", 8, 0xff944d, 0xa84d1b);
     this.generateCircleTexture("proj_meteor", 11, 0xff8b44, 0x70220d);
     this.generateCircleTexture("proj_orbit_blade", 7, 0xc6e5ff, 0x5884ad);
+    this.generateCircleTexture("boss_bullet", 5, 0xff8b8b, 0x7b1a1a);
     this.generateCircleTexture("hit_particle", 2, 0xffffff, 0xffffff);
   }
 
@@ -1732,6 +1746,137 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.triggerGameOver();
+  }
+
+  handleBossProjectileHit(player, projectile) {
+    if (!projectile?.active || !player?.active) {
+      return;
+    }
+
+    const damage = Math.max(1, Math.round(projectile.getData("damage") ?? 12));
+    this.releaseBossProjectile(projectile);
+
+    if (player.isDashInvulnerable()) {
+      return;
+    }
+
+    const damaged = player.takeDamage(damage, this.time.now);
+    if (!damaged) {
+      return;
+    }
+    this.cameras.main.shake(65, 0.0016);
+
+    if (player.isDead()) {
+      this.triggerGameOver();
+    }
+  }
+
+  showBossRadialWarning(boss, durationMs = 1000) {
+    if (!boss?.active) {
+      return;
+    }
+
+    const indicatorY = boss.y - Math.max(42, boss.displayHeight * 0.45);
+    const warningText = this.add
+      .text(boss.x, indicatorY, "RADIAL BURST", {
+        fontFamily: "Arial",
+        fontSize: "16px",
+        color: "#ffd1d1",
+        stroke: "#3f0f0f",
+        strokeThickness: 4
+      })
+      .setOrigin(0.5)
+      .setDepth(22);
+
+    this.tweens.add({
+      targets: warningText,
+      y: indicatorY - 16,
+      alpha: 0,
+      duration: Math.max(120, durationMs),
+      ease: "Cubic.easeOut",
+      onComplete: () => warningText.destroy()
+    });
+  }
+
+  acquireBossProjectile() {
+    if (!this.bossProjectiles) {
+      return null;
+    }
+
+    let projectile = this.bossProjectiles.getFirstDead(false);
+    if (!projectile) {
+      if (this.bossProjectiles.getLength() >= BOSS_BULLET_MAX) {
+        return null;
+      }
+      projectile = this.bossProjectiles.create(-1000, -1000, "boss_bullet");
+      if (!projectile?.body) {
+        return null;
+      }
+      projectile.body.setCircle(Math.max(2, projectile.displayWidth * 0.42), 0, 0);
+      projectile.setDepth(8);
+    }
+
+    projectile.setActive(true);
+    projectile.setVisible(true);
+    projectile.body.enable = true;
+    return projectile;
+  }
+
+  releaseBossProjectile(projectile) {
+    if (!projectile) {
+      return;
+    }
+    if (projectile.body) {
+      projectile.body.setVelocity(0, 0);
+      projectile.body.enable = false;
+    }
+    projectile.setActive(false);
+    projectile.setVisible(false);
+    projectile.setPosition(-1000, -1000);
+  }
+
+  spawnBossRadialBurst(boss, bulletCount = 12, bulletSpeed = 220) {
+    if (!boss?.active || this.isGameOver) {
+      return;
+    }
+
+    const safeCount = Math.max(3, Math.min(32, Math.floor(bulletCount || 12)));
+    const safeSpeed = Math.max(80, Math.min(420, Number(bulletSpeed) || 220));
+    const damagePerBullet = Math.max(8, Math.round((boss.damage ?? 24) * 0.45));
+    const nowMs = this.time?.now ?? 0;
+    for (let i = 0; i < safeCount; i += 1) {
+      const projectile = this.acquireBossProjectile();
+      if (!projectile || !projectile.body) {
+        continue;
+      }
+
+      const angle = (Math.PI * 2 * i) / safeCount;
+      const vx = Math.cos(angle) * safeSpeed;
+      const vy = Math.sin(angle) * safeSpeed;
+      projectile.enableBody(true, boss.x, boss.y, true, true);
+      projectile.body.setVelocity(vx, vy);
+      projectile.setData("damage", damagePerBullet);
+      projectile.setData("expireAtMs", nowMs + BOSS_BULLET_LIFETIME_MS);
+    }
+  }
+
+  updateBossProjectiles(nowMs) {
+    if (!this.bossProjectiles) {
+      return;
+    }
+
+    this.bossProjectiles.getChildren().forEach((projectile) => {
+      if (!projectile?.active) {
+        return;
+      }
+
+      const expireAtMs = projectile.getData("expireAtMs") ?? 0;
+      const outOfBounds =
+        projectile.x < -30 || projectile.y < -30 || projectile.x > WORLD_WIDTH + 30 || projectile.y > WORLD_HEIGHT + 30;
+      if (nowMs >= expireAtMs || outOfBounds) {
+        this.releaseBossProjectile(projectile);
+      }
+    });
   }
 
   performAutoAttack(now) {

@@ -13,7 +13,11 @@ const BOSS_VARIANTS = {
     shockwaveRadius: 190,
     rushIntervalMs: 5000,
     rushDurationMs: 320,
-    rushSpeedMultiplier: 2.65
+    rushSpeedMultiplier: 2.65,
+    radialBurstIntervalMs: 6000,
+    radialBurstWarningLeadMs: 1000,
+    radialBurstBulletCount: 12,
+    radialBurstBulletSpeed: 220
   },
   mini: {
     hp: 420,
@@ -27,7 +31,11 @@ const BOSS_VARIANTS = {
     shockwaveRadius: 155,
     rushIntervalMs: 5800,
     rushDurationMs: 250,
-    rushSpeedMultiplier: 2.35
+    rushSpeedMultiplier: 2.35,
+    radialBurstIntervalMs: 6000,
+    radialBurstWarningLeadMs: 1000,
+    radialBurstBulletCount: 12,
+    radialBurstBulletSpeed: 205
   }
 };
 
@@ -58,6 +66,12 @@ export class BossEnemy extends Enemy {
     this.rushUntilMs = 0;
     this.rushDirX = 0;
     this.rushDirY = 0;
+    this.radialBurstIntervalMs = config.radialBurstIntervalMs;
+    this.radialBurstWarningLeadMs = config.radialBurstWarningLeadMs;
+    this.radialBurstBulletCount = config.radialBurstBulletCount;
+    this.radialBurstBulletSpeed = config.radialBurstBulletSpeed;
+    this.nextRadialBurstAtMs = 0;
+    this.radialBurstWarningShownAtMs = -1;
 
     this.setData("isBoss", true);
     this.setData("bossVariant", this.variant);
@@ -93,6 +107,26 @@ export class BossEnemy extends Enemy {
     if (nowMs < this.rushUntilMs) {
       const rushSpeed = this.speed * this.rushSpeedMultiplier;
       this.body.setVelocity(this.rushDirX * rushSpeed, this.rushDirY * rushSpeed);
+    }
+
+    if (this.nextRadialBurstAtMs <= 0) {
+      this.nextRadialBurstAtMs = nowMs + this.radialBurstIntervalMs;
+    }
+
+    const warningAtMs = this.nextRadialBurstAtMs - this.radialBurstWarningLeadMs;
+    if (nowMs >= warningAtMs && this.radialBurstWarningShownAtMs !== this.nextRadialBurstAtMs) {
+      this.radialBurstWarningShownAtMs = this.nextRadialBurstAtMs;
+      if (this.scene?.showBossRadialWarning) {
+        this.scene.showBossRadialWarning(this, this.radialBurstWarningLeadMs);
+      }
+    }
+
+    if (nowMs >= this.nextRadialBurstAtMs) {
+      this.nextRadialBurstAtMs = nowMs + this.radialBurstIntervalMs;
+      this.radialBurstWarningShownAtMs = -1;
+      if (this.scene?.spawnBossRadialBurst) {
+        this.scene.spawnBossRadialBurst(this, this.radialBurstBulletCount, this.radialBurstBulletSpeed);
+      }
     }
   }
 }
