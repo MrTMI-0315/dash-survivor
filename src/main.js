@@ -1,5 +1,6 @@
 import { GameScene } from "./scenes/GameScene.js";
 import { RunSummaryScene } from "./scenes/RunSummaryScene.js";
+import { UpgradeScene } from "./scenes/UpgradeScene.js";
 
 const config = {
   type: Phaser.AUTO,
@@ -34,7 +35,7 @@ const config = {
     width: 1280,
     height: 720
   },
-  scene: [GameScene, RunSummaryScene]
+  scene: [GameScene, RunSummaryScene, UpgradeScene]
 };
 
 new Phaser.Game(config);

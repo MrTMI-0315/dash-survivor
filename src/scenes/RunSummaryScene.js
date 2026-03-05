@@ -64,6 +64,12 @@ export class RunSummaryScene extends Phaser.Scene {
 
     this.createActionButton(centerX, centerY + 152, "MAIN MENU", () => {
       this.scene.stop("RunSummaryScene");
+      const hasUpgradeScene = Boolean(this.scene.manager?.keys?.UpgradeScene);
+      if (hasUpgradeScene) {
+        this.scene.stop("GameScene");
+        this.scene.start("UpgradeScene");
+        return;
+      }
       const hasMainMenuScene = Boolean(this.scene.manager?.keys?.MainMenuScene);
       if (hasMainMenuScene) {
         this.scene.stop("GameScene");

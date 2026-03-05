@@ -42,6 +42,7 @@ const PARTICLE_FALLBACK_TEXTURE_KEY = "__WHITE";
 const PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY = "particle_fallback";
 const BOSS_WARNING_LEAD_MS = 5000;
 const META_COINS_STORAGE_KEY = "dashsurvivor_coins";
+const SHOP_UPGRADES_STORAGE_KEY = "dashsurvivor_shop_upgrades_v1";
 const DEBUG_HUD_X = 16;
 const DEBUG_HUD_Y = 116;
 const OFFSCREEN_INDICATOR_INSET = 18;
@@ -2099,11 +2100,22 @@ export class GameScene extends Phaser.Scene {
 
   applyMetaBonusesForRun() {
     const bonuses = this.metaSystem.getRunBonuses();
+    const shopUpgrades = this.loadShopUpgradeLevels();
     this.metaXpMultiplier = bonuses.xpMultiplier;
 
     this.player.maxHp += bonuses.maxHpFlat;
     this.player.hp = this.player.maxHp;
     this.player.speed += bonuses.speedFlat;
+
+    const moveSpeedMultiplier = 1 + shopUpgrades.movement_speed * 0.05;
+    this.player.speed = Math.round(this.player.speed * moveSpeedMultiplier);
+
+    const xpMultiplier = 1 + shopUpgrades.xp_gain * 0.1;
+    this.metaXpMultiplier *= xpMultiplier;
+
+    const dashCooldownMultiplier = Math.max(0.35, 1 - shopUpgrades.dash_cooldown * 0.05);
+    this.player.dashCooldownMs = Math.max(700, Math.round(this.player.dashCooldownMs * dashCooldownMultiplier));
+    this.player.dashChargeRate = this.player.dashGaugeMax / (this.player.dashCooldownMs / 1000);
 
     if (bonuses.startingWeaponBonus > 0) {
       this.weaponSystem.addWeapon("lightning");
@@ -2260,6 +2272,32 @@ export class GameScene extends Phaser.Scene {
     const timeReward = Math.floor(timeSurvivedSec / 10);
     const killReward = this.totalKills * 0.1;
     return Math.max(0, Math.round(timeReward + killReward));
+  }
+
+  loadShopUpgradeLevels() {
+    const fallback = {
+      dash_cooldown: 0,
+      xp_gain: 0,
+      movement_speed: 0
+    };
+    if (typeof window === "undefined" || !window.localStorage) {
+      return fallback;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(SHOP_UPGRADES_STORAGE_KEY);
+      if (!raw) {
+        return fallback;
+      }
+      const parsed = JSON.parse(raw);
+      return {
+        dash_cooldown: Math.max(0, Math.floor(Number(parsed?.dash_cooldown) || 0)),
+        xp_gain: Math.max(0, Math.floor(Number(parsed?.xp_gain) || 0)),
+        movement_speed: Math.max(0, Math.floor(Number(parsed?.movement_speed) || 0))
+      };
+    } catch (_error) {
+      return fallback;
+    }
   }
 
   updateHud() {
