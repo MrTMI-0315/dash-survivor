@@ -104,6 +104,8 @@ export class GameScene extends Phaser.Scene {
     this.hudDashStatusText = null;
     this.debugDirectorText = null;
     this.offscreenIndicatorGraphics = null;
+    this.damageNumberPool = [];
+    this.offscreenIndicatorPool = [];
     this.comboText = null;
     this.comboTextTween = null;
     this.killCombo = 0;
@@ -234,6 +236,8 @@ export class GameScene extends Phaser.Scene {
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
+    this.damageNumberPool = [];
+    this.offscreenIndicatorPool = [];
     this.debugDirectorText = this.add
       .text(DEBUG_HUD_X, DEBUG_HUD_Y, "", {
         fontFamily: "Arial",
@@ -1359,25 +1363,51 @@ export class GameScene extends Phaser.Scene {
     const isElite = Boolean(enemy?.isElite);
     const textColor = isBoss ? "#ff3b3b" : isElite ? "#ffb347" : "#ffffff";
 
-    const text = this.add
-      .text(x, y, `${safeAmount}`, {
-        fontFamily: "Arial",
-        fontSize: isElite ? "20px" : "17px",
-        color: textColor,
-        stroke: "#2f1c14",
-        strokeThickness: 4
-      })
-      .setOrigin(0.5)
-      .setDepth(18);
+    let text = this.damageNumberPool.find((entry) => !entry.active);
+    if (!text) {
+      text = this.add
+        .text(x, y, "", {
+          fontFamily: "Arial",
+          fontSize: "17px",
+          color: "#ffffff",
+          stroke: "#2f1c14",
+          strokeThickness: 4
+        })
+        .setOrigin(0.5)
+        .setDepth(18)
+        .setVisible(false)
+        .setActive(false);
+      this.damageNumberPool.push(text);
+    }
 
-    this.tweens.add({
+    const prevTween = text.getData("damageTween");
+    if (prevTween) {
+      prevTween.stop();
+    }
+
+    text.setText(`${safeAmount}`);
+    text.setStyle({
+      fontSize: isElite ? "20px" : "17px",
+      color: textColor
+    });
+    text.setPosition(x, y);
+    text.setAlpha(1);
+    text.setVisible(true);
+    text.setActive(true);
+
+    const tween = this.tweens.add({
       targets: text,
       y: y - (isElite ? 36 : 28),
       alpha: 0,
       duration: isElite ? 420 : 320,
       ease: "Cubic.easeOut",
-      onComplete: () => text.destroy()
+      onComplete: () => {
+        text.setVisible(false);
+        text.setActive(false);
+        text.setData("damageTween", null);
+      }
     });
+    text.setData("damageTween", tween);
   }
 
   formatRunTime(ms) {
@@ -1416,33 +1446,47 @@ export class GameScene extends Phaser.Scene {
     return 0xffffff;
   }
 
-  drawIndicatorTriangle(cx, cy, angle, size, color) {
-    if (!this.offscreenIndicatorGraphics) {
-      return;
+  acquireOffscreenIndicator() {
+    let marker = this.offscreenIndicatorPool.find((entry) => !entry.active);
+    if (marker) {
+      return marker;
     }
-    const tipX = cx + Math.cos(angle) * size;
-    const tipY = cy + Math.sin(angle) * size;
-    const sideAngle = Math.PI * 0.82;
-    const leftX = cx + Math.cos(angle + sideAngle) * (size * 0.78);
-    const leftY = cy + Math.sin(angle + sideAngle) * (size * 0.78);
-    const rightX = cx + Math.cos(angle - sideAngle) * (size * 0.78);
-    const rightY = cy + Math.sin(angle - sideAngle) * (size * 0.78);
 
-    this.offscreenIndicatorGraphics.fillStyle(color, 0.95);
-    this.offscreenIndicatorGraphics.beginPath();
-    this.offscreenIndicatorGraphics.moveTo(tipX, tipY);
-    this.offscreenIndicatorGraphics.lineTo(leftX, leftY);
-    this.offscreenIndicatorGraphics.lineTo(rightX, rightY);
-    this.offscreenIndicatorGraphics.closePath();
-    this.offscreenIndicatorGraphics.fillPath();
+    const size = OFFSCREEN_INDICATOR_SIZE;
+    marker = this.add
+      .triangle(
+        0,
+        0,
+        size,
+        0,
+        -size * 0.78,
+        -size * 0.66,
+        -size * 0.78,
+        size * 0.66,
+        0xffffff,
+        0.95
+      )
+      .setScrollFactor(0)
+      .setDepth(19)
+      .setVisible(false)
+      .setActive(false);
+    this.offscreenIndicatorPool.push(marker);
+    return marker;
   }
 
   updateOffscreenEnemyIndicators() {
-    if (!this.offscreenIndicatorGraphics || !this.cameras?.main) {
+    if (!this.cameras?.main) {
       return;
     }
 
-    this.offscreenIndicatorGraphics.clear();
+    if (this.offscreenIndicatorGraphics) {
+      this.offscreenIndicatorGraphics.clear();
+    }
+    this.offscreenIndicatorPool.forEach((marker) => {
+      marker.setVisible(false);
+      marker.setActive(false);
+    });
+
     const cam = this.cameras.main;
     const view = cam.worldView;
     const sw = cam.width;
@@ -1480,7 +1524,12 @@ export class GameScene extends Phaser.Scene {
       const t = Math.min(Math.abs(scaleX), Math.abs(scaleY));
       const screenX = sw / 2 + nx * t;
       const screenY = sh / 2 + ny * t;
-      this.drawIndicatorTriangle(screenX, screenY, Math.atan2(ny, nx), OFFSCREEN_INDICATOR_SIZE, this.getOffscreenIndicatorColor(enemy));
+      const marker = this.acquireOffscreenIndicator();
+      marker.setPosition(screenX, screenY);
+      marker.setRotation(Math.atan2(ny, nx));
+      marker.setFillStyle(this.getOffscreenIndicatorColor(enemy), 0.95);
+      marker.setVisible(true);
+      marker.setActive(true);
       drawn += 1;
     });
   }
