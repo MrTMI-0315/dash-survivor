@@ -466,6 +466,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverRestartLabel.on("pointerdown", onRestartPointer);
 
     this.createTouchControls();
+    this.registerSceneShutdownCleanup();
     this.openWeaponSelection();
     this.maintainEnemyDensity();
     this.updateHud();
@@ -1217,10 +1218,39 @@ export class GameScene extends Phaser.Scene {
     this.input.on("pointermove", this.onTouchPointerMove);
     this.input.on("pointerup", this.onTouchPointerUp);
     this.input.on("pointerupoutside", this.onTouchPointerUp);
+  }
+
+  registerSceneShutdownCleanup() {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.cleanupTransientUiPools();
       this.teardownTouchControls();
       this.clearEvolutionSlowMoTimer();
     });
+  }
+
+  cleanupTransientUiPools() {
+    if (Array.isArray(this.damageNumberPool)) {
+      this.damageNumberPool.forEach((text) => {
+        const tween = text?.getData?.("damageTween");
+        if (tween) {
+          tween.stop();
+        }
+        text?.setData?.("damageTween", null);
+        text?.setVisible?.(false);
+        text?.setActive?.(false);
+      });
+    }
+
+    if (Array.isArray(this.hudAlertPool)) {
+      this.hudAlertPool.forEach((text) => this.releaseHudAlertText(text));
+    }
+
+    if (Array.isArray(this.offscreenIndicatorPool)) {
+      this.offscreenIndicatorPool.forEach((marker) => {
+        marker?.setVisible?.(false);
+        marker?.setActive?.(false);
+      });
+    }
   }
 
   clearEvolutionSlowMoTimer() {
@@ -1662,6 +1692,7 @@ export class GameScene extends Phaser.Scene {
     if (pendingLadderSpawns <= 0) {
       return;
     }
+    this.logSpawnEventPressure("LADDER", pendingLadderSpawns);
 
     for (let i = 0; i < pendingLadderSpawns; i += 1) {
       const lane = this.director.chooseLadderLane();
@@ -1674,11 +1705,22 @@ export class GameScene extends Phaser.Scene {
     if (pendingHatchSpawns <= 0) {
       return;
     }
+    this.logSpawnEventPressure("HATCH", pendingHatchSpawns);
 
     this.showHudAlert("HATCH BREACH", 1000);
     for (let i = 0; i < pendingHatchSpawns; i += 1) {
       this.spawnEnemyFromEventPoint(SPAWN_LANES.STERN, HATCH_BREACH_POINT, "hatch");
     }
+  }
+
+  logSpawnEventPressure(eventType, requestedCount) {
+    if (!this.debugOverlayEnabled) {
+      return;
+    }
+    const alive = this.getAliveEnemyCount();
+    const target = this.targetEnemies;
+    const runTime = this.formatRunTime(this.runTimeMs);
+    console.info(`[SpawnEvent] t=${runTime} type=${eventType} requested=${requestedCount} alive=${alive} target=${target}`);
   }
 
   getLadderSpawnPoint(lane) {
@@ -2553,6 +2595,9 @@ export class GameScene extends Phaser.Scene {
 
     this.enemies.getChildren().forEach((enemy) => {
       if (!enemy.active) {
+        return;
+      }
+      if (enemy.getData("isDying") || enemy.isDead?.()) {
         return;
       }
 

@@ -54,7 +54,11 @@ export class WeaponSystem {
   isValidProjectileEnemyCollision(a, b) {
     const { projectile, enemy } = this.normalizeProjectileEnemyPair(a, b);
     const hasProjectileSignature = Boolean(projectile && typeof projectile.getData === "function" && projectile.getData("poolTexture"));
-    const valid = enemy instanceof Enemy && hasProjectileSignature;
+    const valid =
+      enemy instanceof Enemy &&
+      hasProjectileSignature &&
+      !enemy.getData("isDying") &&
+      !enemy.isDead?.();
     if (!valid) {
       this.warnInvalidProjectileCollision(enemy);
     }
@@ -606,6 +610,9 @@ export class WeaponSystem {
       this.warnInvalidProjectileCollision(enemy);
       return;
     }
+    if (enemy.getData("isDying") || enemy.isDead?.()) {
+      return;
+    }
 
     const safeDamage = Number.isFinite(damage) ? damage : 0;
     const safeKnockback = Number.isFinite(knockbackForce) ? knockbackForce : 0;
@@ -631,6 +638,9 @@ export class WeaponSystem {
 
     this.scene.enemies.getChildren().forEach((enemy) => {
       if (!enemy.active) {
+        return;
+      }
+      if (enemy.getData("isDying") || enemy.isDead?.()) {
         return;
       }
       if (excluded && excluded.has(enemy)) {
