@@ -42,7 +42,9 @@ const PARTICLE_FALLBACK_TEXTURE_KEY = "__WHITE";
 const PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY = "particle_fallback";
 const BOSS_WARNING_LEAD_MS = 5000;
 const META_COINS_STORAGE_KEY = "dashsurvivor_coins";
+const META_STORAGE_KEY = "dashsurvivor_meta_v1";
 const SHOP_UPGRADES_STORAGE_KEY = "dashsurvivor_shop_upgrades_v1";
+const WEAPON_UNLOCK_STORAGE_KEY = "dashsurvivor_weapon_unlocks_v1";
 const DEBUG_HUD_X = 16;
 const DEBUG_HUD_Y = 116;
 const OFFSCREEN_INDICATOR_INSET = 18;
@@ -55,6 +57,36 @@ const SFX_THROTTLE_MS = {
   dash: 90,
   level_up: 220
 };
+const START_WEAPON_OPTIONS = [
+  {
+    id: "dash_blade",
+    label: "Dash Blade",
+    weaponType: "dagger",
+    unlockCost: 0,
+    defaultUnlocked: true
+  },
+  {
+    id: "pulse_dash",
+    label: "Pulse Dash",
+    weaponType: "fireball",
+    unlockCost: 90,
+    defaultUnlocked: false
+  },
+  {
+    id: "orbit_blade",
+    label: "Orbit Blade",
+    weaponType: "orbit_blades",
+    unlockCost: 180,
+    defaultUnlocked: false
+  },
+  {
+    id: "shockwave",
+    label: "Shockwave",
+    weaponType: "lightning",
+    unlockCost: 140,
+    defaultUnlocked: false
+  }
+];
 
 export class GameScene extends Phaser.Scene {
   constructor() {
@@ -130,6 +162,11 @@ export class GameScene extends Phaser.Scene {
     this.onTouchPointerDown = null;
     this.onTouchPointerMove = null;
     this.onTouchPointerUp = null;
+    this.isWeaponSelecting = false;
+    this.weaponSelectionUi = [];
+    this.weaponSelectionActions = [];
+    this.weaponUnlocks = {};
+    this.selectedStartWeaponId = null;
   }
 
   create() {
@@ -167,6 +204,11 @@ export class GameScene extends Phaser.Scene {
     this.touchMovePointerId = null;
     this.touchMoveVector.set(0, 0);
     this.touchDashQueued = false;
+    this.isWeaponSelecting = false;
+    this.weaponSelectionUi = [];
+    this.weaponSelectionActions = [];
+    this.weaponUnlocks = this.loadWeaponUnlocks();
+    this.selectedStartWeaponId = null;
 
     this.createTextures();
     this.drawArena();
@@ -203,8 +245,6 @@ export class GameScene extends Phaser.Scene {
     this.physics.add.collider(this.player, this.obstacles);
     this.physics.add.collider(this.enemies, this.obstacles);
     this.weaponSystem = new WeaponSystem(this, this.player);
-    this.weaponSystem.addWeapon("dagger");
-    this.weaponSystem.addWeapon("fireball");
     this.applyMetaBonusesForRun();
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
@@ -321,6 +361,7 @@ export class GameScene extends Phaser.Scene {
       .setVisible(false);
 
     this.createTouchControls();
+    this.openWeaponSelection();
     this.maintainEnemyDensity();
     this.updateHud();
   }
@@ -336,6 +377,16 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isLeveling) {
       this.handleLevelUpInput();
+      this.player.body?.setVelocity(0, 0);
+      this.updateDashCooldownRing();
+      this.updateOffscreenEnemyIndicators();
+      this.updateDebugDirectorOverlay();
+      this.updateHud();
+      return;
+    }
+
+    if (this.isWeaponSelecting) {
+      this.handleWeaponSelectionInput();
       this.player.body?.setVelocity(0, 0);
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
@@ -1136,7 +1187,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   maintainEnemyDensity() {
-    if (this.isGameOver || this.isLeveling) {
+    if (this.isGameOver || this.isLeveling || this.isWeaponSelecting) {
       return;
     }
 
@@ -1158,7 +1209,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnEnemyFromEdge() {
-    if (this.isGameOver || this.isLeveling) {
+    if (this.isGameOver || this.isLeveling || this.isWeaponSelecting) {
       return;
     }
     if (this.getAliveEnemyCount() >= PERFORMANCE_MAX_ACTIVE_ENEMIES) {
@@ -2025,6 +2076,173 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  openWeaponSelection() {
+    if (this.isWeaponSelecting || this.isGameOver) {
+      return;
+    }
+
+    this.isWeaponSelecting = true;
+    this.weaponSelectionActions = [];
+    this.physics.pause();
+    this.player.body?.setVelocity(0, 0);
+
+    const centerX = 640;
+    const centerY = 360;
+    const panel = this.add
+      .rectangle(centerX, centerY, 700, 500, 0x07101d, 0.96)
+      .setStrokeStyle(2, 0x4f607d, 1)
+      .setScrollFactor(0)
+      .setDepth(35);
+    const title = this.add
+      .text(centerX, centerY - 205, "SELECT START WEAPON", {
+        fontFamily: "Arial",
+        fontSize: "36px",
+        color: "#f8fbff",
+        stroke: "#0f1728",
+        strokeThickness: 5
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(36);
+
+    const coinText = this.add
+      .text(centerX, centerY - 166, `Coins: ${this.metaData.currency}`, {
+        fontFamily: "Arial",
+        fontSize: "22px",
+        color: "#ffe08a",
+        stroke: "#2a1a06",
+        strokeThickness: 4
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(36);
+
+    const subtitle = this.add
+      .text(centerX, centerY - 132, "Pick one weapon to begin this run", {
+        fontFamily: "Arial",
+        fontSize: "18px",
+        color: "#bfd7ef"
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(36);
+
+    const statusText = this.add
+      .text(centerX, centerY + 204, "", {
+        fontFamily: "Arial",
+        fontSize: "18px",
+        color: "#cde5ff",
+        stroke: "#0e1a2a",
+        strokeThickness: 4
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(36);
+
+    const optionRows = [];
+    START_WEAPON_OPTIONS.forEach((option, index) => {
+      const y = centerY - 64 + index * 82;
+      const box = this.add
+        .rectangle(centerX, y, 620, 68, 0x17233a, 1)
+        .setStrokeStyle(1, 0x4f607d, 1)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0)
+        .setDepth(36);
+      const heading = this.add
+        .text(centerX - 290, y - 14, `[${index + 1}] ${option.label}`, {
+          fontFamily: "Arial",
+          fontSize: "24px",
+          color: "#eaf6ff"
+        })
+        .setOrigin(0, 0.5)
+        .setScrollFactor(0)
+        .setDepth(37);
+      const detail = this.add
+        .text(centerX - 290, y + 16, "", {
+          fontFamily: "Arial",
+          fontSize: "16px",
+          color: "#c6dcf2"
+        })
+        .setOrigin(0, 0.5)
+        .setScrollFactor(0)
+        .setDepth(37);
+
+      const refreshOption = () => {
+        const unlocked = Boolean(this.weaponUnlocks[option.id]);
+        if (unlocked) {
+          detail.setText(`Unlocked · Tap to select`);
+          detail.setColor("#9ff0b6");
+        } else {
+          detail.setText(`Locked · Unlock Cost ${option.unlockCost} coins`);
+          detail.setColor("#ffccb6");
+        }
+      };
+
+      const choose = () => {
+        const unlocked = Boolean(this.weaponUnlocks[option.id]);
+        if (!unlocked) {
+          const spent = this.trySpendMetaCoins(option.unlockCost);
+          if (!spent) {
+            statusText.setText("Not enough coins to unlock this weapon.");
+            statusText.setColor("#ffb4b4");
+            return;
+          }
+          this.weaponUnlocks[option.id] = true;
+          this.saveWeaponUnlocks(this.weaponUnlocks);
+          coinText.setText(`Coins: ${this.metaData.currency}`);
+          refreshOption();
+        }
+        this.selectStartWeapon(option);
+      };
+
+      box.on("pointerdown", choose);
+      heading.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
+      detail.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
+      refreshOption();
+      optionRows.push(box, heading, detail);
+      this.weaponSelectionActions.push(choose);
+    });
+
+    this.weaponSelectionUi = [panel, title, coinText, subtitle, statusText, ...optionRows];
+  }
+
+  handleWeaponSelectionInput() {
+    const indexes = [this.keys.meta1, this.keys.meta2, this.keys.meta3, this.keys.meta4];
+    for (let i = 0; i < indexes.length; i += 1) {
+      if (Phaser.Input.Keyboard.JustDown(indexes[i])) {
+        const action = this.weaponSelectionActions[i];
+        if (action) {
+          action();
+        }
+      }
+    }
+  }
+
+  selectStartWeapon(option) {
+    if (!option || this.selectedStartWeaponId) {
+      return;
+    }
+
+    const added = this.weaponSystem.addWeapon(option.weaponType);
+    if (!added && this.player.weapons.length === 0) {
+      this.weaponSystem.addWeapon("dagger");
+    }
+    this.selectedStartWeaponId = option.id;
+    this.closeWeaponSelection();
+    this.showHudAlert(`${option.label.toUpperCase()} READY`, 1000);
+  }
+
+  closeWeaponSelection() {
+    this.weaponSelectionUi.forEach((obj) => obj.destroy());
+    this.weaponSelectionUi = [];
+    this.weaponSelectionActions = [];
+    this.isWeaponSelecting = false;
+
+    if (!this.isGameOver && !this.isLeveling) {
+      this.physics.resume();
+    }
+  }
+
   applyLevelUpUpgrade(upgrade) {
     if (!upgrade) {
       return;
@@ -2248,6 +2466,16 @@ export class GameScene extends Phaser.Scene {
     const safeAmount = Number.isFinite(amount) ? Math.max(0, Math.floor(amount)) : 0;
     try {
       window.localStorage.setItem(META_COINS_STORAGE_KEY, String(safeAmount));
+      const rawMeta = window.localStorage.getItem(META_STORAGE_KEY);
+      const parsedMeta = rawMeta ? JSON.parse(rawMeta) : {};
+      const mergedMeta = {
+        currency: safeAmount,
+        maxHPBonus: Math.max(0, Math.floor(Number(parsedMeta?.maxHPBonus) || 0)),
+        xpBonus: Math.max(0, Math.floor(Number(parsedMeta?.xpBonus) || 0)),
+        speedBonus: Math.max(0, Math.floor(Number(parsedMeta?.speedBonus) || 0)),
+        startingWeaponBonus: Math.max(0, Math.floor(Number(parsedMeta?.startingWeaponBonus) || 0))
+      };
+      window.localStorage.setItem(META_STORAGE_KEY, JSON.stringify(mergedMeta));
     } catch (_error) {
       // Ignore storage failures to keep runtime stable.
     }
@@ -2267,11 +2495,78 @@ export class GameScene extends Phaser.Scene {
     this.saveCoinBank(metaCoins);
   }
 
+  trySpendMetaCoins(amount) {
+    const safeAmount = Math.max(0, Math.floor(Number(amount) || 0));
+    if (safeAmount <= 0) {
+      return true;
+    }
+    const currentCoins = Math.max(0, Math.floor(this.metaData?.currency ?? 0));
+    if (currentCoins < safeAmount) {
+      return false;
+    }
+
+    const nextCoins = currentCoins - safeAmount;
+    this.saveCoinBank(nextCoins);
+    this.metaSystem = new MetaProgressionSystem();
+    this.metaData = this.metaSystem.getData();
+    return true;
+  }
+
   calculateRunCoinReward() {
     const timeSurvivedSec = Math.max(0, Math.floor(this.runTimeMs / 1000));
     const timeReward = Math.floor(timeSurvivedSec / 10);
     const killReward = this.totalKills * 0.1;
     return Math.max(0, Math.round(timeReward + killReward));
+  }
+
+  loadWeaponUnlocks() {
+    const defaults = {};
+    START_WEAPON_OPTIONS.forEach((option) => {
+      defaults[option.id] = Boolean(option.defaultUnlocked);
+    });
+
+    if (typeof window === "undefined" || !window.localStorage) {
+      return defaults;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(WEAPON_UNLOCK_STORAGE_KEY);
+      if (!raw) {
+        this.saveWeaponUnlocks(defaults);
+        return defaults;
+      }
+
+      const parsed = JSON.parse(raw);
+      START_WEAPON_OPTIONS.forEach((option) => {
+        const stored = parsed?.[option.id];
+        if (typeof stored === "boolean") {
+          defaults[option.id] = stored || option.defaultUnlocked;
+        } else if (stored === 0 || stored === 1) {
+          defaults[option.id] = Boolean(stored) || option.defaultUnlocked;
+        }
+      });
+      return defaults;
+    } catch (_error) {
+      return defaults;
+    }
+  }
+
+  saveWeaponUnlocks(unlocks) {
+    if (typeof window === "undefined" || !window.localStorage) {
+      return;
+    }
+
+    const sanitized = {};
+    START_WEAPON_OPTIONS.forEach((option) => {
+      const unlocked = Boolean(unlocks?.[option.id]) || option.defaultUnlocked;
+      sanitized[option.id] = unlocked;
+    });
+
+    try {
+      window.localStorage.setItem(WEAPON_UNLOCK_STORAGE_KEY, JSON.stringify(sanitized));
+    } catch (_error) {
+      // Ignore storage failures to keep runtime stable.
+    }
   }
 
   loadShopUpgradeLevels() {
