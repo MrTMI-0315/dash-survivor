@@ -61,10 +61,13 @@ const LADDER_SPAWN_POINTS = Object.freeze({
   ])
 });
 const XP_MAGNET_RADIUS_PER_LEVEL = 6;
+const DECK_SURFACE_INSET = 34;
 const DECK_RAIL_INSET = 12;
 const DECK_RAIL_POST_GAP = 120;
 const DECK_RAIL_POST_WIDTH = 8;
 const DECK_RAIL_POST_LENGTH = 24;
+const SEA_WAVE_MIN = 6;
+const SEA_WAVE_MAX = 10;
 const ELITE_BONUS_XP_ORB_MIN = 2;
 const ELITE_BONUS_XP_ORB_MAX = 4;
 const ELITE_BONUS_XP_ORB_VALUE_FACTOR = 0.35;
@@ -237,6 +240,8 @@ export class GameScene extends Phaser.Scene {
     this.performanceKillEvents = [];
     this.performanceDamageTotal = 0;
     this.performanceKillTotal = 0;
+    this.seaWaveGraphics = null;
+    this.seaWaves = [];
   }
 
   create() {
@@ -456,6 +461,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    this.updateSeaWaves(time);
+
     if (this.isGameOver) {
       this.updateBossProjectiles(time);
       this.updateDashCooldownRing();
@@ -996,20 +1003,89 @@ export class GameScene extends Phaser.Scene {
   }
 
   drawArena() {
+    const seaGraphics = this.add.graphics();
+    seaGraphics.setDepth(-3);
+    seaGraphics.fillStyle(0x061328, 1);
+    seaGraphics.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
     const graphics = this.add.graphics();
+    graphics.setDepth(0);
+
+    const deckLeft = DECK_SURFACE_INSET;
+    const deckTop = DECK_SURFACE_INSET;
+    const deckWidth = WORLD_WIDTH - DECK_SURFACE_INSET * 2;
+    const deckHeight = WORLD_HEIGHT - DECK_SURFACE_INSET * 2;
+    const deckRight = deckLeft + deckWidth;
+    const deckBottom = deckTop + deckHeight;
+
     graphics.fillStyle(0x101826, 1);
-    graphics.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    graphics.fillRect(deckLeft, deckTop, deckWidth, deckHeight);
 
     graphics.lineStyle(1, 0x2a3b59, 0.35);
     const grid = 60;
-    for (let x = 0; x <= WORLD_WIDTH; x += grid) {
-      graphics.lineBetween(x, 0, x, WORLD_HEIGHT);
+    for (let x = deckLeft; x <= deckRight; x += grid) {
+      graphics.lineBetween(x, deckTop, x, deckBottom);
     }
-    for (let y = 0; y <= WORLD_HEIGHT; y += grid) {
-      graphics.lineBetween(0, y, WORLD_WIDTH, y);
+    for (let y = deckTop; y <= deckBottom; y += grid) {
+      graphics.lineBetween(deckLeft, y, deckRight, y);
     }
 
+    this.initializeSeaWaves();
     this.drawDeckRails();
+  }
+
+  initializeSeaWaves() {
+    if (this.seaWaveGraphics) {
+      this.seaWaveGraphics.destroy();
+    }
+
+    this.seaWaveGraphics = this.add.graphics();
+    this.seaWaveGraphics.setDepth(-2);
+    this.seaWaves = [];
+
+    const waveCount = Phaser.Math.Between(SEA_WAVE_MIN, SEA_WAVE_MAX);
+    for (let i = 0; i < waveCount; i += 1) {
+      const topBand = i < Math.ceil(waveCount / 2);
+      const minY = topBand ? 8 : WORLD_HEIGHT - DECK_SURFACE_INSET + 8;
+      const maxY = topBand ? DECK_SURFACE_INSET - 8 : WORLD_HEIGHT - 8;
+      this.seaWaves.push({
+        baseY: Phaser.Math.Between(minY, maxY),
+        length: Phaser.Math.Between(190, 360),
+        amplitude: Phaser.Math.FloatBetween(3.5, 9.5),
+        speed: Phaser.Math.FloatBetween(0.016, 0.03),
+        phase: Phaser.Math.FloatBetween(0, Math.PI * 2),
+        alpha: Phaser.Math.FloatBetween(0.13, 0.24),
+        thickness: Phaser.Math.Between(1, 2),
+        color: 0x78b4e3
+      });
+    }
+  }
+
+  updateSeaWaves(timeMs) {
+    if (!this.seaWaveGraphics || !Array.isArray(this.seaWaves) || this.seaWaves.length === 0) {
+      return;
+    }
+
+    this.seaWaveGraphics.clear();
+    this.seaWaves.forEach((wave) => {
+      const segmentCount = 8;
+      const lineStartX = ((timeMs * wave.speed + wave.phase * 80) % (WORLD_WIDTH + wave.length * 2)) - wave.length;
+      const baseY = wave.baseY + Math.sin(timeMs * 0.0016 + wave.phase) * wave.amplitude;
+
+      this.seaWaveGraphics.lineStyle(wave.thickness, wave.color, wave.alpha);
+      this.seaWaveGraphics.beginPath();
+      for (let i = 0; i <= segmentCount; i += 1) {
+        const t = i / segmentCount;
+        const x = lineStartX + wave.length * t;
+        const y = baseY + Math.sin(timeMs * 0.0022 + wave.phase + t * 5.2) * wave.amplitude * 0.42;
+        if (i === 0) {
+          this.seaWaveGraphics.moveTo(x, y);
+        } else {
+          this.seaWaveGraphics.lineTo(x, y);
+        }
+      }
+      this.seaWaveGraphics.strokePath();
+    });
   }
 
   drawDeckRails() {
