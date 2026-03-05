@@ -104,6 +104,21 @@ const OFFSCREEN_INDICATOR_MAX = 12;
 const OFFSCREEN_PRIORITY_BONUS_ELITE = 10000;
 const OFFSCREEN_PRIORITY_BONUS_BOSS = 20000;
 const COMBO_RESET_WINDOW_MS = 2000;
+const HUD_ALERT_POOL_SIZE = 3;
+const HUD_ALERT_STYLE = Object.freeze({
+  fontFamily: "Arial",
+  fontSize: "34px",
+  color: "#ffd76c",
+  stroke: "#2e1b08",
+  strokeThickness: 6
+});
+const HUD_COMBO_STYLE = Object.freeze({
+  fontFamily: "Arial",
+  fontSize: "34px",
+  color: "#fff0b6",
+  stroke: "#2d1f08",
+  strokeThickness: 6
+});
 const BOSS_BULLET_MAX = 220;
 const BOSS_BULLET_LIFETIME_MS = 2800;
 const SFX_AUDIO_FILES = {
@@ -174,7 +189,6 @@ export class GameScene extends Phaser.Scene {
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
-    this.hudAlertHideEvent = null;
 
     this.attackIntervalMs = 800;
     this.attackRange = 120;
@@ -216,9 +230,8 @@ export class GameScene extends Phaser.Scene {
     this.debugDirectorText = null;
     this.offscreenIndicatorGraphics = null;
     this.damageNumberPool = [];
+    this.hudAlertPool = [];
     this.offscreenIndicatorPool = [];
-    this.comboText = null;
-    this.comboTextTween = null;
     this.killCombo = 0;
     this.lastKillAtMs = Number.NEGATIVE_INFINITY;
     this.maxKillCombo = 0;
@@ -266,12 +279,11 @@ export class GameScene extends Phaser.Scene {
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
     this.targetEnemies = 0;
-    this.hudAlertHideEvent = null;
+    this.hudAlertPool = [];
     this.killCombo = 0;
     this.lastKillAtMs = Number.NEGATIVE_INFINITY;
     this.maxKillCombo = 0;
     this.totalKills = 0;
-    this.comboTextTween = null;
     this.xpDisplayRatio = 0;
     this.bossApproachWarnedCycleIndex = 0;
     this.metaData = this.metaSystem.getData();
@@ -391,18 +403,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(19);
-    this.comboText = this.add
-      .text(640, 198, "", {
-        fontFamily: "Arial",
-        fontSize: "34px",
-        color: "#fff0b6",
-        stroke: "#2d1f08",
-        strokeThickness: 6
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(25)
-      .setVisible(false);
+    this.createHudAlertPool();
 
     this.gameOverText = this.add
       .text(640, 360, "GAME OVER", {
@@ -442,19 +443,6 @@ export class GameScene extends Phaser.Scene {
     const onRestartPointer = () => this.restartRun();
     this.gameOverRestartButton.on("pointerdown", onRestartPointer);
     this.gameOverRestartLabel.on("pointerdown", onRestartPointer);
-
-    this.hudAlertText = this.add
-      .text(640, 74, "", {
-        fontFamily: "Arial",
-        fontSize: "34px",
-        color: "#ffd76c",
-        stroke: "#2e1b08",
-        strokeThickness: 6
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(20)
-      .setVisible(false);
 
     this.createTouchControls();
     this.openWeaponSelection();
@@ -1803,17 +1791,84 @@ export class GameScene extends Phaser.Scene {
     this.showHudAlert("MINI BOSS");
   }
 
-  showHudAlert(message, durationMs = 1600) {
-    this.hudAlertText.setText(message);
-    this.hudAlertText.setVisible(true);
-
-    if (this.hudAlertHideEvent) {
-      this.hudAlertHideEvent.remove(false);
+  createHudAlertPool() {
+    this.hudAlertPool = [];
+    for (let i = 0; i < HUD_ALERT_POOL_SIZE; i += 1) {
+      const text = this.add
+        .text(640, 74, "", HUD_ALERT_STYLE)
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(25)
+        .setVisible(false)
+        .setActive(false);
+      text.setData("alertKind", null);
+      text.setData("alertTween", null);
+      text.setData("alertHideEvent", null);
+      this.hudAlertPool.push(text);
     }
-    this.hudAlertHideEvent = this.time.delayedCall(durationMs, () => {
-      this.hudAlertText.setVisible(false);
-      this.hudAlertHideEvent = null;
+  }
+
+  releaseHudAlertText(text) {
+    if (!text) {
+      return;
+    }
+
+    const alertTween = text.getData("alertTween");
+    if (alertTween) {
+      alertTween.stop();
+    }
+    const hideEvent = text.getData("alertHideEvent");
+    if (hideEvent) {
+      hideEvent.remove(false);
+    }
+
+    text.setData("alertTween", null);
+    text.setData("alertHideEvent", null);
+    text.setData("alertKind", null);
+    text.setAlpha(1);
+    text.setScale(1);
+    text.setVisible(false);
+    text.setActive(false);
+  }
+
+  acquireHudAlertText(kind) {
+    if (!Array.isArray(this.hudAlertPool) || this.hudAlertPool.length === 0) {
+      return null;
+    }
+
+    let text = this.hudAlertPool.find((entry) => entry.active && entry.getData("alertKind") === kind);
+    if (!text) {
+      text = this.hudAlertPool.find((entry) => !entry.active);
+    }
+    if (!text) {
+      text = this.hudAlertPool[0];
+    }
+    if (!text) {
+      return null;
+    }
+
+    this.releaseHudAlertText(text);
+    text.setData("alertKind", kind);
+    text.setVisible(true);
+    text.setActive(true);
+    return text;
+  }
+
+  showHudAlert(message, durationMs = 1600) {
+    const text = this.acquireHudAlertText("center_alert");
+    if (!text) {
+      return;
+    }
+
+    text.setStyle(HUD_ALERT_STYLE);
+    text.setPosition(640, 74);
+    text.setDepth(20);
+    text.setText(message);
+
+    const hideEvent = this.time.delayedCall(durationMs, () => {
+      this.releaseHudAlertText(text);
     });
+    text.setData("alertHideEvent", hideEvent);
   }
 
   updateBossApproachWarning() {
@@ -2491,7 +2546,7 @@ export class GameScene extends Phaser.Scene {
     this.maxKillCombo = Math.max(this.maxKillCombo, this.killCombo);
     this.lastKillAtMs = nowMs;
 
-    if (!this.comboText || this.killCombo < 3) {
+    if (this.killCombo < 3) {
       return;
     }
 
@@ -2500,32 +2555,30 @@ export class GameScene extends Phaser.Scene {
       label = `x${this.killCombo} RAMPAGE`;
     }
 
-    this.comboText.setText(label);
-    this.comboText.setAlpha(1);
-    this.comboText.setVisible(true);
-    this.comboText.setScale(1);
-
-    if (this.comboTextTween) {
-      this.comboTextTween.stop();
-      this.comboTextTween = null;
+    const comboText = this.acquireHudAlertText("combo");
+    if (!comboText) {
+      return;
     }
 
-    this.comboTextTween = this.tweens.add({
-      targets: this.comboText,
+    comboText.setStyle(HUD_COMBO_STYLE);
+    comboText.setPosition(640, 198);
+    comboText.setDepth(25);
+    comboText.setText(label);
+    comboText.setAlpha(1);
+    comboText.setScale(1);
+
+    const tween = this.tweens.add({
+      targets: comboText,
       y: 180,
       scale: 1.08,
       alpha: 0,
       duration: 520,
       ease: "Cubic.easeOut",
       onComplete: () => {
-        if (this.comboText) {
-          this.comboText.setVisible(false);
-          this.comboText.setY(198);
-          this.comboText.setScale(1);
-        }
-        this.comboTextTween = null;
+        this.releaseHudAlertText(comboText);
       }
     });
+    comboText.setData("alertTween", tween);
   }
 
   handleEnemyDefeat(enemy) {
