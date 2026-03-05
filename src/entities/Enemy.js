@@ -169,10 +169,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.scene.spawnDamageParticles(this.x, this.y, this.isElite ? 8 : 5);
     }
     if (this.scene.spawnDamageNumber) {
-      this.scene.spawnDamageNumber(this.x, this.y - (this.isElite ? 4 : 0), safeAmount, this.isElite);
+      this.scene.spawnDamageNumber(this.x, this.y - (this.isElite ? 4 : 0), safeAmount, this);
+    }
+    const player = this.scene?.player;
+    const duringDash = Boolean(player?.isDashing?.());
+    if (!duringDash && player?.active) {
+      const dx = this.x - player.x;
+      const dy = this.y - player.y;
+      const distance = Math.hypot(dx, dy);
+      const nx = distance > 0.0001 ? dx / distance : 1;
+      const ny = distance > 0.0001 ? dy / distance : 0;
+      this.setPosition(this.x + nx * 6, this.y + ny * 6);
     }
     if (this.scene?.time?.delayedCall) {
-      this.scene.time.delayedCall(80, () => {
+      this.scene.time.delayedCall(60, () => {
         if (this.active && this.flashToken === flashToken) {
           this.setTint(this.baseTint);
         }

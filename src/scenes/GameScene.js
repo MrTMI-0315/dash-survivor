@@ -41,6 +41,12 @@ const PARTICLE_TEXTURE_KEY = "hit_particle";
 const PARTICLE_FALLBACK_TEXTURE_KEY = "__WHITE";
 const PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY = "particle_fallback";
 const BOSS_WARNING_LEAD_MS = 5000;
+const DEBUG_HUD_X = 16;
+const DEBUG_HUD_Y = 116;
+const OFFSCREEN_INDICATOR_INSET = 18;
+const OFFSCREEN_INDICATOR_SIZE = 9;
+const OFFSCREEN_INDICATOR_MAX = 42;
+const COMBO_RESET_WINDOW_MS = 2000;
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
@@ -76,6 +82,7 @@ export class GameScene extends Phaser.Scene {
     this.eliteKillEmitter = null;
     this.evolutionEmitter = null;
     this.dashTrailEmitter = null;
+    this.dashParticles = null;
     this.dashTrailTickMs = 0;
     this.evolutionSlowMoRestoreHandle = null;
     this.evolutionSlowMoActive = false;
@@ -95,6 +102,12 @@ export class GameScene extends Phaser.Scene {
     this.hudLevelText = null;
     this.hudStatsText = null;
     this.hudDashStatusText = null;
+    this.debugDirectorText = null;
+    this.offscreenIndicatorGraphics = null;
+    this.comboText = null;
+    this.comboTextTween = null;
+    this.killCombo = 0;
+    this.lastKillAtMs = Number.NEGATIVE_INFINITY;
     this.xpDisplayRatio = 0;
     this.bossApproachWarnedCycleIndex = 0;
     this.levelUpOptionActions = [];
@@ -126,6 +139,9 @@ export class GameScene extends Phaser.Scene {
     this.runTimeMs = 0;
     this.targetEnemies = 0;
     this.hudAlertHideEvent = null;
+    this.killCombo = 0;
+    this.lastKillAtMs = Number.NEGATIVE_INFINITY;
+    this.comboTextTween = null;
     this.xpDisplayRatio = 0;
     this.bossApproachWarnedCycleIndex = 0;
     this.metaData = this.metaSystem.getData();
@@ -183,7 +199,7 @@ export class GameScene extends Phaser.Scene {
     this.applyMetaBonusesForRun();
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
     this.hudLevelText = this.add
       .text(16, 12, "", {
@@ -217,6 +233,29 @@ export class GameScene extends Phaser.Scene {
       .setDepth(10);
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
+    this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
+    this.debugDirectorText = this.add
+      .text(DEBUG_HUD_X, DEBUG_HUD_Y, "", {
+        fontFamily: "Arial",
+        fontSize: "14px",
+        color: "#d6e8ff",
+        stroke: "#0d1628",
+        strokeThickness: 3
+      })
+      .setScrollFactor(0)
+      .setDepth(19);
+    this.comboText = this.add
+      .text(640, 198, "", {
+        fontFamily: "Arial",
+        fontSize: "34px",
+        color: "#fff0b6",
+        stroke: "#2d1f08",
+        strokeThickness: 6
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(25)
+      .setVisible(false);
 
     this.gameOverText = this.add
       .text(640, 360, "GAME OVER", {
@@ -278,6 +317,8 @@ export class GameScene extends Phaser.Scene {
   update(time, delta) {
     if (this.isGameOver) {
       this.updateDashCooldownRing();
+      this.updateOffscreenEnemyIndicators();
+      this.updateDebugDirectorOverlay();
       this.handleGameOverInput();
       return;
     }
@@ -286,6 +327,8 @@ export class GameScene extends Phaser.Scene {
       this.handleLevelUpInput();
       this.player.body?.setVelocity(0, 0);
       this.updateDashCooldownRing();
+      this.updateOffscreenEnemyIndicators();
+      this.updateDebugDirectorOverlay();
       this.updateHud();
       return;
     }
@@ -296,6 +339,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.runTimeMs += delta;
+    if ((this.time?.now ?? 0) - this.lastKillAtMs > COMBO_RESET_WINDOW_MS) {
+      this.killCombo = 0;
+    }
     this.updateBossApproachWarning();
     this.spawnAccumulatorMs += delta;
     this.processDirectorBossSpawns();
@@ -341,6 +387,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateDashCooldownRing();
+    this.updateOffscreenEnemyIndicators();
+    this.updateDebugDirectorOverlay();
     this.updateHud();
   }
 
@@ -492,6 +540,7 @@ export class GameScene extends Phaser.Scene {
       blendMode: "ADD"
     });
     this.dashTrailEmitter.setDepth(8);
+    this.dashParticles = this.dashTrailEmitter;
   }
 
   getSafeParticleTextureKey() {
@@ -1300,17 +1349,21 @@ export class GameScene extends Phaser.Scene {
     this.dashCooldownRingGraphics.strokePath();
   }
 
-  spawnDamageNumber(x, y, amount, isElite = false) {
+  spawnDamageNumber(x, y, amount, enemy = null) {
     const safeAmount = Math.max(0, Math.round(amount ?? 0));
     if (safeAmount <= 0) {
       return;
     }
 
+    const isBoss = Boolean(enemy?.getData?.("isBoss")) || enemy?.type === "boss";
+    const isElite = Boolean(enemy?.isElite);
+    const textColor = isBoss ? "#ff3b3b" : isElite ? "#ffb347" : "#ffffff";
+
     const text = this.add
       .text(x, y, `${safeAmount}`, {
         fontFamily: "Arial",
         fontSize: isElite ? "20px" : "17px",
-        color: isElite ? "#ffe4b0" : "#ffe9d5",
+        color: textColor,
         stroke: "#2f1c14",
         strokeThickness: 4
       })
@@ -1324,6 +1377,111 @@ export class GameScene extends Phaser.Scene {
       duration: isElite ? 420 : 320,
       ease: "Cubic.easeOut",
       onComplete: () => text.destroy()
+    });
+  }
+
+  formatRunTime(ms) {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  updateDebugDirectorOverlay() {
+    if (!this.debugDirectorText || !this.director) {
+      return;
+    }
+
+    const alive = this.getAliveEnemyCount();
+    const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
+    const spawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
+    const eliteChance = this.director.getEliteChance();
+    this.debugDirectorText.setText(
+      [
+        `Enemies: ${alive}/${this.targetEnemies}`,
+        `EliteChance: ${(eliteChance * 100).toFixed(1)}%`,
+        `SpawnInterval: ${Math.round(spawnIntervalMs)}ms`,
+        `GameTime: ${this.formatRunTime(this.runTimeMs)}`
+      ].join("\n")
+    );
+  }
+
+  getOffscreenIndicatorColor(enemy) {
+    if (enemy?.getData?.("isBoss")) {
+      return 0xff3b3b;
+    }
+    if (enemy?.isElite) {
+      return 0xffb347;
+    }
+    return 0xffffff;
+  }
+
+  drawIndicatorTriangle(cx, cy, angle, size, color) {
+    if (!this.offscreenIndicatorGraphics) {
+      return;
+    }
+    const tipX = cx + Math.cos(angle) * size;
+    const tipY = cy + Math.sin(angle) * size;
+    const sideAngle = Math.PI * 0.82;
+    const leftX = cx + Math.cos(angle + sideAngle) * (size * 0.78);
+    const leftY = cy + Math.sin(angle + sideAngle) * (size * 0.78);
+    const rightX = cx + Math.cos(angle - sideAngle) * (size * 0.78);
+    const rightY = cy + Math.sin(angle - sideAngle) * (size * 0.78);
+
+    this.offscreenIndicatorGraphics.fillStyle(color, 0.95);
+    this.offscreenIndicatorGraphics.beginPath();
+    this.offscreenIndicatorGraphics.moveTo(tipX, tipY);
+    this.offscreenIndicatorGraphics.lineTo(leftX, leftY);
+    this.offscreenIndicatorGraphics.lineTo(rightX, rightY);
+    this.offscreenIndicatorGraphics.closePath();
+    this.offscreenIndicatorGraphics.fillPath();
+  }
+
+  updateOffscreenEnemyIndicators() {
+    if (!this.offscreenIndicatorGraphics || !this.cameras?.main) {
+      return;
+    }
+
+    this.offscreenIndicatorGraphics.clear();
+    const cam = this.cameras.main;
+    const view = cam.worldView;
+    const sw = cam.width;
+    const sh = cam.height;
+    const centerX = view.centerX;
+    const centerY = view.centerY;
+    const edgeMinX = OFFSCREEN_INDICATOR_INSET;
+    const edgeMaxX = sw - OFFSCREEN_INDICATOR_INSET;
+    const edgeMinY = OFFSCREEN_INDICATOR_INSET;
+    const edgeMaxY = sh - OFFSCREEN_INDICATOR_INSET;
+
+    let drawn = 0;
+    this.enemies.getChildren().forEach((enemy) => {
+      if (drawn >= OFFSCREEN_INDICATOR_MAX) {
+        return;
+      }
+      if (!enemy?.active) {
+        return;
+      }
+      if (Phaser.Geom.Rectangle.Contains(view, enemy.x, enemy.y)) {
+        return;
+      }
+
+      const dx = enemy.x - centerX;
+      const dy = enemy.y - centerY;
+      const length = Math.hypot(dx, dy);
+      if (length < 0.0001) {
+        return;
+      }
+      const nx = dx / length;
+      const ny = dy / length;
+
+      const scaleX = nx !== 0 ? (nx > 0 ? edgeMaxX - sw / 2 : edgeMinX - sw / 2) / nx : Number.POSITIVE_INFINITY;
+      const scaleY = ny !== 0 ? (ny > 0 ? edgeMaxY - sh / 2 : edgeMinY - sh / 2) / ny : Number.POSITIVE_INFINITY;
+      const t = Math.min(Math.abs(scaleX), Math.abs(scaleY));
+      const screenX = sw / 2 + nx * t;
+      const screenY = sh / 2 + ny * t;
+      this.drawIndicatorTriangle(screenX, screenY, Math.atan2(ny, nx), OFFSCREEN_INDICATOR_SIZE, this.getOffscreenIndicatorColor(enemy));
+      drawn += 1;
     });
   }
 
@@ -1445,6 +1603,7 @@ export class GameScene extends Phaser.Scene {
         enemy.setData("lastDashHitId", player.currentDashId);
         enemy.takeDamage(player.dashDamage);
         enemy.applyKnockbackFrom(player.x, player.y, 360);
+        this.cameras.main.shake(80, 0.003);
 
         if (enemy.isDead()) {
           this.handleEnemyDefeat(enemy);
@@ -1570,10 +1729,65 @@ export class GameScene extends Phaser.Scene {
     return true;
   }
 
+  updateKillCombo() {
+    const nowMs = this.time?.now ?? 0;
+    if (nowMs - this.lastKillAtMs > COMBO_RESET_WINDOW_MS) {
+      this.killCombo = 0;
+    }
+    this.killCombo += 1;
+    this.lastKillAtMs = nowMs;
+
+    if (!this.comboText || this.killCombo < 3) {
+      return;
+    }
+
+    let label = `x${this.killCombo} COMBO`;
+    if (this.killCombo >= 10) {
+      label = `x${this.killCombo} RAMPAGE`;
+    }
+
+    this.comboText.setText(label);
+    this.comboText.setAlpha(1);
+    this.comboText.setVisible(true);
+    this.comboText.setScale(1);
+
+    if (this.comboTextTween) {
+      this.comboTextTween.stop();
+      this.comboTextTween = null;
+    }
+
+    this.comboTextTween = this.tweens.add({
+      targets: this.comboText,
+      y: 180,
+      scale: 1.08,
+      alpha: 0,
+      duration: 520,
+      ease: "Cubic.easeOut",
+      onComplete: () => {
+        if (this.comboText) {
+          this.comboText.setVisible(false);
+          this.comboText.setY(198);
+          this.comboText.setScale(1);
+        }
+        this.comboTextTween = null;
+      }
+    });
+  }
+
   handleEnemyDefeat(enemy) {
     if (!enemy || !enemy.active) {
       return;
     }
+    if (enemy.getData("isDying")) {
+      return;
+    }
+    enemy.setData("isDying", true);
+    if (enemy.body) {
+      enemy.body.setVelocity(0, 0);
+      enemy.body.enable = false;
+    }
+
+    this.updateKillCombo();
 
     this.playSfx("enemy_death", { elite: enemy.isElite });
     if (enemy.isElite) {
@@ -1589,12 +1803,23 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    if (enemy.getData("pooledEnemy") === true) {
-      this.enemyPool.release(enemy);
-      return;
-    }
-
-    enemy.destroy();
+    this.tweens.add({
+      targets: enemy,
+      scaleX: enemy.scaleX * 1.3,
+      scaleY: enemy.scaleY * 1.3,
+      alpha: 0,
+      duration: 120,
+      ease: "Quad.easeOut",
+      onComplete: () => {
+        enemy.setData("isDying", false);
+        enemy.setAlpha(1);
+        if (enemy.getData("pooledEnemy") === true) {
+          this.enemyPool.release(enemy);
+          return;
+        }
+        enemy.destroy();
+      }
+    });
   }
 
   handleXpOrbPickup(_, orb) {
@@ -1792,6 +2017,11 @@ export class GameScene extends Phaser.Scene {
       if (distance > pickupRadius) {
         orb.body.setVelocity(0, 0);
         return;
+      }
+
+      if (distance <= 120) {
+        orb.x += dx * 0.05;
+        orb.y += dy * 0.05;
       }
 
       const nx = distance > 0.0001 ? dx / distance : 0;
