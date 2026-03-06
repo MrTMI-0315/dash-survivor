@@ -303,6 +303,63 @@ const PIXEL_BOSS_PATTERN = [
   "........................"
 ];
 
+const PIXEL_CRATE_PATTERN = [
+  "................",
+  ".11111111111111.",
+  ".12222223222221.",
+  ".12444423244421.",
+  ".12444423244421.",
+  ".12444423244421.",
+  ".12222223222221.",
+  ".13333334333331.",
+  ".12222223222221.",
+  ".12444423244421.",
+  ".12444423244421.",
+  ".12444423244421.",
+  ".12222223222221.",
+  ".11111111111111.",
+  "................",
+  "................"
+];
+
+const PIXEL_CANNON_PATTERN = [
+  "................",
+  "................",
+  "......1111......",
+  "....11222211....",
+  "...1122222211...",
+  "..112222222211..",
+  "..133333333331..",
+  "..133333333331..",
+  "...444.. ..444..",
+  "..14441..14441..",
+  "..144441144441..",
+  "...1444444441...",
+  "....11111111....",
+  "................",
+  "................",
+  "................"
+];
+
+const PIXEL_MAST_PATTERN = [
+  "................",
+  ".....111111.....",
+  "...1122222211...",
+  "..122222222221..",
+  "..122223322221..",
+  "..122223322221..",
+  "..122223322221..",
+  "..122223322221..",
+  "..122223322221..",
+  "..122223322221..",
+  "..122223322221..",
+  "..122223322221..",
+  "..122222222221..",
+  "...1122222211...",
+  ".....111111.....",
+  "................"
+];
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
@@ -739,6 +796,23 @@ export class GameScene extends Phaser.Scene {
       "5": 0xd3c1ff,
       "6": 0xff8ba7,
       "7": 0xffd4de
+    });
+    this.generatePixelTexture("terrain_crate", 2, PIXEL_CRATE_PATTERN, {
+      "1": 0x3a2417,
+      "2": 0x7e5234,
+      "3": 0x5f3d28,
+      "4": 0xb6804f
+    });
+    this.generatePixelTexture("terrain_cannon", 2, PIXEL_CANNON_PATTERN, {
+      "1": 0x2b1c14,
+      "2": 0x4b5568,
+      "3": 0x7d8798,
+      "4": 0x8d643f
+    });
+    this.generatePixelTexture("terrain_mast", 2, PIXEL_MAST_PATTERN, {
+      "1": 0x3d2619,
+      "2": 0x71472c,
+      "3": 0xa97a4d
     });
     this.generatePolygonTexture("terrain_rock", 28, [
       { x: 10, y: 12 },
@@ -1571,11 +1645,19 @@ export class GameScene extends Phaser.Scene {
 
     const obstacleType = config.type === "terrain_pillar" ? "terrain_pillar" : "terrain_rock";
     const role = config.role ?? "misc";
+    let textureKey = obstacleType;
+    if (role === "mast") {
+      textureKey = "terrain_mast";
+    } else if (role === "crate") {
+      textureKey = "terrain_crate";
+    } else if (role === "cannon") {
+      textureKey = "terrain_cannon";
+    }
     const x = Phaser.Math.Clamp(Number(config.x) || WORLD_WIDTH * 0.5, 12, WORLD_WIDTH - 12);
     const y = Phaser.Math.Clamp(Number(config.y) || WORLD_HEIGHT * 0.5, 12, WORLD_HEIGHT - 12);
     const scale = Phaser.Math.Clamp(Number(config.scale) || 1, 0.72, 1.9);
 
-    const obstacle = this.obstacles.create(x, y, obstacleType);
+    const obstacle = this.obstacles.create(x, y, textureKey);
     if (!obstacle) {
       return;
     }
@@ -1585,7 +1667,14 @@ export class GameScene extends Phaser.Scene {
     obstacle.setData("obstacleRole", role);
     obstacle.refreshBody();
 
-    const anchorRadius = obstacleType === "terrain_rock" ? 36 : 40;
+    let anchorRadius = obstacleType === "terrain_rock" ? 36 : 40;
+    if (role === "mast") {
+      anchorRadius = 42;
+    } else if (role === "crate") {
+      anchorRadius = 34;
+    } else if (role === "cannon") {
+      anchorRadius = 32;
+    }
     this.terrainObstacleAnchors.push({
       x,
       y,
