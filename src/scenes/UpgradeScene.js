@@ -59,7 +59,13 @@ export class UpgradeScene extends Phaser.Scene {
     this.coins = this.loadCoins();
     this.upgrades = this.loadUpgrades();
 
-    this.add.rectangle(centerX, camera.height * 0.5, camera.width, camera.height, 0x0a101a, 1);
+    this.add.rectangle(centerX, camera.height * 0.5, camera.width, camera.height, 0x071120, 1);
+    for (let y = 0; y < camera.height; y += 32) {
+      const color = Math.floor(y / 32) % 2 === 0 ? 0x0d1a31 : 0x11213d;
+      this.add.rectangle(centerX, y + 16, camera.width, 30, color, 1).setOrigin(0.5);
+    }
+    this.add.rectangle(centerX, camera.height * 0.5, camera.width - 72, camera.height - 80, 0x0b1830, 0.92).setStrokeStyle(4, 0x5ca7ff, 1);
+    this.add.rectangle(centerX, camera.height * 0.5, camera.width - 86, camera.height - 94, 0, 0).setStrokeStyle(2, 0xb8e0ff, 0.92);
     this.add
       .text(centerX, 72, "UPGRADE SHOP", {
         fontFamily: "Arial",
@@ -81,6 +87,7 @@ export class UpgradeScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     const headerY = 176;
+    this.add.rectangle(centerX, headerY + 6, 930, 44, 0x152947, 0.95).setStrokeStyle(2, 0x7bc3ff, 1);
     this.add.text(220, headerY, "Upgrade", { fontFamily: "Arial", fontSize: "22px", color: "#cfe9ff" });
     this.add.text(530, headerY, "Level", { fontFamily: "Arial", fontSize: "22px", color: "#cfe9ff" });
     this.add.text(650, headerY, "Cost", { fontFamily: "Arial", fontSize: "22px", color: "#cfe9ff" });
@@ -109,6 +116,7 @@ export class UpgradeScene extends Phaser.Scene {
 
   createUpgradeRow(definition, index) {
     const y = 230 + index * 92;
+    this.add.rectangle(652, y + 14, 930, 58, 0x13233d, 0.9).setStrokeStyle(2, 0x345c87, 0.95);
     const levelText = this.add.text(530, y, "", { fontFamily: "Arial", fontSize: "24px", color: "#f2f8ff" });
     const costText = this.add.text(650, y, "", { fontFamily: "Arial", fontSize: "24px", color: "#ffe08a" });
     const effectText = this.add.text(850, y, definition.effectLabel, { fontFamily: "Arial", fontSize: "24px", color: "#9ff0b6" });
@@ -168,11 +176,15 @@ export class UpgradeScene extends Phaser.Scene {
   }
 
   createButton(x, y, label, onClick, width = 240, height = 50) {
+    const shadow = this.add
+      .rectangle(x, y + 4, width + 12, height + 8, 0x0b1423, 0.95)
+      .setOrigin(0.5);
     const button = this.add
       .rectangle(x, y, width, height, 0x1c324d, 1)
-      .setStrokeStyle(2, 0x67b8ff, 1)
+      .setStrokeStyle(3, 0x67b8ff, 1)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
+    this.add.rectangle(x, y, width - 12, height - 12, 0, 0).setStrokeStyle(1, 0xb8e0ff, 0.9).setOrigin(0.5);
     const text = this.add
       .text(x, y, label, {
         fontFamily: "Arial",
@@ -191,6 +203,7 @@ export class UpgradeScene extends Phaser.Scene {
     };
     button.on("pointerdown", trigger);
     text.on("pointerdown", trigger);
+    shadow.setData("decorative", true);
     return button;
   }
 
@@ -274,4 +287,3 @@ export class UpgradeScene extends Phaser.Scene {
     }
   }
 }
-

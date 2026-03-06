@@ -3831,23 +3831,30 @@ export class GameScene extends Phaser.Scene {
 
     if (this.hudBarsGraphics) {
       this.hudBarsGraphics.clear();
-      this.hudBarsGraphics.fillStyle(0x101c2e, 0.8);
-      this.hudBarsGraphics.fillRoundedRect(barX, xpBarY, barWidth, barHeight, 4);
-      this.hudBarsGraphics.fillRoundedRect(barX, dashBarY, barWidth, barHeight, 4);
+      this.hudBarsGraphics.fillStyle(0x071120, 0.92);
+      this.hudBarsGraphics.fillRect(barX - 8, 8, barWidth + 16, 106);
+      this.hudBarsGraphics.lineStyle(3, 0x5ca7ff, 1);
+      this.hudBarsGraphics.strokeRect(barX - 8, 8, barWidth + 16, 106);
+      this.hudBarsGraphics.lineStyle(1, 0xb8e0ff, 0.9);
+      this.hudBarsGraphics.strokeRect(barX - 4, 12, barWidth + 8, 98);
+
+      this.hudBarsGraphics.fillStyle(0x101c2e, 1);
+      this.hudBarsGraphics.fillRect(barX, xpBarY, barWidth, barHeight);
+      this.hudBarsGraphics.fillRect(barX, dashBarY, barWidth, barHeight);
       this.hudBarsGraphics.fillStyle(xpFillColor, xpFillAlpha);
-      this.hudBarsGraphics.fillRoundedRect(barX + 1, xpBarY + 1, Math.max(2, (barWidth - 2) * displayedXpRatio), barHeight - 2, 3);
+      this.hudBarsGraphics.fillRect(barX + 2, xpBarY + 2, Math.max(4, (barWidth - 4) * displayedXpRatio), barHeight - 4);
       this.hudBarsGraphics.fillStyle(dashRatio >= 1 ? 0xffd166 : 0x7fd8ff, 0.95);
-      this.hudBarsGraphics.fillRoundedRect(
-        barX + 1,
-        dashBarY + 1,
-        Math.max(2, (barWidth - 2) * dashRatio),
-        barHeight - 2,
-        3
-      );
-      this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.9);
-      this.hudBarsGraphics.strokeRoundedRect(barX, xpBarY, barWidth, barHeight, 4);
-      this.hudBarsGraphics.lineStyle(1, 0x91a6c8, 0.9);
-      this.hudBarsGraphics.strokeRoundedRect(barX, dashBarY, barWidth, barHeight, 4);
+      this.hudBarsGraphics.fillRect(barX + 2, dashBarY + 2, Math.max(4, (barWidth - 4) * dashRatio), barHeight - 4);
+      this.hudBarsGraphics.fillStyle(0x071120, 0.95);
+      this.hudBarsGraphics.fillRect(barX + 8, xpBarY - 12, 26, 10);
+      this.hudBarsGraphics.fillRect(barX + 8, dashBarY - 12, 42, 10);
+      this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.95);
+      this.hudBarsGraphics.strokeRect(barX, xpBarY, barWidth, barHeight);
+      this.hudBarsGraphics.lineStyle(1, 0x91a6c8, 0.95);
+      this.hudBarsGraphics.strokeRect(barX, dashBarY, barWidth, barHeight);
+      this.hudBarsGraphics.lineStyle(1, 0xb8e0ff, 0.8);
+      this.hudBarsGraphics.strokeRect(barX + 8, xpBarY - 12, 26, 10);
+      this.hudBarsGraphics.strokeRect(barX + 8, dashBarY - 12, 42, 10);
     }
   }
 }

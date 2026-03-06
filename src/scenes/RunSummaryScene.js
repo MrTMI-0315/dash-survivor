@@ -19,11 +19,11 @@ export class RunSummaryScene extends Phaser.Scene {
       totalCoins: this.resolveTotalCoins(data.totalCoins)
     };
 
-    this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x000000, 0.64).setDepth(1);
-    this.add
-      .rectangle(centerX, centerY, cardWidth, cardHeight, 0x111827, 0.96)
-      .setStrokeStyle(2, 0x3a4558, 1)
-      .setDepth(2);
+    this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x000000, 0.72).setDepth(1);
+    this.add.rectangle(centerX, centerY, cardWidth + 16, cardHeight + 16, 0x071120, 0.98).setDepth(2);
+    this.add.rectangle(centerX, centerY, cardWidth, cardHeight, 0x111827, 0.98).setDepth(2);
+    this.add.rectangle(centerX, centerY, cardWidth, cardHeight, 0, 0).setStrokeStyle(4, 0x5ca7ff, 1).setDepth(3);
+    this.add.rectangle(centerX, centerY, cardWidth - 12, cardHeight - 12, 0, 0).setStrokeStyle(2, 0xb8e0ff, 0.95).setDepth(3);
 
     this.add
       .text(centerX, centerY - 142, "RUN SUMMARY", {
@@ -46,6 +46,8 @@ export class RunSummaryScene extends Phaser.Scene {
     ];
     const copyText = ["DashSurvivor Run Summary", ...lines].join("\n");
 
+    this.add.rectangle(centerX, centerY - 44, 312, 168, 0x152947, 0.92).setDepth(3);
+    this.add.rectangle(centerX, centerY - 44, 312, 168, 0, 0).setStrokeStyle(2, 0x7bc3ff, 1).setDepth(3);
     this.add
       .text(centerX, centerY - 46, lines.join("\n"), {
         fontFamily: "Arial",
@@ -139,11 +141,13 @@ export class RunSummaryScene extends Phaser.Scene {
   }
 
   createActionButton(x, y, label, onClick) {
+    const shadow = this.add.rectangle(x, y + 3, 242, 48, 0x0b1423, 0.95).setDepth(3);
     const bg = this.add
       .rectangle(x, y, 230, 44, 0x1b2d45, 1)
-      .setStrokeStyle(2, 0x6eb9ff, 1)
+      .setStrokeStyle(3, 0x6eb9ff, 1)
       .setInteractive({ useHandCursor: true })
-      .setDepth(3);
+      .setDepth(4);
+    this.add.rectangle(x, y, 220, 34, 0, 0).setStrokeStyle(1, 0xb8e0ff, 0.9).setDepth(4);
     const text = this.add
       .text(x, y, label, {
         fontFamily: "Arial",
@@ -153,7 +157,7 @@ export class RunSummaryScene extends Phaser.Scene {
         strokeThickness: 5
       })
       .setOrigin(0.5)
-      .setDepth(4)
+      .setDepth(5)
       .setInteractive({ useHandCursor: true });
 
     const trigger = () => {
@@ -164,6 +168,7 @@ export class RunSummaryScene extends Phaser.Scene {
 
     bg.on("pointerdown", trigger);
     text.on("pointerdown", trigger);
+    shadow.setData("decorative", true);
   }
 
   formatTime(ms) {
