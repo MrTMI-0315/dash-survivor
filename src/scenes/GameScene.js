@@ -765,29 +765,29 @@ export class GameScene extends Phaser.Scene {
       "6": 0x54dafe,
       "7": 0x1f7fa5,
       "8": 0x98eeff
-    });
+    }, { shadowColor: 0x071120, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePixelTexture("enemy_swarm", 2, PIXEL_SWARM_PATTERN, {
       "1": 0x7c2748,
       "2": 0xff8a9c,
       "3": 0xffd3de
-    });
+    }, { shadowColor: 0x1f1020, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePixelTexture("enemy_tank", 2, PIXEL_TANK_PATTERN, {
       "1": 0x24344e,
       "2": 0x3f5f8d,
       "3": 0x5c89ff,
       "4": 0xaac4ff,
       "5": 0xcfdcff
-    });
+    }, { shadowColor: 0x071120, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePixelTexture("enemy_hunter", 2, PIXEL_HUNTER_PATTERN, {
       "1": 0x14404b,
       "2": 0x1b6d84,
       "3": 0x54e1ff
-    });
+    }, { shadowColor: 0x071120, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePixelTexture("enemy_chaser", 2, PIXEL_CHASER_PATTERN, {
       "1": 0x74242a,
       "2": 0xff6d6d,
       "3": 0xffd2d2
-    });
+    }, { shadowColor: 0x2a1010, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePixelTexture("enemy_boss", 2, PIXEL_BOSS_PATTERN, {
       "1": 0x24103f,
       "2": 0x4a1e73,
@@ -796,24 +796,24 @@ export class GameScene extends Phaser.Scene {
       "5": 0xd3c1ff,
       "6": 0xff8ba7,
       "7": 0xffd4de
-    });
+    }, { shadowColor: 0x090512, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePixelTexture("terrain_crate", 2, PIXEL_CRATE_PATTERN, {
       "1": 0x3a2417,
       "2": 0x7e5234,
       "3": 0x5f3d28,
       "4": 0xb6804f
-    });
+    }, { shadowColor: 0x24160f, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePixelTexture("terrain_cannon", 2, PIXEL_CANNON_PATTERN, {
       "1": 0x2b1c14,
       "2": 0x4b5568,
       "3": 0x7d8798,
       "4": 0x8d643f
-    });
+    }, { shadowColor: 0x071120, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePixelTexture("terrain_mast", 2, PIXEL_MAST_PATTERN, {
       "1": 0x3d2619,
       "2": 0x71472c,
       "3": 0xa97a4d
-    });
+    }, { shadowColor: 0x24160f, shadowOffsetX: 1, shadowOffsetY: 1 });
     this.generatePolygonTexture("terrain_rock", 28, [
       { x: 10, y: 12 },
       { x: 20, y: 6 },
@@ -1191,7 +1191,7 @@ export class GameScene extends Phaser.Scene {
     gfx.destroy();
   }
 
-  generatePixelTexture(key, pixelSize, rows, palette) {
+  generatePixelTexture(key, pixelSize, rows, palette, options = {}) {
     if (this.textures.exists(key)) {
       return;
     }
@@ -1204,6 +1204,21 @@ export class GameScene extends Phaser.Scene {
     }
 
     const gfx = this.make.graphics({ x: 0, y: 0, add: false });
+    const shadowColor = options.shadowColor;
+    const shadowOffsetX = Number.isFinite(options.shadowOffsetX) ? options.shadowOffsetX : 0;
+    const shadowOffsetY = Number.isFinite(options.shadowOffsetY) ? options.shadowOffsetY : 0;
+    if (shadowColor !== undefined && (shadowOffsetX !== 0 || shadowOffsetY !== 0)) {
+      safeRows.forEach((row, y) => {
+        for (let x = 0; x < row.length; x += 1) {
+          const symbol = row[x];
+          if (palette[symbol] === undefined) {
+            continue;
+          }
+          gfx.fillStyle(shadowColor, 0.9);
+          gfx.fillRect((x + shadowOffsetX) * pixelSize, (y + shadowOffsetY) * pixelSize, pixelSize, pixelSize);
+        }
+      });
+    }
     safeRows.forEach((row, y) => {
       for (let x = 0; x < row.length; x += 1) {
         const symbol = row[x];
