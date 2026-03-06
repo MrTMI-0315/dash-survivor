@@ -9,8 +9,12 @@ const config = {
   width: 1280,
   height: 720,
   backgroundColor: "#0c1424",
+  pixelArt: true,
+  antialias: false,
+  roundPixels: true,
   render: {
-    powerPreference: "high-performance"
+    powerPreference: "high-performance",
+    antialias: false
   },
   fps: {
     target: 60,
