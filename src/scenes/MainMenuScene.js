@@ -36,7 +36,13 @@ export class MainMenuScene extends Phaser.Scene {
     const centerX = camera.width * 0.5;
     const centerY = camera.height * 0.5;
 
-    this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x0b1220, 1);
+    this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x071120, 1);
+    for (let y = 0; y < camera.height; y += 32) {
+      const color = Math.floor(y / 32) % 2 === 0 ? 0x0d1a31 : 0x11213d;
+      this.add.rectangle(centerX, y + 16, camera.width, 30, color, 1).setOrigin(0.5);
+    }
+    this.add.rectangle(centerX, centerY, camera.width - 84, camera.height - 92, 0x10203a, 0.9).setStrokeStyle(4, 0x5ca7ff, 1);
+    this.add.rectangle(centerX, centerY, camera.width - 96, camera.height - 104, 0x0b1830, 0).setStrokeStyle(2, 0x9bd3ff, 0.9);
     if (this.textures.exists(MENU_ATLAS_KEY)) {
       this.add.image(centerX, 62, MENU_ATLAS_KEY, "dot").setScale(18, 18).setTint(0x78c7ff).setAlpha(0.75);
     }
@@ -53,6 +59,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const bestTimeMs = this.loadBestTimeMs();
     const coins = this.loadCoins();
+    this.add.rectangle(centerX, 226, 420, 54, 0x152947, 0.95).setStrokeStyle(2, 0x7bc3ff, 1);
     this.add
       .text(centerX, 226, `Best Time: ${this.formatTime(bestTimeMs)}   Coins: ${coins}`, {
         fontFamily: "Arial",
@@ -76,10 +83,15 @@ export class MainMenuScene extends Phaser.Scene {
 
   createButton(x, y, label, onClick) {
     const button = this.add
+      .rectangle(x, y + 4, 292, 62, 0x0b1423, 0.95)
+      .setStrokeStyle(2, 0x0b1423, 1)
+      .setOrigin(0.5);
+    const plate = this.add
       .rectangle(x, y, 280, 58, 0x1a324f, 1)
-      .setStrokeStyle(2, 0x6ab8ff, 1)
+      .setStrokeStyle(3, 0x6ab8ff, 1)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
+    this.add.rectangle(x, y, 268, 46, 0, 0).setStrokeStyle(1, 0xb8e0ff, 0.9).setOrigin(0.5);
 
     const text = this.add
       .text(x, y, label, {
@@ -97,7 +109,7 @@ export class MainMenuScene extends Phaser.Scene {
         onClick();
       }
     };
-    button.on("pointerdown", trigger);
+    plate.on("pointerdown", trigger);
     text.on("pointerdown", trigger);
   }
 
