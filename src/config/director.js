@@ -36,7 +36,7 @@ export const DIRECTOR_LADDER_SPAWN_EVENT = {
 export const DIRECTOR_SPAWN_RATE = {
   buildStart: 0.85,
   buildEnd: 1.25,
-  peakBase: 1.5,
+  peakBase: 1.42,
   peakTierBonusPerTier: 0.08,
   peakTierBonusCap: 0.5,
   relief: 0.35
@@ -56,7 +56,7 @@ export const DIRECTOR_ELITE_CHANCE = {
 };
 
 export const DIRECTOR_ELITE_TIME_SCALING = {
-  perMinute: 0.03,
+  perMinute: 0.022,
   maxChance: 0.72
 };
 
