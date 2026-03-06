@@ -184,6 +184,124 @@ const START_WEAPON_OPTIONS = [
   }
 ];
 
+const PIXEL_PLAYER_PATTERN = [
+  "................",
+  "......1111......",
+  ".....122221.....",
+  "....12222221....",
+  "....12233221....",
+  ".....144441.....",
+  ".....455554.....",
+  "....45666654....",
+  "....45666654....",
+  "....45666654....",
+  ".....477774.....",
+  ".....47..74.....",
+  "....88....88....",
+  "...88......88...",
+  "...8........8...",
+  "................"
+];
+
+const PIXEL_CHASER_PATTERN = [
+  "................",
+  "......1111......",
+  "....11222211....",
+  "...1222222221...",
+  "...1223322331...",
+  "..122222222221..",
+  "..123222222321..",
+  "..123222222321..",
+  "..123222222321..",
+  "..122222222221..",
+  "...1222222221...",
+  "...1122222211...",
+  "....11111111....",
+  ".....1....1.....",
+  "................",
+  "................"
+];
+
+const PIXEL_SWARM_PATTERN = [
+  "............",
+  "....1111....",
+  "...122221...",
+  "..12233221..",
+  "..12333321..",
+  "..12333321..",
+  "..12233221..",
+  "...122221...",
+  "....1111....",
+  ".....11.....",
+  "............",
+  "............"
+];
+
+const PIXEL_TANK_PATTERN = [
+  "................",
+  "...1111111111...",
+  "..122222222221..",
+  "..123333333321..",
+  "..123444444321..",
+  "..123455554321..",
+  "..123455554321..",
+  "..123444444321..",
+  "..123333333321..",
+  "..123333333321..",
+  "..122222222221..",
+  "...1155555511...",
+  "...15......51...",
+  "..55........55..",
+  "................",
+  "................"
+];
+
+const PIXEL_HUNTER_PATTERN = [
+  "................",
+  ".......11.......",
+  "......1221......",
+  ".....123321.....",
+  "....12333321....",
+  "...1233333331...",
+  "..123333333321..",
+  ".12333333333321.",
+  "..123333333321..",
+  "...1233333331...",
+  "....12333321....",
+  ".....123321.....",
+  "......1221......",
+  ".......11.......",
+  "................",
+  "................"
+];
+
+const PIXEL_BOSS_PATTERN = [
+  "........................",
+  "........11111111........",
+  "......112222222211......",
+  "....1122233333222211....",
+  "...1222333333333333221...",
+  "..122333344444444333322..",
+  "..123333455555555433332..",
+  ".12333445566666554433321.",
+  ".12333455667766554433321.",
+  ".12333455667766554433321.",
+  ".12333445566666554433321.",
+  "..123333455555555433332..",
+  "..122333344444444333322..",
+  "...1222333333333333221...",
+  "....1122233333222211....",
+  "......112222222211......",
+  "........11111111........",
+  ".......11......11.......",
+  "......11........11......",
+  "........................",
+  "........................",
+  "........................",
+  "........................",
+  "........................"
+];
+
 export class GameScene extends Phaser.Scene {
   constructor() {
     super("GameScene");
@@ -580,31 +698,47 @@ export class GameScene extends Phaser.Scene {
   }
 
   createTextures() {
-    this.generatePlayerTriangleTexture("player_triangle", 18, 0x54dafe, 0x1f7fa5, 0x98eeff);
-    this.generateCircleTexture("enemy_swarm", 12, 0xff8a9c, 0xb84060);
-    this.generatePolygonTexture("enemy_tank", 20, [
-      { x: 5, y: 5 },
-      { x: 35, y: 5 },
-      { x: 35, y: 35 },
-      { x: 5, y: 35 }
-    ], 0xffb05b, 0x8d4f10);
-    this.generatePolygonTexture("enemy_hunter", 20, [
-      { x: 20, y: 3 },
-      { x: 37, y: 20 },
-      { x: 20, y: 37 },
-      { x: 3, y: 20 }
-    ], 0x6db8ff, 0x1f5692);
-    this.generateCircleTexture("enemy_chaser", 14, 0xff6d6d, 0xad3434);
-    this.generatePolygonTexture("enemy_boss", 24, [
-      { x: 12, y: 4 },
-      { x: 36, y: 4 },
-      { x: 44, y: 12 },
-      { x: 44, y: 36 },
-      { x: 36, y: 44 },
-      { x: 12, y: 44 },
-      { x: 4, y: 36 },
-      { x: 4, y: 12 }
-    ], 0x6d34ff, 0x2f116f);
+    this.generatePixelTexture("player_triangle", 2, PIXEL_PLAYER_PATTERN, {
+      "1": 0xf6f2c8,
+      "2": 0x183254,
+      "3": 0x7fe8ff,
+      "4": 0x2d6f9b,
+      "5": 0xe7b96b,
+      "6": 0x54dafe,
+      "7": 0x1f7fa5,
+      "8": 0x98eeff
+    });
+    this.generatePixelTexture("enemy_swarm", 2, PIXEL_SWARM_PATTERN, {
+      "1": 0x7c2748,
+      "2": 0xff8a9c,
+      "3": 0xffd3de
+    });
+    this.generatePixelTexture("enemy_tank", 2, PIXEL_TANK_PATTERN, {
+      "1": 0x24344e,
+      "2": 0x3f5f8d,
+      "3": 0x5c89ff,
+      "4": 0xaac4ff,
+      "5": 0xcfdcff
+    });
+    this.generatePixelTexture("enemy_hunter", 2, PIXEL_HUNTER_PATTERN, {
+      "1": 0x14404b,
+      "2": 0x1b6d84,
+      "3": 0x54e1ff
+    });
+    this.generatePixelTexture("enemy_chaser", 2, PIXEL_CHASER_PATTERN, {
+      "1": 0x74242a,
+      "2": 0xff6d6d,
+      "3": 0xffd2d2
+    });
+    this.generatePixelTexture("enemy_boss", 2, PIXEL_BOSS_PATTERN, {
+      "1": 0x24103f,
+      "2": 0x4a1e73,
+      "3": 0x6d34ff,
+      "4": 0xa57cff,
+      "5": 0xd3c1ff,
+      "6": 0xff8ba7,
+      "7": 0xffd4de
+    });
     this.generatePolygonTexture("terrain_rock", 28, [
       { x: 10, y: 12 },
       { x: 20, y: 6 },
@@ -979,6 +1113,34 @@ export class GameScene extends Phaser.Scene {
     gfx.lineStyle(2, strokeColor, 1);
     gfx.strokeCircle(radius, radius, radius);
     gfx.generateTexture(key, radius * 2, radius * 2);
+    gfx.destroy();
+  }
+
+  generatePixelTexture(key, pixelSize, rows, palette) {
+    if (this.textures.exists(key)) {
+      return;
+    }
+
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const rowCount = safeRows.length;
+    const colCount = safeRows.reduce((max, row) => Math.max(max, row.length), 0);
+    if (rowCount === 0 || colCount === 0) {
+      return;
+    }
+
+    const gfx = this.make.graphics({ x: 0, y: 0, add: false });
+    safeRows.forEach((row, y) => {
+      for (let x = 0; x < row.length; x += 1) {
+        const symbol = row[x];
+        const color = palette[symbol];
+        if (color === undefined) {
+          continue;
+        }
+        gfx.fillStyle(color, 1);
+        gfx.fillRect(x * pixelSize, y * pixelSize, pixelSize, pixelSize);
+      }
+    });
+    gfx.generateTexture(key, colCount * pixelSize, rowCount * pixelSize);
     gfx.destroy();
   }
 
