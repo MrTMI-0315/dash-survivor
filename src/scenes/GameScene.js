@@ -124,6 +124,16 @@ const HUD_COMBO_STYLE = Object.freeze({
   stroke: "#2d1f08",
   strokeThickness: 6
 });
+const IMPORTED_PIXEL_ASSETS = Object.freeze({
+  player: Object.freeze({
+    key: "sprite_player_crew",
+    path: "assets/sprites/kenney/player_crew.png"
+  }),
+  cannon: Object.freeze({
+    key: "sprite_terrain_cannon",
+    path: "assets/sprites/kenney/terrain_cannon.png"
+  })
+});
 const BOSS_BULLET_MAX = 220;
 const BOSS_BULLET_LIFETIME_MS = 2800;
 const SFX_AUDIO_FILES = {
@@ -654,6 +664,12 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       this.load.audio(key, path);
+    });
+    Object.values(IMPORTED_PIXEL_ASSETS).forEach(({ key, path }) => {
+      if (this.textures?.exists(key)) {
+        return;
+      }
+      this.load.image(key, path);
     });
   }
 
@@ -1666,7 +1682,9 @@ export class GameScene extends Phaser.Scene {
     } else if (role === "crate") {
       textureKey = "terrain_crate";
     } else if (role === "cannon") {
-      textureKey = "terrain_cannon";
+      textureKey = this.textures.exists(IMPORTED_PIXEL_ASSETS.cannon.key)
+        ? IMPORTED_PIXEL_ASSETS.cannon.key
+        : "terrain_cannon";
     }
     const x = Phaser.Math.Clamp(Number(config.x) || WORLD_WIDTH * 0.5, 12, WORLD_WIDTH - 12);
     const y = Phaser.Math.Clamp(Number(config.y) || WORLD_HEIGHT * 0.5, 12, WORLD_HEIGHT - 12);

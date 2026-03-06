@@ -1,6 +1,10 @@
+function getPlayerTextureKey(scene) {
+  return scene?.textures?.exists("sprite_player_crew") ? "sprite_player_crew" : "player_triangle";
+}
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, "player_triangle");
+    super(scene, x, y, getPlayerTextureKey(scene));
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -30,6 +34,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.setCircle(16, 0, 0);
     this.setCollideWorldBounds(true);
+    if (this.texture?.key === "sprite_player_crew") {
+      this.setScale(1.7);
+    }
   }
 
   moveFromInput(keys, analogInput = null) {
