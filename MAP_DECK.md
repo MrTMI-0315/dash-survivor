@@ -35,6 +35,20 @@
 | Miniboss event | Implemented | One-time miniboss around 90s | `DirectorSystem` + `spawnMiniBossEnemy()` |
 | Boss periodic event | Implemented | Periodic boss spawn (interval-based) | `DirectorSystem` + `spawnBossEnemy()` |
 
+### Pixel-Grid Layout Target (Planned)
+| Layer | Art Target | Authoring Rule |
+|---|---|---|
+| Deck floor | `32x32` planks / trim modules | Keep plank direction readable from top-down camera |
+| Mast / hatch / stairs | `64x64+` assembled chunks | Major anchors should snap to 32px multiples |
+| Cannon line / crate cluster | `32x32` modules grouped in 2x2 or 3x2 blocks | Preserve at least 2 escape routes around each cluster |
+| Rails / posts | `16x32` or `32x32` repeating edge kit | Decorative layer must align with collision boundary |
+| Sea outside deck | low-detail looping tiles or strips | Keep contrast lower than deck to preserve gameplay readability |
+
+### Free Asset Direction
+- Prefer [Kenney Pirate Pack](https://kenney.nl/assets/pirate-pack) for deck props and nautical silhouettes because the license is CC0.
+- Use [OpenGameArt pirate tileset results](https://opengameart.org/art-search-advanced?keys=pirate+tileset) only as supplemental sources after checking per-asset license metadata.
+- Keep Phaser rendering in pixel-art mode and avoid smooth scaling; the runtime now supports this in [main.js](/Users/mrtmi/Desktop/Mr_TMI/repos/DashSurvivor/src/main.js).
+
 ## Implementation Targets
 
 ### Map Structure Targets
@@ -47,6 +61,7 @@
 - Edge boundaries:
   - Keep strict collision boundaries.
   - Add visual ship rail layer aligned with collision walls (planned).
+  - Author rail art in repeating pixel modules instead of freehand shapes.
 
 ### Spawn Targets
 - Enforce sea-entry feel from deck perimeter.
@@ -68,10 +83,12 @@
 - [x] Enemies spawn outside immediate player safe radius.
 - [x] Enemy spawn interval has lower bound guard (`Math.max(0.2, spawnRate)`).
 - [x] Enemy/boss/miniboss enter from edge-oriented positions.
+- [x] Runtime render path is compatible with crisp pixel art.
 - [ ] Replace random obstacle set with ship-deck semantic layout (mast/crates/cannons).
 - [ ] Add explicit bow/port/starboard/stern zone definitions in config.
 - [ ] Add hatch/ladder event spawns tied to deck geometry.
 - [ ] Convert camera to fixed full-deck if target design requires non-scrolling view.
+- [ ] Convert arena art to modular `32x32` deck kit before importing large background sheets.
 
 ## Validation Checklist
 - [ ] Player cannot clip outside deck bounds under dash.
@@ -100,3 +117,4 @@
 - Add destructible crate objects with temporary navigation openings.
 - Add cannon-interaction set pieces (cover/funnel/hazard hybrid).
 - Add variant deck themes (storm/burning/ghost/frozen) with same nav graph.
+- Add a dedicated `PIXEL_ART_LAYOUT.md` only if asset production starts to sprawl beyond the current deck docs.

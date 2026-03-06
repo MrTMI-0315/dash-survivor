@@ -34,12 +34,29 @@
 | Boss entry location | Partial | Boss/miniboss spawn from generic edge candidates | Not yet constrained to bow/stern |
 | Boss warning | Implemented | HUD alert + camera shake | `showHudAlert()`, `spawnBossEnemy()` |
 
+### Pixel-Grid Art Direction (Planned)
+| Item | Target | Notes |
+|---|---|---|
+| Base art grid | `32x32` | Use as the primary deck / prop / pickup authoring grid |
+| Large obstacle modules | `64x64` or `96x96` | Mast, hatch, cannon clusters can occupy multiple 32px cells |
+| Boss footprint art | `64x64` to `96x96` | Keep gameplay collision smaller than visual silhouette |
+| Sprite scaling | Integer-only | Avoid fractional upscale to preserve crisp pixels |
+| Rendering mode | Enabled in runtime | `src/main.js` now uses `pixelArt: true`, `antialias: false`, `roundPixels: true` |
+
+### Free Source Shortlist (Reference Only)
+| Source | Use | License / Caution |
+|---|---|---|
+| [Kenney Pirate Pack](https://kenney.nl/assets/pirate-pack) | Deck props, cannons, crates, nautical set dressing | CC0, safest base for production reuse |
+| [OpenGameArt ship/pirate tilesets search](https://opengameart.org/art-search-advanced?keys=pirate+tileset) | Supplemental deck tiles and themed props | Check each asset license individually before import |
+| [Phaser pixel art guidance](https://docs.phaser.io/phaser/concepts/gameobjects/render-texture#pixel-art-and-rounding) | Rendering rules for crisp pixel output | Use as runtime rendering reference |
+
 ## Implementation Targets
 - Map runtime must preserve these contracts:
   - bounded world collision (no player escape outside map)
   - obstacle-driven routing with minimum free lanes
   - enemy entry from edges/outside view only
   - spawn safety relative to player position
+  - future pixel art assets must snap to a `32x32` layout grid even though current runtime is not tilemap-based
 
 ### Primary Runtime Objects
 - `Arena floor` (procedural graphics)
@@ -53,8 +70,11 @@
 - [x] Obstacles avoid player start area.
 - [x] Enemy spawn checks enforce off-screen + safe radius.
 - [x] Boss/miniboss spawn event emits warning feedback.
+- [x] Runtime render config favors crisp pixel-art presentation.
 - [ ] Ship-zone authored layout (mast/cargo/cannon lanes) not yet authored.
 - [ ] Bow/stern-exclusive boss entry is not yet enforced.
+- [ ] Replace grid-placeholder floor art with authored `32x32` deck tiles / modular prop chunks.
+- [ ] Verify imported art licenses are compatible (`CC0` preferred, `CC-BY` acceptable with attribution plan).
 
 ## Validation Checklist
 - [ ] Player cannot exit world bounds during normal move/dash.
@@ -78,3 +98,4 @@
 - Add explicit spawn markers per lane (bow, stern, port, starboard).
 - Add constrained boss walk-in sequence (bow/stern only).
 - Add optional dynamic hazards (wave push, destructible props) after baseline stability.
+- Lock final environment palette to `deck brown / sea teal / sickly enemy cool hues` before asset import.
