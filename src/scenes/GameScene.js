@@ -64,6 +64,7 @@ const LADDER_SPAWN_POINTS = Object.freeze({
   ])
 });
 const XP_MAGNET_RADIUS_PER_LEVEL = 6;
+const DECK_TILE_SIZE = 32;
 const DECK_SURFACE_INSET = 34;
 const DECK_RAIL_INSET = 12;
 const DECK_RAIL_POST_GAP = 120;
@@ -1203,17 +1204,41 @@ export class GameScene extends Phaser.Scene {
     const deckRight = deckLeft + deckWidth;
     const deckBottom = deckTop + deckHeight;
 
-    graphics.fillStyle(0x101826, 1);
+    graphics.fillStyle(0x5b3b25, 1);
     graphics.fillRect(deckLeft, deckTop, deckWidth, deckHeight);
 
-    graphics.lineStyle(1, 0x2a3b59, 0.35);
-    const grid = 60;
-    for (let x = deckLeft; x <= deckRight; x += grid) {
-      graphics.lineBetween(x, deckTop, x, deckBottom);
+    for (let y = deckTop; y < deckBottom; y += DECK_TILE_SIZE) {
+      const plankIndex = Math.floor((y - deckTop) / DECK_TILE_SIZE);
+      const plankColor = plankIndex % 2 === 0 ? 0x6e472d : 0x7a5033;
+      graphics.fillStyle(plankColor, 1);
+      graphics.fillRect(deckLeft, y, deckWidth, DECK_TILE_SIZE - 2);
+
+      graphics.fillStyle(0x8b603f, 0.24);
+      graphics.fillRect(deckLeft, y, deckWidth, 2);
+
+      for (let x = deckLeft + 128 + ((plankIndex % 3) * 24); x < deckRight - 48; x += 192) {
+        graphics.fillStyle(0x4a2f1f, 0.5);
+        graphics.fillRect(x, y + 4, 3, DECK_TILE_SIZE - 10);
+      }
     }
-    for (let y = deckTop; y <= deckBottom; y += grid) {
-      graphics.lineBetween(deckLeft, y, deckRight, y);
-    }
+
+    graphics.fillStyle(0x3d2619, 1);
+    graphics.fillRect(deckLeft, deckTop, deckWidth, 18);
+    graphics.fillRect(deckLeft, deckBottom - 18, deckWidth, 18);
+    graphics.fillRect(deckLeft, deckTop, 18, deckHeight);
+    graphics.fillRect(deckRight - 18, deckTop, 18, deckHeight);
+
+    const hatchWidth = 128;
+    const hatchHeight = 64;
+    const hatchX = HATCH_BREACH_POINT.x - hatchWidth / 2;
+    const hatchY = HATCH_BREACH_POINT.y - hatchHeight / 2;
+    graphics.fillStyle(0x4b2f1e, 1);
+    graphics.fillRect(hatchX, hatchY, hatchWidth, hatchHeight);
+    graphics.lineStyle(2, 0x28170f, 1);
+    graphics.strokeRect(hatchX, hatchY, hatchWidth, hatchHeight);
+    graphics.lineStyle(2, 0x8f6441, 0.75);
+    graphics.lineBetween(HATCH_BREACH_POINT.x, hatchY + 6, HATCH_BREACH_POINT.x, hatchY + hatchHeight - 6);
+    graphics.lineBetween(hatchX + 6, HATCH_BREACH_POINT.y, hatchX + hatchWidth - 6, HATCH_BREACH_POINT.y);
 
     this.initializeSeaWaves();
     this.drawDeckRails();
