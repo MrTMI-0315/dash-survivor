@@ -46,6 +46,16 @@
   - Boss/miniboss warning text (implemented)
   - Run-end summary (implemented: Game Over + meta summary)
 
+### Pixel-UI Direction (Planned)
+- HUD chrome should snap to a `16px` sub-grid even if gameplay art uses a `32px` world grid.
+- Use 1px or 2px integer borders only; avoid soft gradients that blur against pixel sprites.
+- Keep font rendering crisp and high-contrast so HUD survives camera motion and enemy density.
+- Prefer simple icon silhouettes derived from the same palette family as the world art.
+
+### Free Reference Direction
+- [Kenney UI packs](https://kenney.nl/assets?q=ui) are acceptable starting points for buttons / frames because the licensing is CC0.
+- Runtime crispness should follow [Phaser pixel art guidance](https://docs.phaser.io/phaser/concepts/gameobjects/render-texture#pixel-art-and-rounding).
+
 ### Implementation Checklist
 - [x] HUD text + bars update every frame from live game state.
 - [x] Level-up modal pauses gameplay and resumes cleanly.

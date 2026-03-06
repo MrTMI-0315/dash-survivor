@@ -45,6 +45,22 @@
 
 - Boss/miniboss currently spawn via edge-position logic, not fixed bow/stern lock.
 
+### Pixel-Grid Art Target (Planned)
+| Enemy | Sprite Target | Readability Rule |
+|---|---|---|
+| `chaser` | `32x32` | One dominant silhouette, two-tone body + one accent |
+| `swarm` | `16x16` or `24x24` | Small but high-contrast center mass, no noisy outline |
+| `tank` | `32x32` to `48x48` | Wide silhouette, readable top-down shoulders / shell |
+| `hunter` | `32x32` | Sharp forward-facing shape that reads as speed |
+| `boss` / `mini boss` | `64x64+` | Oversized silhouette, keep collision smaller than visual sprite |
+
+### Free Source Shortlist (Reference Only)
+| Source | Use | License / Caution |
+|---|---|---|
+| [Kenney Monster Builder Pack](https://kenney.nl/assets/monster-builder-pack) | Modular monster parts for fast enemy iteration | CC0 |
+| [OpenGameArt sea-monster / fish search](https://opengameart.org/art-search-advanced?keys=sea+monster+pixel) | Optional boss / creature references | Check each asset license individually |
+| [Phaser pixel art guidance](https://docs.phaser.io/phaser/concepts/gameobjects/render-texture#pixel-art-and-rounding) | Crisp rendering rules once sprites are imported | Runtime reference only |
+
 ## Implementation Targets
 
 ### Entity Contract (Current)
@@ -60,6 +76,7 @@
   - overlap damage application
   - spawn selection/timing
   - defeat/drop/release flow
+  - future pixel-art enemy imports should preserve current collision radii instead of binding gameplay to sprite bounds
 
 ### Implementation Checklist
 - [x] Enemies spawn outside view and outside safe radius.
@@ -69,8 +86,11 @@
 - [x] Pooled enemies are disabled on release and reset on acquire.
 - [x] Defeated pooled enemies return to pool.
 - [x] Boss/miniboss spawns are director-triggered.
+- [x] Runtime render config is compatible with integer-scaled pixel sprites.
 - [ ] Bow/stern-constrained boss entry (currently any valid edge candidate).
 - [ ] Separate enemy-side attack/recover FSM if needed.
+- [ ] Replace temporary procedural silhouettes with authored `16/32/64px` sprite families.
+- [ ] Lock enemy palette so hostile units stay cooler / brighter than deck props.
 
 ## Validation Checklist
 - [ ] Enemy never updates while inactive/dead (`active + isDead` guard).
@@ -100,3 +120,4 @@
 - Add summoner archetype (spawn-support behavior).
 - Add explicit enemy-side attack/recover state timers.
 - Add ship-themed spawn lanes (bow/port/starboard/stern explicit zones).
+- Add one-page enemy sprite sheet guide once the first real asset batch is chosen.

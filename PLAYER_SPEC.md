@@ -50,6 +50,20 @@
 - Enemy damage is overlap-driven (contact), not hard-body push collision.
 - Dash respects world/obstacle constraints through existing physics collision.
 
+### Pixel-Grid Player Art Target (Planned)
+| Item | Target | Notes |
+|---|---|---|
+| Base sprite size | `32x32` | Match current top-down readability and movement speed |
+| Facing set | 4-dir minimum, 8-dir optional | Do not block current 8-direction movement if art remains 4-dir |
+| Dash smear / afterimage | `32x32` additive frame or short trail | Keep effect readable without hiding hitbox center |
+| Collision | Smaller than sprite silhouette | Preserve current `setCircle(16)` gameplay feel |
+| Palette | warm brass / cloth accent | Player must stay readable against dark deck and cool enemies |
+
+### Free Source Direction
+- Prefer building the player from a small custom `32x32` sprite sheet or CC0 pirate-adjacent base pieces from [Kenney Pirate Pack](https://kenney.nl/assets/pirate-pack).
+- Use [Phaser pixel art guidance](https://docs.phaser.io/phaser/concepts/gameobjects/render-texture#pixel-art-and-rounding) as the rendering baseline for crisp output.
+- Avoid mixing multiple free packs with different outline thickness unless the palette and line weight are normalized first.
+
 ## Implementation Targets
 - Player entity required fields:
   - `hp`, `maxHp`, `speed`
@@ -69,8 +83,10 @@
 - [x] Player remains within world bounds.
 - [x] XP magnet pull and level-scaling radius are active.
 - [x] Level-up state pauses gameplay and resumes cleanly.
+- [x] Runtime render config supports crisp pixel-art movement.
 - [ ] Arrow-key movement binding is not implemented.
 - [ ] Health resistance/regeneration systems are not implemented.
+- [ ] Replace placeholder geometry with a `32x32` player sheet and dash-smear frame set.
 
 ## Validation Checklist
 - [ ] Movement speed remains consistent in all 8 directions.
@@ -98,3 +114,4 @@
 - Add player passives (shield/resistance/regen) with explicit UI feedback.
 - Split scene-level player flow into dedicated controllers if complexity grows (`PlayerController`, `DashController`).
 - Add dash distance stat as explicit config value (currently derived from speed * duration).
+- Add a separate animation sheet spec only when player sprite production starts.
