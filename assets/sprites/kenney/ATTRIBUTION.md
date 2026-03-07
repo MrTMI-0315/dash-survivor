@@ -14,6 +14,9 @@ Files used in this project:
 - deck_plank_trim.png
 - player_crew.png
 - terrain_cannon.png
+- ui_panel_brown.png
+- ui_panel_brown_inlay.png
+- ui_panel_tan_inlay.png
 - enemy_chaser_body.png
 - enemy_chaser_eye.png
 - enemy_chaser_mouth.png

@@ -153,6 +153,18 @@ const IMPORTED_PIXEL_ASSETS = Object.freeze({
     key: "sprite_deck_cannonball",
     path: "assets/sprites/kenney/deck_cannonball.png"
   }),
+  uiPanelBrown: Object.freeze({
+    key: "sprite_ui_panel_brown",
+    path: "assets/sprites/kenney/ui_panel_brown.png"
+  }),
+  uiPanelBrownInlay: Object.freeze({
+    key: "sprite_ui_panel_brown_inlay",
+    path: "assets/sprites/kenney/ui_panel_brown_inlay.png"
+  }),
+  uiPanelTanInlay: Object.freeze({
+    key: "sprite_ui_panel_tan_inlay",
+    path: "assets/sprites/kenney/ui_panel_tan_inlay.png"
+  }),
   enemyChaserBody: Object.freeze({
     key: "sprite_enemy_chaser_body",
     path: "assets/sprites/kenney/enemy_chaser_body.png"
@@ -600,8 +612,8 @@ export class GameScene extends Phaser.Scene {
       .text(16, 12, "", {
         fontFamily: "Arial",
         fontSize: "22px",
-        color: "#f8fbff",
-        stroke: "#0f1728",
+        color: "#f8ebd0",
+        stroke: "#28170f",
         strokeThickness: 4
       })
       .setScrollFactor(0)
@@ -610,8 +622,8 @@ export class GameScene extends Phaser.Scene {
       .text(16, 38, "", {
         fontFamily: "Arial",
         fontSize: "16px",
-        color: "#d7ecff",
-        stroke: "#0f1728",
+        color: "#efd8af",
+        stroke: "#28170f",
         strokeThickness: 3
       })
       .setScrollFactor(0)
@@ -620,12 +632,42 @@ export class GameScene extends Phaser.Scene {
       .text(16, 96, "", {
         fontFamily: "Arial",
         fontSize: "16px",
-        color: "#e8f5ff",
-        stroke: "#0f1728",
+        color: "#f8ebd0",
+        stroke: "#28170f",
         strokeThickness: 3
       })
       .setScrollFactor(0)
       .setDepth(10);
+    if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)) {
+      this.hudPanelBack = this.add
+        .image(156, 60, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
+        .setOrigin(0.5)
+        .setDisplaySize(320, 110)
+        .setScrollFactor(0)
+        .setDepth(8);
+    }
+    if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)) {
+      this.hudXpFrame = this.add
+        .image(156, 75, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
+        .setOrigin(0.5)
+        .setDisplaySize(284, 18)
+        .setScrollFactor(0)
+        .setDepth(8.8);
+      this.hudDashFrame = this.add
+        .image(156, 99, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
+        .setOrigin(0.5)
+        .setDisplaySize(284, 18)
+        .setScrollFactor(0)
+        .setDepth(8.8);
+    }
+    if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)) {
+      this.hudHeaderChip = this.add
+        .image(60, 18, IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)
+        .setOrigin(0.5)
+        .setDisplaySize(88, 18)
+        .setScrollFactor(0)
+        .setDepth(8.9);
+    }
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
@@ -4012,30 +4054,20 @@ export class GameScene extends Phaser.Scene {
 
     if (this.hudBarsGraphics) {
       this.hudBarsGraphics.clear();
-      this.hudBarsGraphics.fillStyle(0x071120, 0.92);
-      this.hudBarsGraphics.fillRect(barX - 8, 8, barWidth + 16, 106);
-      this.hudBarsGraphics.lineStyle(3, 0x5ca7ff, 1);
-      this.hudBarsGraphics.strokeRect(barX - 8, 8, barWidth + 16, 106);
-      this.hudBarsGraphics.lineStyle(1, 0xb8e0ff, 0.9);
-      this.hudBarsGraphics.strokeRect(barX - 4, 12, barWidth + 8, 98);
-
-      this.hudBarsGraphics.fillStyle(0x101c2e, 1);
-      this.hudBarsGraphics.fillRect(barX, xpBarY, barWidth, barHeight);
-      this.hudBarsGraphics.fillRect(barX, dashBarY, barWidth, barHeight);
+      this.hudBarsGraphics.fillStyle(0x432615, 0.9);
+      this.hudBarsGraphics.fillRect(barX + 3, xpBarY + 3, barWidth - 6, barHeight - 6);
+      this.hudBarsGraphics.fillRect(barX + 3, dashBarY + 3, barWidth - 6, barHeight - 6);
       this.hudBarsGraphics.fillStyle(xpFillColor, xpFillAlpha);
-      this.hudBarsGraphics.fillRect(barX + 2, xpBarY + 2, Math.max(4, (barWidth - 4) * displayedXpRatio), barHeight - 4);
+      this.hudBarsGraphics.fillRect(barX + 5, xpBarY + 5, Math.max(4, (barWidth - 10) * displayedXpRatio), barHeight - 10);
       this.hudBarsGraphics.fillStyle(dashRatio >= 1 ? 0xffd166 : 0x7fd8ff, 0.95);
-      this.hudBarsGraphics.fillRect(barX + 2, dashBarY + 2, Math.max(4, (barWidth - 4) * dashRatio), barHeight - 4);
-      this.hudBarsGraphics.fillStyle(0x071120, 0.95);
-      this.hudBarsGraphics.fillRect(barX + 8, xpBarY - 12, 26, 10);
-      this.hudBarsGraphics.fillRect(barX + 8, dashBarY - 12, 42, 10);
-      this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.95);
-      this.hudBarsGraphics.strokeRect(barX, xpBarY, barWidth, barHeight);
-      this.hudBarsGraphics.lineStyle(1, 0x91a6c8, 0.95);
-      this.hudBarsGraphics.strokeRect(barX, dashBarY, barWidth, barHeight);
-      this.hudBarsGraphics.lineStyle(1, 0xb8e0ff, 0.8);
-      this.hudBarsGraphics.strokeRect(barX + 8, xpBarY - 12, 26, 10);
-      this.hudBarsGraphics.strokeRect(barX + 8, dashBarY - 12, 42, 10);
+      this.hudBarsGraphics.fillRect(barX + 5, dashBarY + 5, Math.max(4, (barWidth - 10) * dashRatio), barHeight - 10);
+      this.hudBarsGraphics.fillStyle(0x2e170d, 0.96);
+      this.hudBarsGraphics.fillRect(barX + 6, xpBarY - 12, 30, 10);
+      this.hudBarsGraphics.fillRect(barX + 6, dashBarY - 12, 46, 10);
+      this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.85);
+      this.hudBarsGraphics.strokeRect(barX + 3, xpBarY + 3, barWidth - 6, barHeight - 6);
+      this.hudBarsGraphics.lineStyle(1, 0xb9a07e, 0.9);
+      this.hudBarsGraphics.strokeRect(barX + 3, dashBarY + 3, barWidth - 6, barHeight - 6);
     }
   }
 }
