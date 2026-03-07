@@ -7,6 +7,9 @@ Source:
 - Kenney Monster Builder Pack: https://kenney.nl/assets/monster-builder-pack
 
 Files used in this project:
+- deck_cannon_loose.png
+- deck_cannonball.png
+- deck_hull_large.png
 - deck_plank_main.png
 - deck_plank_trim.png
 - player_crew.png

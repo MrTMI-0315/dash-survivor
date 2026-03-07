@@ -141,6 +141,18 @@ const IMPORTED_PIXEL_ASSETS = Object.freeze({
     key: "sprite_terrain_cannon",
     path: "assets/sprites/kenney/terrain_cannon.png"
   }),
+  deckHullLarge: Object.freeze({
+    key: "sprite_deck_hull_large",
+    path: "assets/sprites/kenney/deck_hull_large.png"
+  }),
+  deckCannonLoose: Object.freeze({
+    key: "sprite_deck_cannon_loose",
+    path: "assets/sprites/kenney/deck_cannon_loose.png"
+  }),
+  deckCannonBall: Object.freeze({
+    key: "sprite_deck_cannonball",
+    path: "assets/sprites/kenney/deck_cannonball.png"
+  }),
   enemyChaserBody: Object.freeze({
     key: "sprite_enemy_chaser_body",
     path: "assets/sprites/kenney/enemy_chaser_body.png"
@@ -1445,6 +1457,44 @@ export class GameScene extends Phaser.Scene {
 
     this.initializeSeaWaves();
     this.drawDeckRails();
+    this.drawDeckDecor(deckLeft, deckTop, deckRight, deckBottom);
+  }
+
+  drawDeckDecor(deckLeft, deckTop, deckRight, deckBottom) {
+    const decorDepth = 1.4;
+
+    if (this.textures.exists(IMPORTED_PIXEL_ASSETS.deckHullLarge.key)) {
+      this.add
+        .image((deckLeft + deckRight) * 0.5, deckTop + 54, IMPORTED_PIXEL_ASSETS.deckHullLarge.key)
+        .setDepth(decorDepth)
+        .setScale(1.8);
+      this.add
+        .image((deckLeft + deckRight) * 0.5, deckBottom - 54, IMPORTED_PIXEL_ASSETS.deckHullLarge.key)
+        .setDepth(decorDepth)
+        .setScale(1.8)
+        .setRotation(Math.PI);
+    }
+
+    const looseCannonKey = IMPORTED_PIXEL_ASSETS.deckCannonLoose.key;
+    const cannonBallKey = IMPORTED_PIXEL_ASSETS.deckCannonBall.key;
+    SHIP_DECK_OBSTACLE_LAYOUT.filter((entry) => entry.role === "cannon").forEach((entry, index) => {
+      if (this.textures.exists(looseCannonKey)) {
+        const looseX = entry.x < WORLD_WIDTH * 0.5 ? entry.x + 40 : entry.x - 40;
+        const looseRotation = entry.x < WORLD_WIDTH * 0.5 ? 0 : Math.PI;
+        this.add
+          .image(looseX, entry.y + 18, looseCannonKey)
+          .setDepth(decorDepth)
+          .setScale(1.4)
+          .setRotation(looseRotation);
+      }
+      if (this.textures.exists(cannonBallKey)) {
+        const ballX = entry.x < WORLD_WIDTH * 0.5 ? entry.x + 54 : entry.x - 54;
+        this.add
+          .image(ballX, entry.y + (index % 2 === 0 ? -12 : 12), cannonBallKey)
+          .setDepth(decorDepth + 0.05)
+          .setScale(1.6);
+      }
+    });
   }
 
   initializeSeaWaves() {
