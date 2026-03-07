@@ -132,6 +132,18 @@ const IMPORTED_PIXEL_ASSETS = Object.freeze({
   cannon: Object.freeze({
     key: "sprite_terrain_cannon",
     path: "assets/sprites/kenney/terrain_cannon.png"
+  }),
+  enemyChaserBody: Object.freeze({
+    key: "sprite_enemy_chaser_body",
+    path: "assets/sprites/kenney/enemy_chaser_body.png"
+  }),
+  enemyChaserEye: Object.freeze({
+    key: "sprite_enemy_chaser_eye",
+    path: "assets/sprites/kenney/enemy_chaser_eye.png"
+  }),
+  enemyChaserMouth: Object.freeze({
+    key: "sprite_enemy_chaser_mouth",
+    path: "assets/sprites/kenney/enemy_chaser_mouth.png"
   })
 });
 const BOSS_BULLET_MAX = 220;
@@ -804,6 +816,11 @@ export class GameScene extends Phaser.Scene {
       "2": 0xff6d6d,
       "3": 0xffd2d2
     }, { shadowColor: 0x2a1010, shadowOffsetX: 1, shadowOffsetY: 1 });
+    this.generateCompositeTexture("sprite_enemy_chaser_free", 28, 28, [
+      { sourceKey: IMPORTED_PIXEL_ASSETS.enemyChaserBody.key, x: 2, y: 2, width: 24, height: 24 },
+      { sourceKey: IMPORTED_PIXEL_ASSETS.enemyChaserEye.key, x: 9, y: 8, width: 10, height: 9 },
+      { sourceKey: IMPORTED_PIXEL_ASSETS.enemyChaserMouth.key, x: 8, y: 17, width: 12, height: 5 }
+    ]);
     this.generatePixelTexture("enemy_boss", 2, PIXEL_BOSS_PATTERN, {
       "1": 0x24103f,
       "2": 0x4a1e73,
@@ -1248,6 +1265,50 @@ export class GameScene extends Phaser.Scene {
     });
     gfx.generateTexture(key, colCount * pixelSize, rowCount * pixelSize);
     gfx.destroy();
+  }
+
+  generateCompositeTexture(key, width, height, layers = []) {
+    if (this.textures.exists(key)) {
+      return;
+    }
+    if (!Array.isArray(layers) || layers.length === 0) {
+      return;
+    }
+
+    const allLayersReady = layers.every((layer) => this.textures.exists(layer.sourceKey));
+    if (!allLayersReady) {
+      return;
+    }
+
+    const canvasTexture = this.textures.createCanvas(key, width, height);
+    if (!canvasTexture?.context) {
+      return;
+    }
+
+    const ctx = canvasTexture.context;
+    ctx.clearRect(0, 0, width, height);
+    ctx.imageSmoothingEnabled = false;
+
+    layers.forEach((layer) => {
+      const sourceTexture = this.textures.get(layer.sourceKey);
+      const sourceImage = sourceTexture?.getSourceImage?.();
+      if (!sourceImage) {
+        return;
+      }
+      ctx.drawImage(
+        sourceImage,
+        0,
+        0,
+        sourceImage.width,
+        sourceImage.height,
+        layer.x,
+        layer.y,
+        layer.width,
+        layer.height
+      );
+    });
+
+    canvasTexture.refresh();
   }
 
   generatePolygonTexture(key, size, points, fillColor, strokeColor) {
