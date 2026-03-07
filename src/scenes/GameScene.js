@@ -125,6 +125,14 @@ const HUD_COMBO_STYLE = Object.freeze({
   strokeThickness: 6
 });
 const IMPORTED_PIXEL_ASSETS = Object.freeze({
+  deckPlankMain: Object.freeze({
+    key: "sprite_deck_plank_main",
+    path: "assets/sprites/kenney/deck_plank_main.png"
+  }),
+  deckPlankTrim: Object.freeze({
+    key: "sprite_deck_plank_trim",
+    path: "assets/sprites/kenney/deck_plank_trim.png"
+  }),
   player: Object.freeze({
     key: "sprite_player_crew",
     path: "assets/sprites/kenney/player_crew.png"
@@ -1369,18 +1377,47 @@ export class GameScene extends Phaser.Scene {
     const deckHeight = WORLD_HEIGHT - DECK_SURFACE_INSET * 2;
     const deckRight = deckLeft + deckWidth;
     const deckBottom = deckTop + deckHeight;
+    const hasDeckPlankTexture = this.textures.exists(IMPORTED_PIXEL_ASSETS.deckPlankMain.key);
+    const hasDeckTrimTexture = this.textures.exists(IMPORTED_PIXEL_ASSETS.deckPlankTrim.key);
 
     graphics.fillStyle(0x5b3b25, 1);
     graphics.fillRect(deckLeft, deckTop, deckWidth, deckHeight);
 
     for (let y = deckTop; y < deckBottom; y += DECK_TILE_SIZE) {
       const plankIndex = Math.floor((y - deckTop) / DECK_TILE_SIZE);
-      const plankColor = plankIndex % 2 === 0 ? 0x6e472d : 0x7a5033;
-      graphics.fillStyle(plankColor, 1);
-      graphics.fillRect(deckLeft, y, deckWidth, DECK_TILE_SIZE - 2);
+      const rowHeight = Math.min(DECK_TILE_SIZE - 2, deckBottom - y);
+      if (hasDeckPlankTexture) {
+        const plankRow = this.add.tileSprite(
+          deckLeft + deckWidth * 0.5,
+          y + rowHeight * 0.5,
+          deckWidth,
+          rowHeight,
+          IMPORTED_PIXEL_ASSETS.deckPlankMain.key
+        );
+        plankRow.setDepth(0);
+        plankRow.setTint(plankIndex % 2 === 0 ? 0xffffff : 0xe8d0bf);
+        plankRow.tileScaleX = 1;
+        plankRow.tileScaleY = 1;
+      } else {
+        const plankColor = plankIndex % 2 === 0 ? 0x6e472d : 0x7a5033;
+        graphics.fillStyle(plankColor, 1);
+        graphics.fillRect(deckLeft, y, deckWidth, rowHeight);
+      }
 
       graphics.fillStyle(0x8b603f, 0.24);
       graphics.fillRect(deckLeft, y, deckWidth, 2);
+
+      if (hasDeckTrimTexture) {
+        const trimRow = this.add.tileSprite(
+          deckLeft + deckWidth * 0.5,
+          y + 2,
+          deckWidth,
+          6,
+          IMPORTED_PIXEL_ASSETS.deckPlankTrim.key
+        );
+        trimRow.setDepth(0.1);
+        trimRow.setTint(plankIndex % 2 === 0 ? 0xe6c19c : 0xc89a70);
+      }
 
       for (let x = deckLeft + 128 + ((plankIndex % 3) * 24); x < deckRight - 48; x += 192) {
         graphics.fillStyle(0x4a2f1f, 0.5);
