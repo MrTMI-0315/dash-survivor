@@ -646,7 +646,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudSecondaryText = this.add
-      .text(1028, 18, "", {
+      .text(1032, 22, "", {
         fontFamily: "Arial",
         fontSize: "14px",
         color: "#ddc69e",
@@ -654,6 +654,7 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 3,
         align: "left"
       })
+      .setLineSpacing(4)
       .setScrollFactor(0)
       .setDepth(10);
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)) {
@@ -705,19 +706,21 @@ export class GameScene extends Phaser.Scene {
         .setTint(0xb48855);
     }
     this.hudCoreLabelText = this.add
-      .text(27, 12, "SURVIVAL LOG", {
+      .text(76, 18, "SURVIVAL LOG", {
         fontFamily: "Arial",
         fontSize: "11px",
         color: "#2e170d"
       })
+      .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(10);
     this.hudSecondaryLabelText = this.add
-      .text(1062, 12, "CREW KIT", {
+      .text(1104, 18, "CREW KIT", {
         fontFamily: "Arial",
         fontSize: "11px",
         color: "#2e170d"
       })
+      .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(10);
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
@@ -727,17 +730,17 @@ export class GameScene extends Phaser.Scene {
     this.damageNumberPool = [];
     this.offscreenIndicatorPool = [];
     this.debugOverlayPanel = this.add
-      .rectangle(1260, 98, 252, 116, 0x08111d, 0.82)
+      .rectangle(1260, 98, 252, 116, 0x09121e, 0.74)
       .setOrigin(1, 0)
-      .setStrokeStyle(2, 0x5a3b24, 0.95)
+      .setStrokeStyle(2, 0x38506f, 0.82)
       .setScrollFactor(0)
       .setDepth(18)
       .setVisible(false);
     this.debugDirectorText = this.add
       .text(1024, 108, "", {
         fontFamily: "Arial",
-        fontSize: "14px",
-        color: "#d6e8ff",
+        fontSize: "13px",
+        color: "#bed2e8",
         stroke: "#0d1628",
         strokeThickness: 3
       })
