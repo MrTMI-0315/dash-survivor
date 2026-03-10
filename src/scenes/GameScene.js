@@ -462,7 +462,8 @@ export class GameScene extends Phaser.Scene {
     this.hudStatsText = null;
     this.hudDashStatusText = null;
     this.debugDirectorText = null;
-    this.debugOverlayEnabled = true;
+    this.debugOverlayPanel = null;
+    this.debugOverlayEnabled = false;
     this.cameraFollowEnabled = true;
     this.spawnPacingPresetKey = PLAYTEST_SPAWN_PACING_DEFAULT;
     this.spawnPacingPreset = PLAYTEST_SPAWN_PACING_PRESETS[PLAYTEST_SPAWN_PACING_DEFAULT];
@@ -544,7 +545,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionActions = [];
     this.weaponUnlocks = this.loadWeaponUnlocks();
     this.selectedStartWeaponId = null;
-    this.debugOverlayEnabled = true;
+    this.debugOverlayEnabled = false;
     this.cameraFollowEnabled = true;
     this.spawnPacingPresetKey = this.loadSpawnPacingPresetKey();
     this.spawnPacingPreset =
@@ -673,8 +674,15 @@ export class GameScene extends Phaser.Scene {
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
     this.damageNumberPool = [];
     this.offscreenIndicatorPool = [];
+    this.debugOverlayPanel = this.add
+      .rectangle(1260, 12, 252, 116, 0x08111d, 0.82)
+      .setOrigin(1, 0)
+      .setStrokeStyle(2, 0x5a3b24, 0.95)
+      .setScrollFactor(0)
+      .setDepth(18)
+      .setVisible(false);
     this.debugDirectorText = this.add
-      .text(DEBUG_HUD_X, DEBUG_HUD_Y, "", {
+      .text(1024, 22, "", {
         fontFamily: "Arial",
         fontSize: "14px",
         color: "#d6e8ff",
@@ -2624,6 +2632,7 @@ export class GameScene extends Phaser.Scene {
 
   toggleDebugOverlay() {
     this.debugOverlayEnabled = !this.debugOverlayEnabled;
+    this.debugOverlayPanel?.setVisible(this.debugOverlayEnabled);
     this.debugDirectorText?.setVisible(this.debugOverlayEnabled);
     this.showHudAlert(this.debugOverlayEnabled ? "DEBUG HUD ON" : "DEBUG HUD OFF", 850);
   }
@@ -2667,12 +2676,16 @@ export class GameScene extends Phaser.Scene {
     const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
     const spawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
     const eliteChance = this.director.getEliteChance();
+    const weaponCount = this.player?.weapons?.length ?? 0;
+    const passiveCount = Object.keys(this.player?.passives ?? {}).length;
+    const metaLiveTotal = (this.metaData?.currency ?? 0) + (this.runMetaCurrency ?? 0);
     this.debugDirectorText.setText(
       [
         `Enemies: ${alive}/${this.targetEnemies}`,
         `Pacing: ${this.spawnPacingPresetKey}`,
         `EliteChance: ${(eliteChance * 100).toFixed(1)}%`,
         `SpawnInterval: ${Math.round(spawnIntervalMs)}ms`,
+        `Build: WPN ${weaponCount} / PAS ${passiveCount} / META ${metaLiveTotal}`,
         `GameTime: ${this.formatRunTime(this.runTimeMs)}`
       ].join("\n")
     );
@@ -4013,12 +4026,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateHud() {
-    const activeEnemies = this.getAliveEnemyCount();
     const dashPercent = Math.floor(this.player.getDashRatio() * 100);
-    const directorState = this.director.getState();
-    const weaponCount = this.player.weapons.length;
-    const passiveCount = Object.keys(this.player.passives).length;
-    const metaLiveTotal = this.metaData.currency + this.runMetaCurrency;
     const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
     if (xpRatio < this.xpDisplayRatio) {
       this.xpDisplayRatio = xpRatio;
@@ -4039,16 +4047,14 @@ export class GameScene extends Phaser.Scene {
     const barWidth = 280;
     const barHeight = 14;
 
-    this.hudLevelText.setText(`LV ${this.level}   HP ${this.player.hp}/${this.player.maxHp}   DIR ${directorState}`);
-    this.hudStatsText.setText(
-      `XP ${this.currentXp}/${this.xpToNext}   Enemies ${activeEnemies}/${this.targetEnemies}   WPN ${weaponCount}/${this.player.maxWeaponSlots}   PAS ${passiveCount}   META ${metaLiveTotal}`
-    );
+    this.hudLevelText.setText(`HP ${this.player.hp}/${this.player.maxHp}   LV ${this.level}`);
+    this.hudStatsText.setText(`TIME ${this.formatRunTime(this.runTimeMs)}   XP ${this.currentXp}/${this.xpToNext}`);
 
-    let dashStatus = `Dash Charging ${dashPercent}%`;
+    let dashStatus = `DASH ${dashPercent}%`;
     if (this.player.isDashing()) {
-      dashStatus = "Dash Active";
+      dashStatus = "DASH ACTIVE";
     } else if (dashPercent >= 100) {
-      dashStatus = "Dash Ready";
+      dashStatus = "DASH READY";
     }
     this.hudDashStatusText.setText(dashStatus);
 
