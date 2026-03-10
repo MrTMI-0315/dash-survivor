@@ -462,6 +462,8 @@ export class GameScene extends Phaser.Scene {
     this.hudStatsText = null;
     this.hudDashStatusText = null;
     this.hudSecondaryText = null;
+    this.hudCoreLabelText = null;
+    this.hudSecondaryLabelText = null;
     this.debugDirectorText = null;
     this.debugOverlayPanel = null;
     this.debugOverlayEnabled = false;
@@ -644,7 +646,7 @@ export class GameScene extends Phaser.Scene {
       .text(1028, 18, "", {
         fontFamily: "Arial",
         fontSize: "15px",
-        color: "#efd8af",
+        color: "#f3dfbc",
         stroke: "#28170f",
         strokeThickness: 3,
         align: "left"
@@ -657,13 +659,15 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDisplaySize(320, 110)
         .setScrollFactor(0)
-        .setDepth(8);
+        .setDepth(8)
+        .setTint(0x9b6639);
       this.hudSecondaryPanel = this.add
         .image(1142, 44, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
         .setOrigin(0.5)
         .setDisplaySize(228, 78)
         .setScrollFactor(0)
-        .setDepth(8);
+        .setDepth(8)
+        .setTint(0x7e532f);
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)) {
       this.hudXpFrame = this.add
@@ -671,22 +675,48 @@ export class GameScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDisplaySize(284, 18)
         .setScrollFactor(0)
-        .setDepth(8.8);
+        .setDepth(8.8)
+        .setTint(0xd8ba8c);
       this.hudDashFrame = this.add
         .image(156, 99, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
         .setOrigin(0.5)
         .setDisplaySize(284, 18)
         .setScrollFactor(0)
-        .setDepth(8.8);
+        .setDepth(8.8)
+        .setTint(0xc49a62);
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)) {
       this.hudHeaderChip = this.add
-        .image(60, 18, IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)
+        .image(76, 18, IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)
         .setOrigin(0.5)
-        .setDisplaySize(88, 18)
+        .setDisplaySize(120, 18)
         .setScrollFactor(0)
-        .setDepth(8.9);
+        .setDepth(8.9)
+        .setTint(0xc19a67);
+      this.hudSecondaryChip = this.add
+        .image(1104, 18, IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)
+        .setOrigin(0.5)
+        .setDisplaySize(100, 18)
+        .setScrollFactor(0)
+        .setDepth(8.9)
+        .setTint(0xb48855);
     }
+    this.hudCoreLabelText = this.add
+      .text(27, 12, "SURVIVAL LOG", {
+        fontFamily: "Arial",
+        fontSize: "11px",
+        color: "#2e170d"
+      })
+      .setScrollFactor(0)
+      .setDepth(10);
+    this.hudSecondaryLabelText = this.add
+      .text(1062, 12, "CREW KIT", {
+        fontFamily: "Arial",
+        fontSize: "11px",
+        color: "#2e170d"
+      })
+      .setScrollFactor(0)
+      .setDepth(10);
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
