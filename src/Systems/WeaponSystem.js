@@ -72,6 +72,8 @@ export class WeaponSystem {
         const projectile = this.projectiles.create(-1000, -1000, texture);
         projectile.setData("poolTexture", texture);
         projectile.setData("inProjectilePool", true);
+        projectile.setDepth(8);
+        projectile.setAlpha(0.98);
         projectile.speed = 0;
         projectile.maxDistance = 0;
         projectile.travelled = 0;
@@ -372,6 +374,8 @@ export class WeaponSystem {
     for (let i = 0; i < count; i += 1) {
       const blade = this.orbitBlades.create(this.player.x, this.player.y, "proj_orbit_blade");
       blade.body.setCircle(blade.displayWidth * 0.48, 0, 0);
+      blade.setDepth(8);
+      blade.setAlpha(0.96);
       blade.setData("weaponBaseType", weapon.baseType);
       blade.setData("orbitHitKey", `orbit_hit_${weapon.baseType}`);
       blade.setData("damage", this.getScaledWeaponDamage(weapon));

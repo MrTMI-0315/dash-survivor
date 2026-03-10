@@ -458,6 +458,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverRestartLabel = null;
     this.hudBarsGraphics = null;
     this.dashCooldownRingGraphics = null;
+    this.playerReadabilityGraphics = null;
     this.hudLevelText = null;
     this.hudStatsText = null;
     this.hudDashStatusText = null;
@@ -720,6 +721,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
+    this.playerReadabilityGraphics = this.add.graphics().setDepth(5);
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
     this.damageNumberPool = [];
@@ -873,6 +875,7 @@ export class GameScene extends Phaser.Scene {
     this.updateBossProjectiles(time);
     this.emitDashTrail(delta);
     this.player.moveFromInput(this.keys, this.getTouchMoveInput());
+    this.updatePlayerReadabilityAura();
     this.pullXpOrbsToPlayer();
     this.weaponSystem.update(time, delta);
     this.performAutoAttack(time);
@@ -1508,16 +1511,16 @@ export class GameScene extends Phaser.Scene {
           IMPORTED_PIXEL_ASSETS.deckPlankMain.key
         );
         plankRow.setDepth(0);
-        plankRow.setTint(plankIndex % 2 === 0 ? 0xffffff : 0xe8d0bf);
+        plankRow.setTint(plankIndex % 2 === 0 ? 0xf0e3d4 : 0xe0ccb5);
         plankRow.tileScaleX = 1;
         plankRow.tileScaleY = 1;
       } else {
-        const plankColor = plankIndex % 2 === 0 ? 0x6e472d : 0x7a5033;
+        const plankColor = plankIndex % 2 === 0 ? 0x6c4830 : 0x755138;
         graphics.fillStyle(plankColor, 1);
         graphics.fillRect(deckLeft, y, deckWidth, rowHeight);
       }
 
-      graphics.fillStyle(0x8b603f, 0.24);
+      graphics.fillStyle(0x8b603f, 0.12);
       graphics.fillRect(deckLeft, y, deckWidth, 2);
 
       if (hasDeckTrimTexture) {
@@ -1529,11 +1532,11 @@ export class GameScene extends Phaser.Scene {
           IMPORTED_PIXEL_ASSETS.deckPlankTrim.key
         );
         trimRow.setDepth(0.1);
-        trimRow.setTint(plankIndex % 2 === 0 ? 0xe6c19c : 0xc89a70);
+        trimRow.setTint(plankIndex % 2 === 0 ? 0xd9b48c : 0xc49263);
       }
 
       for (let x = deckLeft + 128 + ((plankIndex % 3) * 24); x < deckRight - 48; x += 192) {
-        graphics.fillStyle(0x4a2f1f, 0.5);
+        graphics.fillStyle(0x4a2f1f, 0.22);
         graphics.fillRect(x, y + 4, 3, DECK_TILE_SIZE - 10);
       }
     }
@@ -1886,6 +1889,24 @@ export class GameScene extends Phaser.Scene {
     this.helpOverlayCompact = shouldCompact;
     helpElement.classList.toggle("is-compact", shouldCompact);
     this.updateHelpOverlayText();
+  }
+
+  updatePlayerReadabilityAura() {
+    if (!this.playerReadabilityGraphics) {
+      return;
+    }
+
+    this.playerReadabilityGraphics.clear();
+    if (!this.player?.active) {
+      return;
+    }
+
+    const x = this.player.x;
+    const y = this.player.y + 2;
+    this.playerReadabilityGraphics.fillStyle(0x08111d, 0.22);
+    this.playerReadabilityGraphics.fillEllipse(x, y + 8, 42, 18);
+    this.playerReadabilityGraphics.lineStyle(2, 0xe7e1c4, 0.16);
+    this.playerReadabilityGraphics.strokeCircle(x, y, 19);
   }
 
   isPointerInTouchJoystick(pointer) {
@@ -3230,6 +3251,9 @@ export class GameScene extends Phaser.Scene {
     }
     const radius = config.radius ?? (config.pickupType === "elite_upgrade" ? 8 : 6);
     orb.setCircle?.(radius, 0, 0);
+    orb.setDepth(config.pickupType === "elite_upgrade" ? 7 : 5);
+    orb.setScale(config.pickupType === "elite_upgrade" ? 1.18 : 1.1);
+    orb.setAlpha(config.pickupType === "elite_upgrade" ? 1 : 0.96);
     orb.xpValue = value;
     if (config.pickupType) {
       orb.setData("pickupType", config.pickupType);

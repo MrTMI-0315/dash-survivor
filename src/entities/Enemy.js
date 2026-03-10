@@ -63,6 +63,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.baseTint = config.tint ?? archetype.tint;
     this.setTexture(getEnemyTextureKey(this.type, this.scene));
     this.setScale(config.scale ?? archetype.scale);
+    this.setDepth(this.type === "boss" ? 7 : 6);
     this.setCircle(config.radius ?? archetype.radius, 0, 0);
     const spawnX = config.x ?? this.x;
     const spawnY = config.y ?? this.y;
