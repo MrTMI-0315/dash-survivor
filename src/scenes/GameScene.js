@@ -494,6 +494,7 @@ export class GameScene extends Phaser.Scene {
     this.onTouchPointerDown = null;
     this.onTouchPointerMove = null;
     this.onTouchPointerUp = null;
+    this.helpOverlayCompact = false;
     this.isWeaponSelecting = false;
     this.weaponSelectionUi = [];
     this.weaponSelectionActions = [];
@@ -561,6 +562,7 @@ export class GameScene extends Phaser.Scene {
     this.performanceKillEvents = [];
     this.performanceDamageTotal = 0;
     this.performanceKillTotal = 0;
+    this.helpOverlayCompact = false;
     this.devAntiJamEnabled = this.resolveDevAntiJamEnabled();
 
     this.createTextures();
@@ -804,6 +806,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    this.updateHelpOverlayPresentation();
     this.updateSeaWaves(time);
     this.handlePlaytestHotkeys();
 
@@ -1858,8 +1861,31 @@ export class GameScene extends Phaser.Scene {
     }
 
     helpElement.textContent = this.touchControlsEnabled
-      ? "Touch Pad Move · Touch Dash Button · R Restart"
-      : "WASD Move · SPACE Dash · R Restart";
+      ? this.helpOverlayCompact
+        ? "MOVE PAD · DASH BTN · R"
+        : "Touch Pad Move · Touch Dash Button · R Restart"
+      : this.helpOverlayCompact
+        ? "WASD · SPACE · R"
+        : "WASD Move · SPACE Dash · R Restart";
+  }
+
+  updateHelpOverlayPresentation() {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const helpElement = document.getElementById("help");
+    if (!helpElement) {
+      return;
+    }
+
+    const shouldCompact = !this.touchControlsEnabled && !this.isGameOver && this.runTimeMs >= 18000;
+    if (shouldCompact === this.helpOverlayCompact) {
+      return;
+    }
+
+    this.helpOverlayCompact = shouldCompact;
+    helpElement.classList.toggle("is-compact", shouldCompact);
+    this.updateHelpOverlayText();
   }
 
   isPointerInTouchJoystick(pointer) {

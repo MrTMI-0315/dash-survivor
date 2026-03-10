@@ -107,4 +107,16 @@ canvas {
   letter-spacing: 0.02em;
   color: #e7d0a4;
   pointer-events: none;
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+
+#help.is-compact {
+  opacity: 0.48;
+  transform: translateY(4px);
+  background: rgba(24, 14, 9, 0.36);
+  border-color: rgba(214, 174, 126, 0.14);
 }
