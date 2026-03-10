@@ -99,13 +99,14 @@ canvas {
   position: absolute;
   left: 16px;
   bottom: 14px;
-  padding: 6px 10px;
+  padding: 7px 11px;
   border-radius: 6px;
-  background: rgba(24, 14, 9, 0.66);
-  border: 1px solid rgba(214, 174, 126, 0.28);
+  background: rgba(44, 28, 16, 0.74);
+  border: 1px solid rgba(191, 154, 103, 0.34);
+  box-shadow: 0 0 0 1px rgba(93, 64, 40, 0.32) inset;
   font-size: 13px;
   letter-spacing: 0.02em;
-  color: #e7d0a4;
+  color: #ead7b7;
   pointer-events: none;
   transition:
     opacity 180ms ease,
@@ -115,8 +116,8 @@ canvas {
 }
 
 #help.is-compact {
-  opacity: 0.48;
+  opacity: 0.42;
   transform: translateY(4px);
-  background: rgba(24, 14, 9, 0.36);
-  border-color: rgba(214, 174, 126, 0.14);
+  background: rgba(30, 19, 11, 0.42);
+  border-color: rgba(191, 154, 103, 0.18);
 }

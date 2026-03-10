@@ -730,9 +730,9 @@ export class GameScene extends Phaser.Scene {
     this.damageNumberPool = [];
     this.offscreenIndicatorPool = [];
     this.debugOverlayPanel = this.add
-      .rectangle(1260, 98, 252, 116, 0x09121e, 0.74)
+      .rectangle(1260, 98, 252, 116, 0x19110b, 0.64)
       .setOrigin(1, 0)
-      .setStrokeStyle(2, 0x38506f, 0.82)
+      .setStrokeStyle(2, 0x6d4a31, 0.68)
       .setScrollFactor(0)
       .setDepth(18)
       .setVisible(false);
@@ -740,8 +740,8 @@ export class GameScene extends Phaser.Scene {
       .text(1024, 108, "", {
         fontFamily: "Arial",
         fontSize: "13px",
-        color: "#bed2e8",
-        stroke: "#0d1628",
+        color: "#cbb590",
+        stroke: "#22150d",
         strokeThickness: 3
       })
       .setScrollFactor(0)
@@ -3460,16 +3460,28 @@ export class GameScene extends Phaser.Scene {
     const centerX = 640;
     const centerY = 360;
     const panel = this.add
-      .rectangle(centerX, centerY, 620, 420, 0x070d18, 0.96)
-      .setStrokeStyle(2, 0x4f607d, 1)
+      .rectangle(centerX, centerY, 620, 420, 0x22150d, 0.96)
+      .setStrokeStyle(3, 0xb48855, 0.98)
       .setScrollFactor(0)
       .setDepth(30);
+    const panelInset = this.add
+      .rectangle(centerX, centerY, 596, 396, 0x352215, 0.94)
+      .setStrokeStyle(1, 0x6d4a31, 0.9)
+      .setScrollFactor(0)
+      .setDepth(30.2);
+    const titleChip = this.add
+      .rectangle(centerX, centerY - 160, 196, 30, 0xc19a67, 0.96)
+      .setStrokeStyle(2, 0x6d4a31, 0.95)
+      .setScrollFactor(0)
+      .setDepth(30.4);
 
     const title = this.add
       .text(centerX, centerY - 158, "LEVEL UP", {
         fontFamily: "Arial",
         fontSize: "38px",
-        color: "#f8fbff"
+        color: "#2e170d",
+        stroke: "#ead7b7",
+        strokeThickness: 1
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -3478,7 +3490,9 @@ export class GameScene extends Phaser.Scene {
       .text(centerX, centerY - 124, "Choose one upgrade", {
         fontFamily: "Arial",
         fontSize: "18px",
-        color: "#bfd7ef"
+        color: "#e8d0a5",
+        stroke: "#2a1a10",
+        strokeThickness: 3
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -3490,17 +3504,25 @@ export class GameScene extends Phaser.Scene {
     choices.forEach((upgrade, index) => {
       const y = centerY - 40 + index * 94;
       const box = this.add
-        .rectangle(centerX, y, 530, 80, 0x17233a, 1)
-        .setStrokeStyle(1, 0x4f607d, 1)
+        .rectangle(centerX, y, 530, 80, 0x4a2f1d, 0.98)
+        .setStrokeStyle(2, 0xb48855, 0.94)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(31);
+      const boxInlay = this.add
+        .rectangle(centerX, y, 514, 64, 0xead7b7, 0.9)
+        .setStrokeStyle(1, 0x6d4a31, 0.65)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0)
+        .setDepth(31.2);
 
       const heading = this.add
         .text(centerX - 244, y - 14, `[${index + 1}] ${upgrade.label}`, {
           fontFamily: "Arial",
           fontSize: "24px",
-          color: "#eaf6ff"
+          color: "#2e170d",
+          stroke: "#f7e8cc",
+          strokeThickness: 1
         })
         .setOrigin(0, 0.5)
         .setScrollFactor(0)
@@ -3509,7 +3531,9 @@ export class GameScene extends Phaser.Scene {
         .text(centerX - 244, y + 16, upgrade.description, {
           fontFamily: "Arial",
           fontSize: "16px",
-          color: "#c6dcf2"
+          color: "#5a3f2c",
+          stroke: "#f7e8cc",
+          strokeThickness: 1
         })
         .setOrigin(0, 0.5)
         .setScrollFactor(0)
@@ -3520,14 +3544,15 @@ export class GameScene extends Phaser.Scene {
         this.closeLevelUpChoices();
       };
       box.on("pointerdown", chooseUpgrade);
+      boxInlay.on("pointerdown", chooseUpgrade);
       heading.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
       description.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
       this.levelUpOptionActions.push(chooseUpgrade);
 
-      optionObjects.push(box, heading, description);
+      optionObjects.push(box, boxInlay, heading, description);
     });
 
-    this.levelUpUi = [panel, title, subtitle, ...optionObjects];
+    this.levelUpUi = [panel, panelInset, titleChip, title, subtitle, ...optionObjects];
   }
 
   handleLevelUpInput() {
@@ -3555,17 +3580,27 @@ export class GameScene extends Phaser.Scene {
     const centerX = 640;
     const centerY = 360;
     const panel = this.add
-      .rectangle(centerX, centerY, 700, 500, 0x07101d, 0.96)
-      .setStrokeStyle(2, 0x4f607d, 1)
+      .rectangle(centerX, centerY, 700, 500, 0x22150d, 0.96)
+      .setStrokeStyle(3, 0xb48855, 0.98)
       .setScrollFactor(0)
       .setDepth(35);
+    const panelInset = this.add
+      .rectangle(centerX, centerY, 672, 470, 0x342214, 0.94)
+      .setStrokeStyle(1, 0x6d4a31, 0.92)
+      .setScrollFactor(0)
+      .setDepth(35.2);
+    const titleChip = this.add
+      .rectangle(centerX, centerY - 205, 286, 34, 0xc19a67, 0.96)
+      .setStrokeStyle(2, 0x6d4a31, 0.95)
+      .setScrollFactor(0)
+      .setDepth(35.4);
     const title = this.add
       .text(centerX, centerY - 205, "SELECT START WEAPON", {
         fontFamily: "Arial",
         fontSize: "36px",
-        color: "#f8fbff",
-        stroke: "#0f1728",
-        strokeThickness: 5
+        color: "#2e170d",
+        stroke: "#f1dfbf",
+        strokeThickness: 1
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -3575,9 +3610,9 @@ export class GameScene extends Phaser.Scene {
       .text(centerX, centerY - 166, `Coins: ${this.metaData.currency}`, {
         fontFamily: "Arial",
         fontSize: "22px",
-        color: "#ffe08a",
-        stroke: "#2a1a06",
-        strokeThickness: 4
+        color: "#f0d48b",
+        stroke: "#2e170d",
+        strokeThickness: 3
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -3587,7 +3622,9 @@ export class GameScene extends Phaser.Scene {
       .text(centerX, centerY - 132, "Pick one weapon to begin this run", {
         fontFamily: "Arial",
         fontSize: "18px",
-        color: "#bfd7ef"
+        color: "#e7d0a4",
+        stroke: "#2a1a10",
+        strokeThickness: 3
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -3597,8 +3634,8 @@ export class GameScene extends Phaser.Scene {
       .text(centerX, centerY + 204, "", {
         fontFamily: "Arial",
         fontSize: "18px",
-        color: "#cde5ff",
-        stroke: "#0e1a2a",
+        color: "#ebd7b7",
+        stroke: "#2e170d",
         strokeThickness: 4
       })
       .setOrigin(0.5)
@@ -3609,16 +3646,24 @@ export class GameScene extends Phaser.Scene {
     START_WEAPON_OPTIONS.forEach((option, index) => {
       const y = centerY - 64 + index * 82;
       const box = this.add
-        .rectangle(centerX, y, 620, 68, 0x17233a, 1)
-        .setStrokeStyle(1, 0x4f607d, 1)
+        .rectangle(centerX, y, 620, 68, 0x4a2f1d, 0.98)
+        .setStrokeStyle(2, 0xb48855, 0.94)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(36);
+      const boxInlay = this.add
+        .rectangle(centerX, y, 604, 54, 0xead7b7, 0.88)
+        .setStrokeStyle(1, 0x6d4a31, 0.58)
+        .setInteractive({ useHandCursor: true })
+        .setScrollFactor(0)
+        .setDepth(36.2);
       const heading = this.add
         .text(centerX - 290, y - 14, `[${index + 1}] ${option.label}`, {
           fontFamily: "Arial",
           fontSize: "24px",
-          color: "#eaf6ff"
+          color: "#2e170d",
+          stroke: "#f7e8cc",
+          strokeThickness: 1
         })
         .setOrigin(0, 0.5)
         .setScrollFactor(0)
@@ -3627,7 +3672,9 @@ export class GameScene extends Phaser.Scene {
         .text(centerX - 290, y + 16, "", {
           fontFamily: "Arial",
           fontSize: "16px",
-          color: "#c6dcf2"
+          color: "#5a3f2c",
+          stroke: "#f7e8cc",
+          strokeThickness: 1
         })
         .setOrigin(0, 0.5)
         .setScrollFactor(0)
@@ -3637,10 +3684,10 @@ export class GameScene extends Phaser.Scene {
         const unlocked = Boolean(this.weaponUnlocks[option.id]);
         if (unlocked) {
           detail.setText(`Unlocked · Tap to select`);
-          detail.setColor("#9ff0b6");
+          detail.setColor("#426539");
         } else {
           detail.setText(`Locked · Unlock Cost ${option.unlockCost} coins`);
-          detail.setColor("#ffccb6");
+          detail.setColor("#7a4c2b");
         }
       };
 
@@ -3662,14 +3709,15 @@ export class GameScene extends Phaser.Scene {
       };
 
       box.on("pointerdown", choose);
+      boxInlay.on("pointerdown", choose);
       heading.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
       detail.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
       refreshOption();
-      optionRows.push(box, heading, detail);
+      optionRows.push(box, boxInlay, heading, detail);
       this.weaponSelectionActions.push(choose);
     });
 
-    this.weaponSelectionUi = [panel, title, coinText, subtitle, statusText, ...optionRows];
+    this.weaponSelectionUi = [panel, panelInset, titleChip, title, coinText, subtitle, statusText, ...optionRows];
   }
 
   handleWeaponSelectionInput() {
