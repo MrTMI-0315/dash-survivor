@@ -635,16 +635,6 @@ export class GameScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(10);
-    this.hudDashStatusText = this.add
-      .text(16, 96, "", {
-        fontFamily: "Arial",
-        fontSize: "15px",
-        color: "#f8ebd0",
-        stroke: "#28170f",
-        strokeThickness: 3
-      })
-      .setScrollFactor(0)
-      .setDepth(10);
     this.hudSecondaryText = this.add
       .text(1032, 22, "", {
         fontFamily: "Arial",
@@ -661,7 +651,7 @@ export class GameScene extends Phaser.Scene {
       this.hudPanelBack = this.add
         .image(156, 60, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
         .setOrigin(0.5)
-        .setDisplaySize(320, 110)
+        .setDisplaySize(320, 88)
         .setScrollFactor(0)
         .setDepth(8)
         .setTint(0x9b6639);
@@ -675,19 +665,12 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)) {
       this.hudXpFrame = this.add
-        .image(156, 75, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
+        .image(156, 74, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
         .setOrigin(0.5)
         .setDisplaySize(284, 18)
         .setScrollFactor(0)
         .setDepth(8.8)
         .setTint(0xd8ba8c);
-      this.hudDashFrame = this.add
-        .image(156, 99, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
-        .setOrigin(0.5)
-        .setDisplaySize(284, 18)
-        .setScrollFactor(0)
-        .setDepth(8.8)
-        .setTint(0xc49a62);
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)) {
       this.hudHeaderChip = this.add
@@ -748,6 +731,7 @@ export class GameScene extends Phaser.Scene {
       .setDepth(19);
     this.debugDirectorText.setVisible(this.debugOverlayEnabled);
     this.createHudAlertPool();
+    this.applyHudModalFocus(false);
 
     this.gameOverText = this.add
       .text(640, 360, "GAME OVER", {
@@ -1892,6 +1876,25 @@ export class GameScene extends Phaser.Scene {
     this.helpOverlayCompact = shouldCompact;
     helpElement.classList.toggle("is-compact", shouldCompact);
     this.updateHelpOverlayText();
+  }
+
+  applyHudModalFocus(isModalOpen) {
+    const hudAlpha = isModalOpen ? 0.4 : 1;
+    const panelAlpha = isModalOpen ? 0.26 : 1;
+    [
+      this.hudLevelText,
+      this.hudStatsText,
+      this.hudCoreLabelText,
+      this.hudXpFrame
+    ]
+      .filter(Boolean)
+      .forEach((obj) => obj.setAlpha(hudAlpha));
+    [this.hudPanelBack].filter(Boolean).forEach((obj) => obj.setAlpha(panelAlpha));
+    [this.hudBarsGraphics].filter(Boolean).forEach((obj) => obj.setAlpha(hudAlpha));
+
+    if (typeof document !== "undefined") {
+      document.getElementById("help")?.classList.toggle("modal-open", isModalOpen);
+    }
   }
 
   updatePlayerReadabilityAura() {
@@ -3456,6 +3459,7 @@ export class GameScene extends Phaser.Scene {
     this.levelUpOptionActions = [];
     this.physics.pause();
     this.player.body?.setVelocity(0, 0);
+    this.applyHudModalFocus(true);
 
     const centerX = 640;
     const centerY = 360;
@@ -3576,6 +3580,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionActions = [];
     this.physics.pause();
     this.player.body?.setVelocity(0, 0);
+    this.applyHudModalFocus(true);
 
     const centerX = 640;
     const centerY = 360;
@@ -3751,6 +3756,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionUi = [];
     this.weaponSelectionActions = [];
     this.isWeaponSelecting = false;
+    this.applyHudModalFocus(false);
 
     if (!this.isGameOver && !this.isLeveling) {
       this.physics.resume();
@@ -3823,6 +3829,7 @@ export class GameScene extends Phaser.Scene {
     this.levelUpOptionActions = [];
 
     this.isLeveling = false;
+    this.applyHudModalFocus(false);
     this.physics.resume();
 
     if (this.pendingLevelUps > 0) {
@@ -4175,10 +4182,6 @@ export class GameScene extends Phaser.Scene {
   }
 
   updateHud() {
-    const dashPercent = Math.floor(this.player.getDashRatio() * 100);
-    const weaponCount = this.player.weapons.length;
-    const passiveCount = Object.keys(this.player.passives).length;
-    const metaLiveTotal = this.metaData.currency + this.runMetaCurrency;
     const hpRatio = Phaser.Math.Clamp(this.player.getHpRatio(), 0, 1);
     const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
     if (xpRatio < this.xpDisplayRatio) {
@@ -4195,47 +4198,33 @@ export class GameScene extends Phaser.Scene {
     const xpFillAlpha = xpPulseActive ? 0.84 + xpPulse * 0.16 : 0.95;
     const xpBorderColor = xpPulseActive ? this.lerpColor(0x91a6c8, 0xffeab0, xpPulse) : 0x91a6c8;
     const barX = 16;
-    const xpBarY = 68;
-    const dashBarY = 92;
+    const xpBarY = 66;
     const barWidth = 280;
     const barHeight = 14;
 
     const hpColor = hpRatio <= 0.25 ? "#ffb2a2" : hpRatio <= 0.5 ? "#ffd598" : "#fff0cf";
     this.hudLevelText.setColor(hpColor);
-    this.hudLevelText.setText(`${this.player.hp}/${this.player.maxHp} HP   LV ${this.level}`);
-    this.hudStatsText.setText(`${this.formatRunTime(this.runTimeMs)} TIME   ${this.currentXp}/${this.xpToNext} XP`);
-
-    let dashStatus = `DASH ${dashPercent}%`;
-    let dashColor = "#c8e4ff";
-    if (this.player.isDashing()) {
-      dashStatus = "DASH ACTIVE";
-      dashColor = "#9ff5d2";
-    } else if (dashPercent >= 100) {
-      dashStatus = "DASH READY";
-      dashColor = "#ffd78a";
-    }
-    this.hudDashStatusText.setColor(dashColor);
-    this.hudDashStatusText.setText(dashStatus);
-    this.hudSecondaryText?.setText(
-      `${weaponCount}/${this.player.maxWeaponSlots} WPN   ${passiveCount} PAS\n${metaLiveTotal} COINS   ${this.totalKills} KILLS`
-    );
+    this.hudLevelText.setText(`${this.player.hp}/${this.player.maxHp} HP`);
+    this.hudStatsText.setText(`${this.formatRunTime(this.runTimeMs)} PLAYTIME   ${this.currentXp}/${this.xpToNext} EXP`);
+    this.hudHeaderChip?.setVisible(false);
+    this.hudCoreLabelText?.setVisible(false);
+    this.hudSecondaryPanel?.setVisible(false);
+    this.hudSecondaryChip?.setVisible(false);
+    this.hudSecondaryLabelText?.setVisible(false);
+    this.hudSecondaryText?.setVisible(false);
+    this.hudDashFrame?.setVisible(false);
+    this.hudDashStatusText?.setVisible(false);
 
     if (this.hudBarsGraphics) {
       this.hudBarsGraphics.clear();
       this.hudBarsGraphics.fillStyle(0x432615, 0.9);
       this.hudBarsGraphics.fillRect(barX + 3, xpBarY + 3, barWidth - 6, barHeight - 6);
-      this.hudBarsGraphics.fillRect(barX + 3, dashBarY + 3, barWidth - 6, barHeight - 6);
       this.hudBarsGraphics.fillStyle(xpFillColor, xpFillAlpha);
       this.hudBarsGraphics.fillRect(barX + 5, xpBarY + 5, Math.max(4, (barWidth - 10) * displayedXpRatio), barHeight - 10);
-      this.hudBarsGraphics.fillStyle(dashRatio >= 1 ? 0xffd166 : 0x7fd8ff, 0.95);
-      this.hudBarsGraphics.fillRect(barX + 5, dashBarY + 5, Math.max(4, (barWidth - 10) * dashRatio), barHeight - 10);
       this.hudBarsGraphics.fillStyle(0x2e170d, 0.96);
       this.hudBarsGraphics.fillRect(barX + 6, xpBarY - 12, 30, 10);
-      this.hudBarsGraphics.fillRect(barX + 6, dashBarY - 12, 46, 10);
       this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.85);
       this.hudBarsGraphics.strokeRect(barX + 3, xpBarY + 3, barWidth - 6, barHeight - 6);
-      this.hudBarsGraphics.lineStyle(1, 0xb9a07e, 0.9);
-      this.hudBarsGraphics.strokeRect(barX + 3, dashBarY + 3, barWidth - 6, barHeight - 6);
     }
   }
 }

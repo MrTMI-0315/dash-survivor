@@ -121,3 +121,10 @@ canvas {
   background: rgba(30, 19, 11, 0.42);
   border-color: rgba(191, 154, 103, 0.18);
 }
+
+#help.modal-open {
+  opacity: 0.16;
+  transform: translateY(6px);
+  background: rgba(24, 15, 9, 0.22);
+  border-color: rgba(191, 154, 103, 0.1);
+}
