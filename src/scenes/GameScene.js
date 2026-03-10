@@ -615,8 +615,8 @@ export class GameScene extends Phaser.Scene {
     this.hudLevelText = this.add
       .text(16, 12, "", {
         fontFamily: "Arial",
-        fontSize: "22px",
-        color: "#f8ebd0",
+        fontSize: "25px",
+        color: "#fff0cf",
         stroke: "#28170f",
         strokeThickness: 4
       })
@@ -625,8 +625,8 @@ export class GameScene extends Phaser.Scene {
     this.hudStatsText = this.add
       .text(16, 38, "", {
         fontFamily: "Arial",
-        fontSize: "16px",
-        color: "#efd8af",
+        fontSize: "14px",
+        color: "#d7bf96",
         stroke: "#28170f",
         strokeThickness: 3
       })
@@ -635,7 +635,7 @@ export class GameScene extends Phaser.Scene {
     this.hudDashStatusText = this.add
       .text(16, 96, "", {
         fontFamily: "Arial",
-        fontSize: "16px",
+        fontSize: "15px",
         color: "#f8ebd0",
         stroke: "#28170f",
         strokeThickness: 3
@@ -645,8 +645,8 @@ export class GameScene extends Phaser.Scene {
     this.hudSecondaryText = this.add
       .text(1028, 18, "", {
         fontFamily: "Arial",
-        fontSize: "15px",
-        color: "#f3dfbc",
+        fontSize: "14px",
+        color: "#ddc69e",
         stroke: "#28170f",
         strokeThickness: 3,
         align: "left"
@@ -4078,6 +4078,7 @@ export class GameScene extends Phaser.Scene {
     const weaponCount = this.player.weapons.length;
     const passiveCount = Object.keys(this.player.passives).length;
     const metaLiveTotal = this.metaData.currency + this.runMetaCurrency;
+    const hpRatio = Phaser.Math.Clamp(this.player.getHpRatio(), 0, 1);
     const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
     if (xpRatio < this.xpDisplayRatio) {
       this.xpDisplayRatio = xpRatio;
@@ -4098,18 +4099,24 @@ export class GameScene extends Phaser.Scene {
     const barWidth = 280;
     const barHeight = 14;
 
-    this.hudLevelText.setText(`HP ${this.player.hp}/${this.player.maxHp}   LV ${this.level}`);
-    this.hudStatsText.setText(`TIME ${this.formatRunTime(this.runTimeMs)}   XP ${this.currentXp}/${this.xpToNext}`);
+    const hpColor = hpRatio <= 0.25 ? "#ffb2a2" : hpRatio <= 0.5 ? "#ffd598" : "#fff0cf";
+    this.hudLevelText.setColor(hpColor);
+    this.hudLevelText.setText(`${this.player.hp}/${this.player.maxHp} HP   LV ${this.level}`);
+    this.hudStatsText.setText(`${this.formatRunTime(this.runTimeMs)} TIME   ${this.currentXp}/${this.xpToNext} XP`);
 
     let dashStatus = `DASH ${dashPercent}%`;
+    let dashColor = "#c8e4ff";
     if (this.player.isDashing()) {
       dashStatus = "DASH ACTIVE";
+      dashColor = "#9ff5d2";
     } else if (dashPercent >= 100) {
       dashStatus = "DASH READY";
+      dashColor = "#ffd78a";
     }
+    this.hudDashStatusText.setColor(dashColor);
     this.hudDashStatusText.setText(dashStatus);
     this.hudSecondaryText?.setText(
-      `WPN ${weaponCount}/${this.player.maxWeaponSlots}   PAS ${passiveCount}\nCOINS ${metaLiveTotal}   KILLS ${this.totalKills}`
+      `${weaponCount}/${this.player.maxWeaponSlots} WPN   ${passiveCount} PAS\n${metaLiveTotal} COINS   ${this.totalKills} KILLS`
     );
 
     if (this.hudBarsGraphics) {
