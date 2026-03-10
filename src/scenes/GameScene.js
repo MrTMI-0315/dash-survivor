@@ -461,6 +461,7 @@ export class GameScene extends Phaser.Scene {
     this.hudLevelText = null;
     this.hudStatsText = null;
     this.hudDashStatusText = null;
+    this.hudSecondaryText = null;
     this.debugDirectorText = null;
     this.debugOverlayPanel = null;
     this.debugOverlayEnabled = false;
@@ -639,11 +640,28 @@ export class GameScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(10);
+    this.hudSecondaryText = this.add
+      .text(1028, 18, "", {
+        fontFamily: "Arial",
+        fontSize: "15px",
+        color: "#efd8af",
+        stroke: "#28170f",
+        strokeThickness: 3,
+        align: "left"
+      })
+      .setScrollFactor(0)
+      .setDepth(10);
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)) {
       this.hudPanelBack = this.add
         .image(156, 60, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
         .setOrigin(0.5)
         .setDisplaySize(320, 110)
+        .setScrollFactor(0)
+        .setDepth(8);
+      this.hudSecondaryPanel = this.add
+        .image(1142, 44, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
+        .setOrigin(0.5)
+        .setDisplaySize(228, 78)
         .setScrollFactor(0)
         .setDepth(8);
     }
@@ -675,14 +693,14 @@ export class GameScene extends Phaser.Scene {
     this.damageNumberPool = [];
     this.offscreenIndicatorPool = [];
     this.debugOverlayPanel = this.add
-      .rectangle(1260, 12, 252, 116, 0x08111d, 0.82)
+      .rectangle(1260, 98, 252, 116, 0x08111d, 0.82)
       .setOrigin(1, 0)
       .setStrokeStyle(2, 0x5a3b24, 0.95)
       .setScrollFactor(0)
       .setDepth(18)
       .setVisible(false);
     this.debugDirectorText = this.add
-      .text(1024, 22, "", {
+      .text(1024, 108, "", {
         fontFamily: "Arial",
         fontSize: "14px",
         color: "#d6e8ff",
@@ -4027,6 +4045,9 @@ export class GameScene extends Phaser.Scene {
 
   updateHud() {
     const dashPercent = Math.floor(this.player.getDashRatio() * 100);
+    const weaponCount = this.player.weapons.length;
+    const passiveCount = Object.keys(this.player.passives).length;
+    const metaLiveTotal = this.metaData.currency + this.runMetaCurrency;
     const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
     if (xpRatio < this.xpDisplayRatio) {
       this.xpDisplayRatio = xpRatio;
@@ -4057,6 +4078,9 @@ export class GameScene extends Phaser.Scene {
       dashStatus = "DASH READY";
     }
     this.hudDashStatusText.setText(dashStatus);
+    this.hudSecondaryText?.setText(
+      `WPN ${weaponCount}/${this.player.maxWeaponSlots}   PAS ${passiveCount}\nCOINS ${metaLiveTotal}   KILLS ${this.totalKills}`
+    );
 
     if (this.hudBarsGraphics) {
       this.hudBarsGraphics.clear();
