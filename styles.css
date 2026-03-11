@@ -99,14 +99,15 @@ canvas {
   position: absolute;
   left: 16px;
   bottom: 14px;
-  padding: 7px 11px;
+  padding: 6px 10px;
   border-radius: 6px;
-  background: rgba(44, 28, 16, 0.74);
-  border: 1px solid rgba(191, 154, 103, 0.34);
-  box-shadow: 0 0 0 1px rgba(93, 64, 40, 0.32) inset;
-  font-size: 13px;
+  background: rgba(37, 23, 13, 0.58);
+  border: 1px solid rgba(191, 154, 103, 0.24);
+  box-shadow: 0 0 0 1px rgba(93, 64, 40, 0.24) inset;
+  font-size: 12px;
   letter-spacing: 0.02em;
-  color: #ead7b7;
+  color: #dcc49f;
+  opacity: 0.72;
   pointer-events: none;
   transition:
     opacity 180ms ease,
@@ -116,10 +117,10 @@ canvas {
 }
 
 #help.is-compact {
-  opacity: 0.42;
+  opacity: 0.28;
   transform: translateY(4px);
-  background: rgba(30, 19, 11, 0.42);
-  border-color: rgba(191, 154, 103, 0.18);
+  background: rgba(28, 18, 10, 0.28);
+  border-color: rgba(191, 154, 103, 0.12);
 }
 
 #help.modal-open {

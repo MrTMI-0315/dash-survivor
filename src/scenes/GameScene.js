@@ -1858,10 +1858,10 @@ export class GameScene extends Phaser.Scene {
     helpElement.textContent = this.touchControlsEnabled
       ? this.helpOverlayCompact
         ? "MOVE PAD · DASH BTN · R"
-        : "Touch Pad Move · Touch Dash Button · R Restart"
+        : "Touch Move · Dash Button · R Restart"
       : this.helpOverlayCompact
         ? "WASD · SPACE · R"
-        : "WASD Move · SPACE Dash · R Restart";
+        : "WASD Move · SPACE Dash · R";
   }
 
   updateHelpOverlayPresentation() {
@@ -1873,7 +1873,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const shouldCompact = !this.touchControlsEnabled && !this.isGameOver && this.runTimeMs >= 18000;
+    const shouldCompact = !this.touchControlsEnabled && !this.isGameOver && this.runTimeMs >= 12000;
     if (shouldCompact === this.helpOverlayCompact) {
       return;
     }
