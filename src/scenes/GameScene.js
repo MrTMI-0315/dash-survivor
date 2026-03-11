@@ -3506,24 +3506,24 @@ export class GameScene extends Phaser.Scene {
     const optionObjects = [];
 
     choices.forEach((upgrade, index) => {
-      const y = centerY - 40 + index * 94;
+      const y = centerY - 36 + index * 96;
       const box = this.add
-        .rectangle(centerX, y, 530, 80, 0x4a2f1d, 0.98)
+        .rectangle(centerX, y, 530, 76, 0x4a2f1d, 0.98)
         .setStrokeStyle(2, 0xb48855, 0.94)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(31);
       const boxInlay = this.add
-        .rectangle(centerX, y, 514, 64, 0xead7b7, 0.9)
+        .rectangle(centerX, y, 514, 60, 0xead7b7, 0.9)
         .setStrokeStyle(1, 0x6d4a31, 0.65)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(31.2);
 
       const heading = this.add
-        .text(centerX - 244, y - 14, `[${index + 1}] ${upgrade.label}`, {
+        .text(centerX - 244, y - 12, `[${index + 1}] ${upgrade.label}`, {
           fontFamily: "Arial",
-          fontSize: "24px",
+          fontSize: "23px",
           color: "#2e170d",
           stroke: "#f7e8cc",
           strokeThickness: 1
@@ -3532,10 +3532,10 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(32);
       const description = this.add
-        .text(centerX - 244, y + 16, upgrade.description, {
+        .text(centerX - 244, y + 14, upgrade.description, {
           fontFamily: "Arial",
-          fontSize: "16px",
-          color: "#5a3f2c",
+          fontSize: "14px",
+          color: "#6a4d36",
           stroke: "#f7e8cc",
           strokeThickness: 1
         })
@@ -3651,21 +3651,21 @@ export class GameScene extends Phaser.Scene {
     START_WEAPON_OPTIONS.forEach((option, index) => {
       const y = centerY - 64 + index * 82;
       const box = this.add
-        .rectangle(centerX, y, 620, 68, 0x4a2f1d, 0.98)
+        .rectangle(centerX, y, 620, 72, 0x4a2f1d, 0.98)
         .setStrokeStyle(2, 0xb48855, 0.94)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(36);
       const boxInlay = this.add
-        .rectangle(centerX, y, 604, 54, 0xead7b7, 0.88)
+        .rectangle(centerX, y, 604, 58, 0xead7b7, 0.88)
         .setStrokeStyle(1, 0x6d4a31, 0.58)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(36.2);
       const heading = this.add
-        .text(centerX - 290, y - 14, `[${index + 1}] ${option.label}`, {
+        .text(centerX - 290, y - 12, `[${index + 1}] ${option.label}`, {
           fontFamily: "Arial",
-          fontSize: "24px",
+          fontSize: "23px",
           color: "#2e170d",
           stroke: "#f7e8cc",
           strokeThickness: 1
@@ -3674,10 +3674,10 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(37);
       const detail = this.add
-        .text(centerX - 290, y + 16, "", {
+        .text(centerX - 290, y + 14, "", {
           fontFamily: "Arial",
-          fontSize: "16px",
-          color: "#5a3f2c",
+          fontSize: "14px",
+          color: "#6a4d36",
           stroke: "#f7e8cc",
           strokeThickness: 1
         })
