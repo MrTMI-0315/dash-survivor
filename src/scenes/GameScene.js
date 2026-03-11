@@ -710,6 +710,11 @@ export class GameScene extends Phaser.Scene {
     this.playerReadabilityGraphics = this.add.graphics().setDepth(5);
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
+    this.modalBackdrop = this.add
+      .rectangle(640, 360, 1280, 720, 0x05080d, 0.22)
+      .setScrollFactor(0)
+      .setDepth(24)
+      .setVisible(false);
     this.damageNumberPool = [];
     this.offscreenIndicatorPool = [];
     this.debugOverlayPanel = this.add
@@ -1891,6 +1896,8 @@ export class GameScene extends Phaser.Scene {
       .forEach((obj) => obj.setAlpha(hudAlpha));
     [this.hudPanelBack].filter(Boolean).forEach((obj) => obj.setAlpha(panelAlpha));
     [this.hudBarsGraphics].filter(Boolean).forEach((obj) => obj.setAlpha(hudAlpha));
+    this.offscreenIndicatorGraphics?.setAlpha(isModalOpen ? 0.18 : 1);
+    this.modalBackdrop?.setVisible(isModalOpen);
 
     if (typeof document !== "undefined") {
       document.getElementById("help")?.classList.toggle("modal-open", isModalOpen);
