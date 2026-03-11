@@ -724,7 +724,7 @@ export class GameScene extends Phaser.Scene {
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
     this.modalBackdrop = this.add
-      .rectangle(640, 360, 1280, 720, 0x05080d, 0.22)
+      .rectangle(640, 360, 1280, 720, 0x05080d, 0.28)
       .setScrollFactor(0)
       .setDepth(24)
       .setVisible(false);
@@ -1897,8 +1897,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   applyHudModalFocus(isModalOpen) {
-    const hudAlpha = isModalOpen ? 0.4 : 1;
-    const panelAlpha = isModalOpen ? 0.26 : 1;
+    const hudAlpha = isModalOpen ? 0.34 : 1;
+    const panelAlpha = isModalOpen ? 0.2 : 1;
     [
       this.hudLevelText,
       this.hudStatsText,
@@ -1910,7 +1910,8 @@ export class GameScene extends Phaser.Scene {
       .forEach((obj) => obj.setAlpha(hudAlpha));
     [this.hudPanelBack].filter(Boolean).forEach((obj) => obj.setAlpha(panelAlpha));
     [this.hudBarsGraphics].filter(Boolean).forEach((obj) => obj.setAlpha(hudAlpha));
-    this.offscreenIndicatorGraphics?.setAlpha(isModalOpen ? 0.18 : 1);
+    this.dashCooldownRingGraphics?.setAlpha(isModalOpen ? 0.2 : 1);
+    this.offscreenIndicatorGraphics?.setAlpha(isModalOpen ? 0.08 : 1);
     this.modalBackdrop?.setVisible(isModalOpen);
 
     if (typeof document !== "undefined") {
