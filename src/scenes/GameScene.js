@@ -1516,17 +1516,20 @@ export class GameScene extends Phaser.Scene {
           IMPORTED_PIXEL_ASSETS.deckPlankMain.key
         );
         plankRow.setDepth(0);
-        plankRow.setTint(plankIndex % 2 === 0 ? 0xf0e3d4 : 0xe0ccb5);
+        plankRow.setTint(plankIndex % 2 === 0 ? 0xe8d8c6 : 0xd8c0a7);
         plankRow.tileScaleX = 1;
         plankRow.tileScaleY = 1;
+        plankRow.tilePositionX = (plankIndex % 5) * 19;
       } else {
         const plankColor = plankIndex % 2 === 0 ? 0x6c4830 : 0x755138;
         graphics.fillStyle(plankColor, 1);
         graphics.fillRect(deckLeft, y, deckWidth, rowHeight);
       }
 
-      graphics.fillStyle(0x8b603f, 0.12);
-      graphics.fillRect(deckLeft, y, deckWidth, 2);
+      const seamInset = 28 + (plankIndex % 4) * 18;
+      const seamWidth = Math.max(120, deckWidth - seamInset * 2);
+      graphics.fillStyle(0x8b603f, plankIndex % 2 === 0 ? 0.08 : 0.14);
+      graphics.fillRect(deckLeft + seamInset, y, seamWidth, 2);
 
       if (hasDeckTrimTexture) {
         const trimRow = this.add.tileSprite(
@@ -1540,7 +1543,7 @@ export class GameScene extends Phaser.Scene {
         trimRow.setTint(plankIndex % 2 === 0 ? 0xd9b48c : 0xc49263);
       }
 
-      for (let x = deckLeft + 128 + ((plankIndex % 3) * 24); x < deckRight - 48; x += 192) {
+      for (let x = deckLeft + 92 + ((plankIndex % 4) * 31); x < deckRight - 64; x += 176 + ((plankIndex + x) % 3) * 18) {
         graphics.fillStyle(0x4a2f1f, 0.22);
         graphics.fillRect(x, y + 4, 3, DECK_TILE_SIZE - 10);
       }
