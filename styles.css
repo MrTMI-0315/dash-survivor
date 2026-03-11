@@ -102,8 +102,8 @@ canvas {
   padding: 6px 10px;
   border-radius: 6px;
   background: rgba(37, 23, 13, 0.58);
-  border: 1px solid rgba(191, 154, 103, 0.24);
-  box-shadow: 0 0 0 1px rgba(93, 64, 40, 0.24) inset;
+  border: 1px solid rgba(191, 154, 103, 0.2);
+  box-shadow: 0 0 0 1px rgba(93, 64, 40, 0.2) inset;
   font-size: 12px;
   letter-spacing: 0.02em;
   color: #dcc49f;
@@ -120,7 +120,7 @@ canvas {
   opacity: 0.28;
   transform: translateY(4px);
   background: rgba(28, 18, 10, 0.28);
-  border-color: rgba(191, 154, 103, 0.12);
+  border-color: rgba(191, 154, 103, 0.1);
 }
 
 #help.modal-open {

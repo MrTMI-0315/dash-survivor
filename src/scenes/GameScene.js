@@ -654,7 +654,7 @@ export class GameScene extends Phaser.Scene {
         .setDisplaySize(332, 94)
         .setScrollFactor(0)
         .setDepth(8)
-        .setTint(0x9b6639);
+        .setTint(0x8e5b33);
       this.hudSecondaryPanel = this.add
         .image(1142, 44, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
         .setOrigin(0.5)
@@ -670,7 +670,7 @@ export class GameScene extends Phaser.Scene {
         .setDisplaySize(290, 18)
         .setScrollFactor(0)
         .setDepth(8.8)
-        .setTint(0xd8ba8c);
+        .setTint(0xd2b07e);
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)) {
       this.hudHeaderChip = this.add
@@ -718,9 +718,9 @@ export class GameScene extends Phaser.Scene {
     this.damageNumberPool = [];
     this.offscreenIndicatorPool = [];
     this.debugOverlayPanel = this.add
-      .rectangle(1260, 98, 252, 116, 0x19110b, 0.64)
+      .rectangle(1260, 98, 252, 116, 0x19110b, 0.56)
       .setOrigin(1, 0)
-      .setStrokeStyle(2, 0x6d4a31, 0.68)
+      .setStrokeStyle(2, 0x6d4a31, 0.56)
       .setScrollFactor(0)
       .setDepth(18)
       .setVisible(false);
@@ -728,7 +728,7 @@ export class GameScene extends Phaser.Scene {
       .text(1024, 108, "", {
         fontFamily: "Arial",
         fontSize: "13px",
-        color: "#cbb590",
+        color: "#baa27d",
         stroke: "#22150d",
         strokeThickness: 3
       })
