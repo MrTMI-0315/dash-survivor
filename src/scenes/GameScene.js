@@ -616,7 +616,7 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
     this.hudLevelText = this.add
-      .text(20, 11, "", {
+      .text(24, 15, "", {
         fontFamily: "Arial",
         fontSize: "28px",
         color: "#fff0cf",
@@ -626,7 +626,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudStatsText = this.add
-      .text(20, 44, "", {
+      .text(24, 47, "", {
         fontFamily: "Arial",
         fontSize: "13px",
         color: "#cdb28a",
@@ -649,12 +649,13 @@ export class GameScene extends Phaser.Scene {
       .setDepth(10);
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)) {
       this.hudPanelBack = this.add
-        .image(162, 59, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
+        .image(170, 64, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
         .setOrigin(0.5)
-        .setDisplaySize(332, 94)
+        .setDisplaySize(324, 88)
         .setScrollFactor(0)
         .setDepth(8)
-        .setTint(0x8e5b33);
+        .setTint(0x8e5b33)
+        .setAlpha(0.92);
       this.hudSecondaryPanel = this.add
         .image(1142, 44, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
         .setOrigin(0.5)
@@ -665,12 +666,13 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)) {
       this.hudXpFrame = this.add
-        .image(162, 79, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
+        .image(170, 83, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
         .setOrigin(0.5)
-        .setDisplaySize(290, 18)
+        .setDisplaySize(284, 16)
         .setScrollFactor(0)
         .setDepth(8.8)
-        .setTint(0xd2b07e);
+        .setTint(0xd2b07e)
+        .setAlpha(0.9);
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrownInlay.key)) {
       this.hudHeaderChip = this.add
@@ -4204,8 +4206,8 @@ export class GameScene extends Phaser.Scene {
     const xpFillColor = xpPulseActive ? this.lerpColor(0x66f5b2, 0xffe38a, xpPulse) : 0x66f5b2;
     const xpFillAlpha = xpPulseActive ? 0.84 + xpPulse * 0.16 : 0.95;
     const xpBorderColor = xpPulseActive ? this.lerpColor(0x91a6c8, 0xffeab0, xpPulse) : 0x91a6c8;
-    const barX = 20;
-    const xpBarY = 68;
+    const barX = 24;
+    const xpBarY = 72;
     const barWidth = 284;
     const barHeight = 14;
 
