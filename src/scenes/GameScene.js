@@ -3656,9 +3656,9 @@ export class GameScene extends Phaser.Scene {
 
     const optionRows = [];
     START_WEAPON_OPTIONS.forEach((option, index) => {
-      const y = centerY - 64 + index * 82;
+      const y = centerY - 60 + index * 86;
       const box = this.add
-        .rectangle(centerX, y, 620, 72, 0x4a2f1d, 0.98)
+        .rectangle(centerX, y, 620, 74, 0x4a2f1d, 0.98)
         .setStrokeStyle(2, 0xb48855, 0.94)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
@@ -3670,9 +3670,9 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(36.2);
       const heading = this.add
-        .text(centerX - 290, y - 12, `[${index + 1}] ${option.label}`, {
+        .text(centerX - 286, y - 13, `[${index + 1}] ${option.label}`, {
           fontFamily: "Arial",
-          fontSize: "23px",
+          fontSize: "24px",
           color: "#2e170d",
           stroke: "#f7e8cc",
           strokeThickness: 1
@@ -3681,9 +3681,9 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(37);
       const detail = this.add
-        .text(centerX - 290, y + 14, "", {
+        .text(centerX - 286, y + 15, "", {
           fontFamily: "Arial",
-          fontSize: "14px",
+          fontSize: "13px",
           color: "#6a4d36",
           stroke: "#f7e8cc",
           strokeThickness: 1
@@ -3696,10 +3696,10 @@ export class GameScene extends Phaser.Scene {
         const unlocked = Boolean(this.weaponUnlocks[option.id]);
         if (unlocked) {
           detail.setText(`Unlocked · Tap to select`);
-          detail.setColor("#426539");
+          detail.setColor("#56714b");
         } else {
           detail.setText(`Locked · Unlock Cost ${option.unlockCost} coins`);
-          detail.setColor("#7a4c2b");
+          detail.setColor("#8b5d37");
         }
       };
 
