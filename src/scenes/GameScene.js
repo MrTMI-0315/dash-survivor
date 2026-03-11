@@ -3602,14 +3602,14 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(35.2);
     const titleChip = this.add
-      .rectangle(centerX, centerY - 206, 312, 34, 0xc19a67, 0.96)
+      .rectangle(centerX, centerY - 206, 296, 32, 0xc19a67, 0.96)
       .setStrokeStyle(2, 0x6d4a31, 0.95)
       .setScrollFactor(0)
       .setDepth(35.4);
     const title = this.add
-      .text(centerX, centerY - 205, "SELECT START WEAPON", {
+      .text(centerX, centerY - 206, "SELECT START WEAPON", {
         fontFamily: "Arial",
-        fontSize: "34px",
+        fontSize: "33px",
         color: "#2e170d",
         stroke: "#f1dfbf",
         strokeThickness: 1
@@ -3619,10 +3619,10 @@ export class GameScene extends Phaser.Scene {
       .setDepth(36);
 
     const coinText = this.add
-      .text(centerX, centerY - 166, `Coins: ${this.metaData.currency}`, {
+      .text(centerX, centerY - 168, `Coins: ${this.metaData.currency}`, {
         fontFamily: "Arial",
-        fontSize: "22px",
-        color: "#f0d48b",
+        fontSize: "20px",
+        color: "#e2c388",
         stroke: "#2e170d",
         strokeThickness: 3
       })
@@ -3631,12 +3631,12 @@ export class GameScene extends Phaser.Scene {
       .setDepth(36);
 
     const subtitle = this.add
-      .text(centerX, centerY - 128, "Pick one weapon to begin this run", {
+      .text(centerX, centerY - 130, "Pick one weapon to begin this run", {
         fontFamily: "Arial",
-        fontSize: "18px",
-        color: "#e7d0a4",
+        fontSize: "17px",
+        color: "#d8bf95",
         stroke: "#2a1a10",
-        strokeThickness: 3
+        strokeThickness: 2
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
