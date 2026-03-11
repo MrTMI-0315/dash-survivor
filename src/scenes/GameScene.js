@@ -635,6 +635,17 @@ export class GameScene extends Phaser.Scene {
       })
       .setScrollFactor(0)
       .setDepth(10);
+    this.hudXpLabelText = this.add
+      .text(36, 60, "EXP", {
+        fontFamily: "Arial",
+        fontSize: "10px",
+        color: "#e7d6b4",
+        stroke: "#28170f",
+        strokeThickness: 2
+      })
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(10);
     this.hudSecondaryText = this.add
       .text(1032, 22, "", {
         fontFamily: "Arial",
@@ -1891,6 +1902,7 @@ export class GameScene extends Phaser.Scene {
     [
       this.hudLevelText,
       this.hudStatsText,
+      this.hudXpLabelText,
       this.hudCoreLabelText,
       this.hudXpFrame
     ]
@@ -4214,9 +4226,10 @@ export class GameScene extends Phaser.Scene {
     const hpColor = hpRatio <= 0.25 ? "#ffb2a2" : hpRatio <= 0.5 ? "#ffd598" : "#fff0cf";
     this.hudLevelText.setColor(hpColor);
     this.hudLevelText.setText(`${this.player.hp}/${this.player.maxHp} HP`);
-    this.hudStatsText.setText(`${this.formatRunTime(this.runTimeMs)} PLAYTIME   ${this.currentXp}/${this.xpToNext} EXP`);
+    this.hudStatsText.setText(`PLAYTIME ${this.formatRunTime(this.runTimeMs)}   ·   EXP ${this.currentXp}/${this.xpToNext}`);
     this.hudHeaderChip?.setVisible(false);
     this.hudCoreLabelText?.setVisible(false);
+    this.hudXpLabelText?.setVisible(true);
     this.hudSecondaryPanel?.setVisible(false);
     this.hudSecondaryChip?.setVisible(false);
     this.hudSecondaryLabelText?.setVisible(false);
