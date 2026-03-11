@@ -3505,9 +3505,7 @@ export class GameScene extends Phaser.Scene {
       .text(centerX, centerY - 161, "LEVEL UP", {
         fontFamily: "Arial",
         fontSize: "36px",
-        color: "#2e170d",
-        stroke: "#ead7b7",
-        strokeThickness: 1
+        color: "#3a1f11"
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -3625,9 +3623,7 @@ export class GameScene extends Phaser.Scene {
       .text(centerX, centerY - 206, "SELECT START WEAPON", {
         fontFamily: "Arial",
         fontSize: "33px",
-        color: "#2e170d",
-        stroke: "#f1dfbf",
-        strokeThickness: 1
+        color: "#3a1f11"
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
