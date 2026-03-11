@@ -1543,9 +1543,18 @@ export class GameScene extends Phaser.Scene {
         trimRow.setTint(plankIndex % 2 === 0 ? 0xd9b48c : 0xc49263);
       }
 
-      for (let x = deckLeft + 92 + ((plankIndex % 4) * 31); x < deckRight - 64; x += 176 + ((plankIndex + x) % 3) * 18) {
+      const jointSteps = [148, 206, 172, 228];
+      let jointX = deckLeft + 76 + ((plankIndex % 5) * 22);
+      let jointIndex = plankIndex % jointSteps.length;
+      while (jointX < deckRight - 72) {
         graphics.fillStyle(0x4a2f1f, 0.22);
-        graphics.fillRect(x, y + 4, 3, DECK_TILE_SIZE - 10);
+        graphics.fillRect(jointX, y + 4, 3, DECK_TILE_SIZE - 10);
+        if ((jointIndex + plankIndex) % 3 === 0) {
+          graphics.fillStyle(0x2f1d12, 0.1);
+          graphics.fillRect(jointX + 6, y + 8, 22, 2);
+        }
+        jointX += jointSteps[jointIndex];
+        jointIndex = (jointIndex + 1) % jointSteps.length;
       }
     }
 
