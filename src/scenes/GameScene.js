@@ -3507,6 +3507,43 @@ export class GameScene extends Phaser.Scene {
     return XP_REQUIREMENTS.postL3Base + (level - 3) * XP_REQUIREMENTS.postL3Step;
   }
 
+  createModalTitle(centerX, centerY, label, config = {}) {
+    const snappedX = Math.round(centerX);
+    const snappedY = Math.round(centerY);
+    const fontSize = Number(config.fontSize ?? 32);
+    const badgeHeight = Number(config.badgeHeight ?? 32);
+    const paddingX = Number(config.paddingX ?? 26);
+    const minWidth = Number(config.minWidth ?? 180);
+    const badgeDepth = Number(config.badgeDepth ?? 30.4);
+    const textDepth = Number(config.textDepth ?? badgeDepth + 0.6);
+    const textStyle = {
+      fontFamily: "Arial",
+      fontSize: `${fontSize}px`,
+      color: config.color ?? "#3a1f11"
+    };
+
+    const measureText = this.add
+      .text(-1000, -1000, label, textStyle)
+      .setVisible(false)
+      .setActive(false);
+    const badgeWidth = Math.max(minWidth, Math.ceil(measureText.width) + paddingX * 2);
+    measureText.destroy();
+
+    const titleChip = this.add
+      .rectangle(snappedX, snappedY, badgeWidth, badgeHeight, 0xc19a67, 0.96)
+      .setStrokeStyle(2, 0x6d4a31, 0.95)
+      .setScrollFactor(0)
+      .setDepth(badgeDepth);
+
+    const title = this.add
+      .text(snappedX, snappedY, label, textStyle)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setDepth(textDepth);
+
+    return { titleChip, title };
+  }
+
   openLevelUpChoices() {
     if (this.pendingLevelUps <= 0) {
       return;
@@ -3531,21 +3568,12 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
       .setDepth(30.2);
-    const titleChip = this.add
-      .rectangle(centerX, centerY - 162, 208, 32, 0xc19a67, 0.96)
-      .setStrokeStyle(2, 0x6d4a31, 0.95)
-      .setScrollFactor(0)
-      .setDepth(30.4);
-
-    const title = this.add
-      .text(centerX, centerY - 162, "LEVEL UP", {
-        fontFamily: "Arial",
-        fontSize: "34px",
-        color: "#3a1f11"
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(31);
+    const { titleChip, title } = this.createModalTitle(centerX, centerY - 162, "LEVEL UP", {
+      fontSize: 34,
+      minWidth: 208,
+      badgeDepth: 30.4,
+      textDepth: 31
+    });
     const subtitle = this.add
       .text(centerX, centerY - 119, "Choose one upgrade", {
         fontFamily: "Arial",
@@ -3650,20 +3678,17 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
       .setDepth(35.2);
-    const titleChip = this.add
-      .rectangle(centerX, centerY - 206, 292, 32, 0xc19a67, 0.96)
-      .setStrokeStyle(2, 0x6d4a31, 0.95)
-      .setScrollFactor(0)
-      .setDepth(35.4);
-    const title = this.add
-      .text(centerX, centerY - 206, "SELECT START WEAPON", {
-        fontFamily: "Arial",
-        fontSize: "32px",
-        color: "#3a1f11"
-      })
-      .setOrigin(0.5)
-      .setScrollFactor(0)
-      .setDepth(36);
+    const { titleChip, title } = this.createModalTitle(
+      centerX,
+      centerY - 206,
+      "SELECT START WEAPON",
+      {
+        fontSize: 32,
+        minWidth: 292,
+        badgeDepth: 35.4,
+        textDepth: 36
+      }
+    );
 
     const coinText = this.add
       .text(centerX, centerY - 168, `Coins: ${this.metaData.currency}`, {
