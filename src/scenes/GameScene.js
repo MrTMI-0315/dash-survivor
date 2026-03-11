@@ -3487,12 +3487,12 @@ export class GameScene extends Phaser.Scene {
     const centerY = 360;
     const panel = this.add
       .rectangle(centerX, centerY, 620, 420, 0x22150d, 0.96)
-      .setStrokeStyle(3, 0xb48855, 0.98)
+      .setStrokeStyle(3, 0xb48855, 0.96)
       .setScrollFactor(0)
       .setDepth(30);
     const panelInset = this.add
       .rectangle(centerX, centerY, 596, 396, 0x352215, 0.94)
-      .setStrokeStyle(1, 0x6d4a31, 0.9)
+      .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
       .setDepth(30.2);
     const titleChip = this.add
@@ -3531,13 +3531,13 @@ export class GameScene extends Phaser.Scene {
       const y = centerY - 36 + index * 96;
       const box = this.add
         .rectangle(centerX, y, 530, 76, 0x4a2f1d, 0.98)
-        .setStrokeStyle(2, 0xb48855, 0.94)
+        .setStrokeStyle(2, 0xb48855, 0.92)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(31);
       const boxInlay = this.add
         .rectangle(centerX, y, 514, 60, 0xead7b7, 0.9)
-        .setStrokeStyle(1, 0x6d4a31, 0.65)
+        .setStrokeStyle(1, 0x6d4a31, 0.6)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(31.2);
@@ -3608,12 +3608,12 @@ export class GameScene extends Phaser.Scene {
     const centerY = 360;
     const panel = this.add
       .rectangle(centerX, centerY, 700, 500, 0x22150d, 0.96)
-      .setStrokeStyle(3, 0xb48855, 0.98)
+      .setStrokeStyle(3, 0xb48855, 0.96)
       .setScrollFactor(0)
       .setDepth(35);
     const panelInset = this.add
       .rectangle(centerX, centerY, 672, 470, 0x342214, 0.94)
-      .setStrokeStyle(1, 0x6d4a31, 0.92)
+      .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
       .setDepth(35.2);
     const titleChip = this.add
@@ -3674,13 +3674,13 @@ export class GameScene extends Phaser.Scene {
       const y = centerY - 60 + index * 86;
       const box = this.add
         .rectangle(centerX, y, 620, 74, 0x4a2f1d, 0.98)
-        .setStrokeStyle(2, 0xb48855, 0.94)
+        .setStrokeStyle(2, 0xb48855, 0.92)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(36);
       const boxInlay = this.add
         .rectangle(centerX, y, 604, 58, 0xead7b7, 0.88)
-        .setStrokeStyle(1, 0x6d4a31, 0.58)
+        .setStrokeStyle(1, 0x6d4a31, 0.6)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(36.2);
