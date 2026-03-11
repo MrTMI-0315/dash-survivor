@@ -1576,6 +1576,30 @@ export class GameScene extends Phaser.Scene {
     graphics.lineBetween(HATCH_BREACH_POINT.x, hatchY + 6, HATCH_BREACH_POINT.x, hatchY + hatchHeight - 6);
     graphics.lineBetween(hatchX + 6, HATCH_BREACH_POINT.y, hatchX + hatchWidth - 6, HATCH_BREACH_POINT.y);
 
+    const beamYPositions = [deckTop + 186, deckTop + 420, deckBottom - 214];
+    beamYPositions.forEach((beamY, index) => {
+      graphics.fillStyle(0x3f281a, 0.26);
+      graphics.fillRect(deckLeft + 36, beamY - 7, deckWidth - 72, 14);
+      graphics.fillStyle(0x8f6441, 0.12);
+      graphics.fillRect(deckLeft + 44, beamY - 5, deckWidth - 88, 3);
+      for (let x = deckLeft + 120 + (index % 2) * 38; x < deckRight - 120; x += 260) {
+        graphics.fillStyle(0x2d1a10, 0.35);
+        graphics.fillRect(x, beamY - 3, 10, 6);
+      }
+    });
+
+    [
+      { x: deckLeft + 118, y: deckTop + 146 },
+      { x: deckRight - 118, y: deckTop + 146 },
+      { x: deckLeft + 118, y: deckBottom - 146 },
+      { x: deckRight - 118, y: deckBottom - 146 }
+    ].forEach((plate) => {
+      graphics.fillStyle(0x4f3728, 0.42);
+      graphics.fillRect(plate.x - 18, plate.y - 12, 36, 24);
+      graphics.lineStyle(1, 0xb08961, 0.34);
+      graphics.strokeRect(plate.x - 18, plate.y - 12, 36, 24);
+    });
+
     this.initializeSeaWaves();
     this.drawDeckRails();
     this.drawDeckDecor(deckLeft, deckTop, deckRight, deckBottom);
