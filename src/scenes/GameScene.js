@@ -3496,15 +3496,15 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(30.2);
     const titleChip = this.add
-      .rectangle(centerX, centerY - 162, 212, 34, 0xc19a67, 0.96)
+      .rectangle(centerX, centerY - 162, 208, 32, 0xc19a67, 0.96)
       .setStrokeStyle(2, 0x6d4a31, 0.95)
       .setScrollFactor(0)
       .setDepth(30.4);
 
     const title = this.add
-      .text(centerX, centerY - 161, "LEVEL UP", {
+      .text(centerX, centerY - 162, "LEVEL UP", {
         fontFamily: "Arial",
-        fontSize: "36px",
+        fontSize: "34px",
         color: "#3a1f11"
       })
       .setOrigin(0.5)
@@ -3615,14 +3615,14 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(35.2);
     const titleChip = this.add
-      .rectangle(centerX, centerY - 206, 296, 32, 0xc19a67, 0.96)
+      .rectangle(centerX, centerY - 206, 292, 32, 0xc19a67, 0.96)
       .setStrokeStyle(2, 0x6d4a31, 0.95)
       .setScrollFactor(0)
       .setDepth(35.4);
     const title = this.add
       .text(centerX, centerY - 206, "SELECT START WEAPON", {
         fontFamily: "Arial",
-        fontSize: "33px",
+        fontSize: "32px",
         color: "#3a1f11"
       })
       .setOrigin(0.5)
