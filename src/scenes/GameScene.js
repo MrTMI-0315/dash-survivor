@@ -624,6 +624,7 @@ export class GameScene extends Phaser.Scene {
     this.dashTrailTickMs = 0;
     this.evolutionSlowMoRestoreHandle = null;
     this.evolutionSlowMoActive = false;
+    this.weaponRecoilTween = null;
     this.metaSystem = new MetaProgressionSystem();
     this.metaData = this.metaSystem.getData();
     this.metaXpMultiplier = 1;
@@ -670,6 +671,7 @@ export class GameScene extends Phaser.Scene {
     this.xpDisplayRatio = 0;
     this.expBarScaleY = 1;
     this.expBarPulseTween = null;
+    this.weaponRecoilTween = null;
     this.bossApproachWarnedCycleIndex = 0;
     this.levelUpOptionActions = [];
     this.sfxLastPlayedAt = {};
@@ -1501,7 +1503,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  playWeaponFireFeedback(x, y, _weaponType = "") {
+  playWeaponFireFeedback(x, y, weaponType = "") {
     if (!this.add || !this.tweens) {
       return;
     }
@@ -1517,8 +1519,36 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => flash.destroy()
     });
 
+    if (this.player?.active) {
+      const baseScaleX = this.player.getData("weaponRecoilBaseScaleX") ?? this.player.scaleX;
+      const baseScaleY = this.player.getData("weaponRecoilBaseScaleY") ?? this.player.scaleY;
+      this.player.setData("weaponRecoilBaseScaleX", baseScaleX);
+      this.player.setData("weaponRecoilBaseScaleY", baseScaleY);
+
+      if (this.weaponRecoilTween) {
+        this.weaponRecoilTween.stop();
+        this.weaponRecoilTween = null;
+      }
+
+      this.player.setScale(baseScaleX, baseScaleY);
+      this.weaponRecoilTween = this.tweens.add({
+        targets: this.player,
+        scaleX: baseScaleX * 1.05,
+        scaleY: baseScaleY * 1.05,
+        duration: 40,
+        ease: "Sine.easeOut",
+        yoyo: true,
+        onComplete: () => {
+          if (this.player?.active) {
+            this.player.setScale(baseScaleX, baseScaleY);
+          }
+          this.weaponRecoilTween = null;
+        }
+      });
+    }
+
     this.cameras?.main?.shake(60, 0.0008, true);
-    this.playSfx("weapon_fire");
+    this.playSfx("weapon_fire", { weaponType });
   }
 
   emitDashTrail(delta) {
@@ -1650,6 +1680,47 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (type === "weapon_fire") {
+      const weaponType = options.weaponType ?? "dagger";
+      if (weaponType === "dagger") {
+        this.playSfxTone({
+          wave: "square",
+          startFreq: 980,
+          endFreq: 720,
+          duration: 0.032,
+          gain: 0.016
+        });
+        return;
+      }
+      if (weaponType === "fireball") {
+        this.playSfxTone({
+          wave: "sawtooth",
+          startFreq: 520,
+          endFreq: 280,
+          duration: 0.06,
+          gain: 0.026
+        });
+        return;
+      }
+      if (weaponType === "meteor") {
+        this.playSfxTone({
+          wave: "sawtooth",
+          startFreq: 420,
+          endFreq: 180,
+          duration: 0.08,
+          gain: 0.03
+        });
+        return;
+      }
+      if (weaponType === "lightning") {
+        this.playSfxTone({
+          wave: "triangle",
+          startFreq: 1120,
+          endFreq: 760,
+          duration: 0.042,
+          gain: 0.02
+        });
+        return;
+      }
       this.playSfxTone({
         wave: "square",
         startFreq: 820,
