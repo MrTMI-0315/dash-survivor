@@ -178,7 +178,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       this.scene.spawnDamageParticles(this.x, this.y, this.isElite ? 8 : 5);
     }
     if (this.scene.spawnDamageNumber) {
-      this.scene.spawnDamageNumber(this.x, this.y - (this.isElite ? 4 : 0), safeAmount, this);
+      this.scene.spawnDamageNumber(this.x, this.y - (this.isElite ? 4 : 0), appliedDamage, this);
     }
     const player = this.scene?.player;
     const duringDash = Boolean(player?.isDashing?.());
