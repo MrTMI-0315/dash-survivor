@@ -125,7 +125,12 @@ const HUD_PANEL_X = 16;
 const HUD_PANEL_Y = 16;
 const HUD_PANEL_WIDTH = 324;
 const HUD_PANEL_HEIGHT = 108;
-const HUD_EXP_BAR_HEIGHT = 6;
+const HUD_EXP_BAR_WIDTH = 200;
+const HUD_EXP_BAR_BASE_HEIGHT = 8;
+const HUD_EXP_BAR_START_COLOR = 0x3ec5ff;
+const HUD_EXP_BAR_END_COLOR = 0x8fffd4;
+const HUD_EXP_PULSE_SCALE = 1.3;
+const HUD_EXP_PULSE_DURATION_MS = 120;
 const HUD_ALERT_POOL_SIZE = 3;
 const HUD_ALERT_STYLE = Object.freeze({
   fontFamily: "Arial",
@@ -657,6 +662,8 @@ export class GameScene extends Phaser.Scene {
     this.maxKillCombo = 0;
     this.totalKills = 0;
     this.xpDisplayRatio = 0;
+    this.expBarScaleY = 1;
+    this.expBarPulseTween = null;
     this.bossApproachWarnedCycleIndex = 0;
     this.levelUpOptionActions = [];
     this.sfxLastPlayedAt = {};
@@ -706,6 +713,8 @@ export class GameScene extends Phaser.Scene {
     this.maxKillCombo = 0;
     this.totalKills = 0;
     this.xpDisplayRatio = 0;
+    this.expBarScaleY = 1;
+    this.expBarPulseTween = null;
     this.bossApproachWarnedCycleIndex = 0;
     this.metaData = this.metaSystem.getData();
     this.syncCoinStorageWithMeta();
@@ -3914,6 +3923,9 @@ export class GameScene extends Phaser.Scene {
   gainXp(amount) {
     const baseAmount = Math.max(0, Math.round(amount));
     const effectiveAmount = Math.max(0, Math.round(baseAmount * this.metaXpMultiplier));
+    if (effectiveAmount > 0) {
+      this.playExpGainPulse();
+    }
 
     this.totalXp += effectiveAmount;
     this.currentXp += effectiveAmount;
@@ -3942,6 +3954,30 @@ export class GameScene extends Phaser.Scene {
       return XP_REQUIREMENTS.byLevel[level];
     }
     return XP_REQUIREMENTS.postL3Base + (level - 3) * XP_REQUIREMENTS.postL3Step;
+  }
+
+  playExpGainPulse() {
+    if (!this.tweens) {
+      return;
+    }
+
+    if (this.expBarPulseTween) {
+      this.expBarPulseTween.stop();
+      this.expBarPulseTween = null;
+    }
+
+    this.expBarScaleY = 1;
+    this.expBarPulseTween = this.tweens.add({
+      targets: this,
+      expBarScaleY: HUD_EXP_PULSE_SCALE,
+      duration: Math.floor(HUD_EXP_PULSE_DURATION_MS * 0.5),
+      ease: "Sine.easeOut",
+      yoyo: true,
+      onComplete: () => {
+        this.expBarScaleY = 1;
+        this.expBarPulseTween = null;
+      }
+    });
   }
 
   createModalTitle(centerX, centerY, label, config = {}) {
@@ -4722,9 +4758,10 @@ export class GameScene extends Phaser.Scene {
     const xpFillAlpha = xpPulseActive ? 0.84 + xpPulse * 0.16 : 0.95;
     const xpBorderColor = xpPulseActive ? this.lerpColor(0x91a6c8, 0xffeab0, xpPulse) : 0x91a6c8;
     const barX = 20;
-    const xpBarY = 46;
-    const barWidth = 284;
-    const barHeight = 10;
+    const xpBarCenterY = 47;
+    const barWidth = HUD_EXP_BAR_WIDTH;
+    const barHeight = HUD_EXP_BAR_BASE_HEIGHT * Phaser.Math.Clamp(this.expBarScaleY ?? 1, 1, HUD_EXP_PULSE_SCALE);
+    const xpBarY = xpBarCenterY - barHeight * 0.5;
 
     const hpColor = hpRatio <= 0.25 ? "#ffb2a2" : hpRatio <= 0.5 ? "#ffd598" : "#fff0cf";
     const levelValue = Number.isFinite(this.player?.level) ? this.player.level : this.level;
@@ -4765,12 +4802,21 @@ export class GameScene extends Phaser.Scene {
       this.hudBarsGraphics.clear();
       this.hudBarsGraphics.fillStyle(0x432615, 0.92);
       this.hudBarsGraphics.fillRect(barX, xpBarY, barWidth, barHeight);
-      this.hudBarsGraphics.fillStyle(xpFillColor, xpFillAlpha);
+      this.hudBarsGraphics.fillGradientStyle(
+        HUD_EXP_BAR_START_COLOR,
+        HUD_EXP_BAR_END_COLOR,
+        HUD_EXP_BAR_START_COLOR,
+        HUD_EXP_BAR_END_COLOR,
+        xpFillAlpha,
+        xpFillAlpha,
+        xpFillAlpha,
+        xpFillAlpha
+      );
       this.hudBarsGraphics.fillRect(
         barX + 2,
         xpBarY + 2,
         Math.max(3, (barWidth - 4) * displayedXpRatio),
-        HUD_EXP_BAR_HEIGHT
+        Math.max(2, barHeight - 4)
       );
       this.hudBarsGraphics.fillStyle(0x2e170d, 0.96);
       this.hudBarsGraphics.fillRect(barX + 2, xpBarY - 10, 26, 8);
