@@ -118,6 +118,8 @@ const OFFSCREEN_INDICATOR_MAX = 12;
 const OFFSCREEN_PRIORITY_BONUS_ELITE = 10000;
 const OFFSCREEN_PRIORITY_BONUS_BOSS = 20000;
 const COMBO_RESET_WINDOW_MS = 2000;
+const COMBO_TEXT_SCALE = 1.3;
+const COMBO_TEXT_FADE_TIME_MS = 800;
 const HUD_PANEL_PADDING = 12;
 const HUD_PANEL_HEIGHT = 72;
 const HUD_EXP_BAR_HEIGHT = 6;
@@ -3024,7 +3026,7 @@ export class GameScene extends Phaser.Scene {
       text = this.add
         .text(x, y, "", {
           fontFamily: "Arial",
-          fontSize: "17px",
+          fontSize: "16px",
           color: "#ffffff",
           stroke: "#2f1c14",
           strokeThickness: 4
@@ -3040,16 +3042,34 @@ export class GameScene extends Phaser.Scene {
     if (prevTween) {
       prevTween.stop();
     }
+    const prevPopTween = text.getData("damagePopTween");
+    if (prevPopTween) {
+      prevPopTween.stop();
+    }
 
     text.setText(`${safeAmount}`);
     text.setStyle({
-      fontSize: isElite ? "20px" : "17px",
+      fontSize: isBoss ? "20px" : isElite ? "18px" : "16px",
       color: textColor
     });
     text.setPosition(x, y);
     text.setAlpha(1);
+    text.setScale(1);
     text.setVisible(true);
     text.setActive(true);
+
+    const popTween = this.tweens.add({
+      targets: text,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 60,
+      yoyo: true,
+      ease: "Quad.easeOut",
+      onComplete: () => {
+        text.setData("damagePopTween", null);
+      }
+    });
+    text.setData("damagePopTween", popTween);
 
     const tween = this.tweens.add({
       targets: text,
@@ -3061,6 +3081,7 @@ export class GameScene extends Phaser.Scene {
         text.setVisible(false);
         text.setActive(false);
         text.setData("damageTween", null);
+        text.setData("damagePopTween", null);
       }
     });
     text.setData("damageTween", tween);
@@ -3757,14 +3778,14 @@ export class GameScene extends Phaser.Scene {
     comboText.setDepth(25);
     comboText.setText(label);
     comboText.setAlpha(1);
-    comboText.setScale(1);
+    comboText.setScale(COMBO_TEXT_SCALE);
 
     const tween = this.tweens.add({
       targets: comboText,
-      y: 180,
-      scale: 1.08,
+      y: 176,
+      scale: COMBO_TEXT_SCALE * 1.05,
       alpha: 0,
-      duration: 520,
+      duration: COMBO_TEXT_FADE_TIME_MS,
       ease: "Cubic.easeOut",
       onComplete: () => {
         this.releaseHudAlertText(comboText);
@@ -4737,7 +4758,8 @@ export class GameScene extends Phaser.Scene {
       }
 
       const width = isBoss ? 96 : isElite ? 46 : 34;
-      const height = isBoss ? 9 : 6;
+      const height = isBoss ? 12 : 10;
+      const innerHeight = isBoss ? 8 : 6;
       const x = Math.round(enemy.x - width / 2);
       const y = Math.round(enemy.y - Math.max(28, enemy.displayHeight * 0.58));
       const innerWidth = Math.max(2, Math.round((width - 4) * hpRatio));
@@ -4746,7 +4768,7 @@ export class GameScene extends Phaser.Scene {
       this.enemyHealthBarsGraphics.fillStyle(0x1b1010, 0.86);
       this.enemyHealthBarsGraphics.fillRect(x, y, width, height);
       this.enemyHealthBarsGraphics.fillStyle(fillColor, 0.96);
-      this.enemyHealthBarsGraphics.fillRect(x + 2, y + 2, innerWidth, Math.max(1, height - 4));
+      this.enemyHealthBarsGraphics.fillRect(x + 2, y + 2, innerWidth, innerHeight);
       this.enemyHealthBarsGraphics.lineStyle(1, 0xf2d5b5, isBoss ? 0.92 : 0.78);
       this.enemyHealthBarsGraphics.strokeRect(x, y, width, height);
     });
