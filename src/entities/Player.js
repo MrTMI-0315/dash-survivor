@@ -1,10 +1,45 @@
-function getPlayerTextureKey(scene) {
-  return scene?.textures?.exists("sprite_player_crew") ? "sprite_player_crew" : "player_triangle";
+const DIRECTION_INDEX_TO_NAME = Object.freeze([
+  "east",
+  "south-east",
+  "south",
+  "south-west",
+  "west",
+  "north-west",
+  "north",
+  "north-east"
+]);
+
+function getDirectionNameFromVector(x, y, fallback = "south") {
+  if (Math.abs(x) < 0.0001 && Math.abs(y) < 0.0001) {
+    return fallback;
+  }
+  const octant = Math.round(Math.atan2(y, x) / (Math.PI / 4));
+  const index = ((octant % 8) + 8) % 8;
+  return DIRECTION_INDEX_TO_NAME[index] ?? fallback;
+}
+
+function getPlayerDirectionalTextureKey(scene, direction = "south") {
+  const key = `char_player_pirate_${direction.replace(/-/g, "_")}`;
+  if (scene?.textures?.exists(key)) {
+    return key;
+  }
+  return null;
+}
+
+function getPlayerTextureKey(scene, direction = "south") {
+  const directionalKey = getPlayerDirectionalTextureKey(scene, direction);
+  if (directionalKey) {
+    return directionalKey;
+  }
+  if (scene?.textures?.exists("sprite_player_crew")) {
+    return "sprite_player_crew";
+  }
+  return "player_triangle";
 }
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
-    super(scene, x, y, getPlayerTextureKey(scene));
+    super(scene, x, y, getPlayerTextureKey(scene, "south"));
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
@@ -15,6 +50,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.damageCooldownMs = 400;
     this.nextDamageAt = 0;
     this.lastMoveDir = new Phaser.Math.Vector2(1, 0);
+    this.facingDirection = "south";
 
     this.dashGaugeMax = 100;
     this.dashGauge = 0;
@@ -35,8 +71,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setCircle(16, 0, 0);
     this.setCollideWorldBounds(true);
     this.setDepth(7);
-    if (this.texture?.key === "sprite_player_crew") {
+    if (this.texture?.key?.startsWith("char_player_pirate_") || this.texture?.key === "sprite_player_crew") {
       this.setScale(1.7);
+    }
+  }
+
+  updateFacingFromVector(x, y) {
+    const nextDirection = getDirectionNameFromVector(x, y, this.facingDirection);
+    this.facingDirection = nextDirection;
+    const textureKey = getPlayerTextureKey(this.scene, nextDirection);
+    if (textureKey && this.texture?.key !== textureKey) {
+      this.setTexture(textureKey);
     }
   }
 
@@ -79,6 +124,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     const magnitude = Math.min(1, direction.length());
     direction.normalize();
     this.lastMoveDir.copy(direction);
+    this.updateFacingFromVector(direction.x, direction.y);
     this.body.setVelocity(direction.x * this.speed * magnitude, direction.y * this.speed * magnitude);
   }
 
@@ -122,6 +168,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     const dashSpeed = this.speed * this.dashSpeedMultiplier;
+    this.updateFacingFromVector(dir.x, dir.y);
     this.body.setVelocity(dir.x * dashSpeed, dir.y * dashSpeed);
     this.setTint(0xfff2a6);
     if (this.scene.playSfx) {

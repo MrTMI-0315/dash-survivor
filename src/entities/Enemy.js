@@ -2,12 +2,53 @@ import { ENEMY_ARCHETYPE_CONFIGS, ELITE_TYPE_CONFIGS } from "../config/enemies.j
 
 const ENCIRCLE_ANGLE_MIN_DEG = -30;
 const ENCIRCLE_ANGLE_MAX_DEG = 30;
+const DIRECTION_INDEX_TO_NAME = Object.freeze([
+  "east",
+  "south-east",
+  "south",
+  "south-west",
+  "west",
+  "north-west",
+  "north",
+  "north-east"
+]);
+const ENEMY_TYPE_TO_FOLDER = Object.freeze({
+  chaser: "enemy_chaser",
+  swarm: "enemy_swarm",
+  tank: "enemy_tank",
+  hunter: "enemy_hunter"
+});
 
 function getArchetypeConfig(type) {
   return ENEMY_ARCHETYPE_CONFIGS[type] ?? ENEMY_ARCHETYPE_CONFIGS.chaser;
 }
 
-function getEnemyTextureKey(type, scene) {
+function getDirectionNameFromVector(x, y, fallback = "south") {
+  if (Math.abs(x) < 0.0001 && Math.abs(y) < 0.0001) {
+    return fallback;
+  }
+  const octant = Math.round(Math.atan2(y, x) / (Math.PI / 4));
+  const index = ((octant % 8) + 8) % 8;
+  return DIRECTION_INDEX_TO_NAME[index] ?? fallback;
+}
+
+function getDirectionalEnemyTextureKey(type, scene, direction = "south") {
+  const folder = ENEMY_TYPE_TO_FOLDER[type];
+  if (!folder) {
+    return null;
+  }
+  const key = `char_${folder}_${direction.replace(/-/g, "_")}`;
+  if (scene?.textures?.exists(key)) {
+    return key;
+  }
+  return null;
+}
+
+function getEnemyTextureKey(type, scene, direction = "south") {
+  const directionalKey = getDirectionalEnemyTextureKey(type, scene, direction);
+  if (directionalKey) {
+    return directionalKey;
+  }
   if (type === "swarm") {
     return "enemy_swarm";
   }
@@ -57,12 +98,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.dashVy = 0;
     this.nextPoisonTickAtMs = 0;
     this.flashToken = (this.flashToken ?? 0) + 1;
+    this.facingDirection = "south";
     this.encircleAngleOffsetRad = Phaser.Math.DegToRad(
       Phaser.Math.Between(ENCIRCLE_ANGLE_MIN_DEG, ENCIRCLE_ANGLE_MAX_DEG)
     );
 
     this.baseTint = config.tint ?? archetype.tint;
-    this.setTexture(getEnemyTextureKey(this.type, this.scene));
+    this.setTexture(getEnemyTextureKey(this.type, this.scene, this.facingDirection));
     this.setScale(config.scale ?? archetype.scale);
     this.setDepth(this.type === "boss" ? 7 : 6);
     this.setCircle(config.radius ?? archetype.radius, 0, 0);
@@ -105,6 +147,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     if (distance === 0) {
       this.body.setVelocity(this.knockbackVx, this.knockbackVy);
+      this.updateFacingFromVelocity(this.knockbackVx, this.knockbackVy);
       return;
     }
 
@@ -143,7 +186,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       }
 
       if (nowMs < this.abilityUntilMs) {
-        this.body.setVelocity(this.dashVx + this.knockbackVx, this.dashVy + this.knockbackVy);
+        const velocityX = this.dashVx + this.knockbackVx;
+        const velocityY = this.dashVy + this.knockbackVy;
+        this.body.setVelocity(velocityX, velocityY);
+        this.updateFacingFromVelocity(velocityX, velocityY);
         return;
       }
     }
@@ -153,7 +199,22 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const approachAngle = playerAngle + this.encircleAngleOffsetRad * encircleInfluence;
     const chaseVx = Math.cos(approachAngle) * this.speed * speedMultiplier;
     const chaseVy = Math.sin(approachAngle) * this.speed * speedMultiplier;
-    this.body.setVelocity(chaseVx + this.knockbackVx, chaseVy + this.knockbackVy);
+    const velocityX = chaseVx + this.knockbackVx;
+    const velocityY = chaseVy + this.knockbackVy;
+    this.body.setVelocity(velocityX, velocityY);
+    this.updateFacingFromVelocity(velocityX, velocityY);
+  }
+
+  updateFacingFromVelocity(vx, vy) {
+    if (this.type === "boss") {
+      return;
+    }
+    const nextDirection = getDirectionNameFromVector(vx, vy, this.facingDirection);
+    this.facingDirection = nextDirection;
+    const textureKey = getEnemyTextureKey(this.type, this.scene, nextDirection);
+    if (textureKey && this.texture?.key !== textureKey) {
+      this.setTexture(textureKey);
+    }
   }
 
   takeDamage(amount) {

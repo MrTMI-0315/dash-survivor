@@ -208,6 +208,23 @@ const SFX_THROTTLE_MS = {
   level_up: 220,
   boss_warning: 300
 };
+const CHARACTER_DIRECTION_NAMES = Object.freeze([
+  "south",
+  "south-east",
+  "east",
+  "north-east",
+  "north",
+  "north-west",
+  "west",
+  "south-west"
+]);
+const CHARACTER_ASSET_FOLDERS = Object.freeze([
+  "player_pirate",
+  "enemy_chaser",
+  "enemy_swarm",
+  "enemy_tank",
+  "enemy_hunter"
+]);
 const START_WEAPON_OPTIONS = [
   {
     id: "dash_blade",
@@ -860,6 +877,16 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       this.load.audio(key, path);
+    });
+    CHARACTER_ASSET_FOLDERS.forEach((folder) => {
+      CHARACTER_DIRECTION_NAMES.forEach((direction) => {
+        const dirKey = direction.replace(/-/g, "_");
+        const textureKey = `char_${folder}_${dirKey}`;
+        if (this.textures?.exists(textureKey)) {
+          return;
+        }
+        this.load.image(textureKey, `assets/sprites/characters/${folder}/rotations/${direction}.png`);
+      });
     });
     Object.values(IMPORTED_PIXEL_ASSETS).forEach(({ key, path }) => {
       if (this.textures?.exists(key)) {
