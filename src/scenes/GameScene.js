@@ -1137,6 +1137,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.isWeaponSelecting) {
+      const hasSelectionUi = Array.isArray(this.weaponSelectionUi) && this.weaponSelectionUi.some((obj) => obj?.active !== false);
+      if (!hasSelectionUi) {
+        this.forceCloseWeaponSelectionWithFallback();
+      }
+      if (!this.isWeaponSelecting) {
+        // Fallback may have resumed gameplay in this frame.
+      } else {
       this.handleWeaponSelectionInput();
       this.updateBossProjectiles(time);
       this.player.body?.setVelocity(0, 0);
@@ -1147,6 +1154,7 @@ export class GameScene extends Phaser.Scene {
       this.updateDebugDirectorOverlay();
       this.updateHUD();
       return;
+      }
     }
 
     const stateChanged = this.director.update(delta);
@@ -4324,20 +4332,20 @@ export class GameScene extends Phaser.Scene {
     this.physics.pause();
     this.player.body?.setVelocity(0, 0);
     this.applyHudModalFocus(true);
-
-    const centerX = 640;
-    const centerY = 360;
-    const panel = this.add
+    try {
+      const centerX = 640;
+      const centerY = 360;
+      const panel = this.add
       .rectangle(centerX, centerY, 700, 500, 0x22150d, 0.96)
       .setStrokeStyle(3, 0xb48855, 0.96)
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 1);
-    const panelInset = this.add
+      const panelInset = this.add
       .rectangle(centerX, centerY, 672, 470, 0x342214, 0.94)
       .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 2);
-    const { titleChip, title } = this.createModalTitle(
+      const { titleChip, title } = this.createModalTitle(
       centerX,
       centerY - 206,
       "SELECT START WEAPON",
@@ -4349,7 +4357,7 @@ export class GameScene extends Phaser.Scene {
       }
     );
 
-    const coinText = this.add
+      const coinText = this.add
       .text(centerX, centerY - 168, `Coins: ${this.metaData.currency}`, {
         fontFamily: "Arial",
         fontSize: "20px",
@@ -4361,7 +4369,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 4);
 
-    const subtitle = this.add
+      const subtitle = this.add
       .text(centerX, centerY - 130, "Pick one weapon to begin this run", {
         fontFamily: "Arial",
         fontSize: "17px",
@@ -4373,7 +4381,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 4);
 
-    const statusText = this.add
+      const statusText = this.add
       .text(centerX, centerY + 204, "", {
         fontFamily: "Arial",
         fontSize: "18px",
@@ -4385,8 +4393,8 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 4);
 
-    const optionRows = [];
-    START_WEAPON_OPTIONS.forEach((option, index) => {
+      const optionRows = [];
+      START_WEAPON_OPTIONS.forEach((option, index) => {
       const y = centerY - 60 + index * 86;
       const box = this.add
         .rectangle(centerX, y, 620, 74, 0x4a2f1d, 0.98)
@@ -4456,11 +4464,15 @@ export class GameScene extends Phaser.Scene {
       heading.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
       detail.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
       refreshOption();
-      optionRows.push(box, boxInlay, heading, detail);
-      this.weaponSelectionActions.push(choose);
-    });
+        optionRows.push(box, boxInlay, heading, detail);
+        this.weaponSelectionActions.push(choose);
+      });
 
-    this.weaponSelectionUi = [panel, panelInset, titleChip, title, coinText, subtitle, statusText, ...optionRows];
+      this.weaponSelectionUi = [panel, panelInset, titleChip, title, coinText, subtitle, statusText, ...optionRows];
+    } catch (error) {
+      console.error("[GameScene] Failed to open weapon selection modal, fallback to default weapon.", error);
+      this.forceCloseWeaponSelectionWithFallback();
+    }
   }
 
   handleWeaponSelectionInput() {
@@ -4496,6 +4508,20 @@ export class GameScene extends Phaser.Scene {
     this.isWeaponSelecting = false;
     this.applyHudModalFocus(false);
 
+    if (!this.isGameOver && !this.isLeveling) {
+      this.physics.resume();
+    }
+  }
+
+  forceCloseWeaponSelectionWithFallback() {
+    this.weaponSelectionUi.forEach((obj) => obj?.destroy?.());
+    this.weaponSelectionUi = [];
+    this.weaponSelectionActions = [];
+    this.isWeaponSelecting = false;
+    this.applyHudModalFocus(false);
+    if (!this.player?.weapons?.length) {
+      this.weaponSystem?.addWeapon?.("dagger");
+    }
     if (!this.isGameOver && !this.isLeveling) {
       this.physics.resume();
     }
