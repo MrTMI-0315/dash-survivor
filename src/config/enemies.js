@@ -5,7 +5,7 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     damage: 10,
     xpValue: 12,
     radius: 14,
-    scale: 1.0,
+    scale: 1.28,
     tint: 0xff6d6d
   },
   tank: {
@@ -14,7 +14,7 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     damage: 14,
     xpValue: 24,
     radius: 18,
-    scale: 1.28,
+    scale: 0.9,
     tint: 0xffb05b
   },
   swarm: {
@@ -23,7 +23,7 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     damage: 5,
     xpValue: 5,
     radius: 10,
-    scale: 0.8,
+    scale: 1.08,
     tint: 0xff8a9c
   },
   hunter: {
@@ -32,7 +32,7 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     damage: 6,
     xpValue: 11,
     radius: 11,
-    scale: 0.92,
+    scale: 1.22,
     tint: 0x6db8ff
   }
 };

@@ -71,7 +71,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setCircle(16, 0, 0);
     this.setCollideWorldBounds(true);
     this.setDepth(7);
-    if (this.texture?.key?.startsWith("char_player_pirate_") || this.texture?.key === "sprite_player_crew") {
+    if (this.texture?.key?.startsWith("char_player_pirate_")) {
+      this.setScale(1.32);
+    } else if (this.texture?.key === "sprite_player_crew") {
       this.setScale(1.7);
     }
   }
