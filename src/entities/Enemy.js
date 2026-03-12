@@ -18,6 +18,9 @@ const ENEMY_TYPE_TO_FOLDER = Object.freeze({
   tank: "enemy_tank",
   hunter: "enemy_hunter"
 });
+const HIT_FLASH_DURATION_MS = 60;
+const HIT_VISUAL_PUSH_PX = 4;
+const HIT_SPARK_PARTICLE_COUNT = 3;
 
 function getArchetypeConfig(type) {
   return ENEMY_ARCHETYPE_CONFIGS[type] ?? ENEMY_ARCHETYPE_CONFIGS.chaser;
@@ -236,8 +239,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.scene.playSfx) {
       this.scene.playSfx("enemy_hit", { elite: this.isElite });
     }
-    if (this.scene.spawnDamageParticles) {
-      this.scene.spawnDamageParticles(this.x, this.y, this.isElite ? 8 : 5);
+    if (this.scene.spawnHitSparkParticles) {
+      this.scene.spawnHitSparkParticles(this.x, this.y, HIT_SPARK_PARTICLE_COUNT);
+    } else if (this.scene.spawnDamageParticles) {
+      this.scene.spawnDamageParticles(this.x, this.y, HIT_SPARK_PARTICLE_COUNT);
     }
     if (this.scene.spawnDamageNumber) {
       this.scene.spawnDamageNumber(this.x, this.y - (this.isElite ? 4 : 0), appliedDamage, this);
@@ -250,10 +255,10 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       const distance = Math.hypot(dx, dy);
       const nx = distance > 0.0001 ? dx / distance : 1;
       const ny = distance > 0.0001 ? dy / distance : 0;
-      this.setPosition(this.x + nx * 6, this.y + ny * 6);
+      this.setPosition(this.x + nx * HIT_VISUAL_PUSH_PX, this.y + ny * HIT_VISUAL_PUSH_PX);
     }
     if (this.scene?.time?.delayedCall) {
-      this.scene.time.delayedCall(60, () => {
+      this.scene.time.delayedCall(HIT_FLASH_DURATION_MS, () => {
         if (this.active && this.flashToken === flashToken) {
           this.setTint(this.baseTint);
         }

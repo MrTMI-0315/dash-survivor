@@ -1432,6 +1432,14 @@ export class GameScene extends Phaser.Scene {
     this.damageEmitter.explode(Math.max(2, Math.min(12, scaledCount)), x, y);
   }
 
+  spawnHitSparkParticles(x, y, count = 3) {
+    if (!this.ensureParticleEmitters()) {
+      return;
+    }
+    const sparkCount = Math.max(1, Math.min(6, Math.round(Number(count) || 3)));
+    this.damageEmitter.explode(sparkCount, x, y);
+  }
+
   spawnKillParticles(x, y, count = 10) {
     if (!this.ensureParticleEmitters()) {
       return;
