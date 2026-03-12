@@ -50,6 +50,7 @@ export class WeaponSystem {
   constructor(scene, player) {
     this.scene = scene;
     this.player = player;
+    this.paused = false;
     this.projectilePoolByTexture = new Map();
     this.globalDamageMultiplier = 1;
     this.globalCooldownMultiplier = 1;
@@ -74,6 +75,14 @@ export class WeaponSystem {
 
     scene.physics.add.overlap(this.projectiles, scene.enemies, this.handleProjectileHit, this.isValidProjectileEnemyCollision, this);
     scene.physics.add.overlap(this.orbitBlades, scene.enemies, this.handleOrbitBladeHit, null, this);
+  }
+
+  pause() {
+    this.paused = true;
+  }
+
+  resume() {
+    this.paused = false;
   }
 
   createProjectileTrailEmitter() {
@@ -379,6 +388,9 @@ export class WeaponSystem {
   }
 
   update(time, delta) {
+    if (this.paused) {
+      return;
+    }
     this.updateProjectiles(delta);
     this.updateOrbitBlades(time, delta);
 

@@ -41,6 +41,7 @@ function randomArrayItem(items) {
 
 export class DirectorSystem {
   constructor(config = {}) {
+    this.paused = false;
     this.durationsMs = {
       [DIRECTOR_STATE.BUILD]: config.buildMs ?? DIRECTOR_DEFAULT_DURATIONS_MS[DIRECTOR_STATE.BUILD],
       [DIRECTOR_STATE.PEAK]: config.peakMs ?? DIRECTOR_DEFAULT_DURATIONS_MS[DIRECTOR_STATE.PEAK],
@@ -68,7 +69,18 @@ export class DirectorSystem {
     this.adaptivePerformance = 0;
   }
 
+  pause() {
+    this.paused = true;
+  }
+
+  resume() {
+    this.paused = false;
+  }
+
   update(deltaMs) {
+    if (this.paused) {
+      return false;
+    }
     this.stateElapsedMs += deltaMs;
     this.totalElapsedMs += deltaMs;
     this.updateBossSpawnSchedule();

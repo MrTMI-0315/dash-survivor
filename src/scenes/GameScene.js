@@ -4180,77 +4180,63 @@ export class GameScene extends Phaser.Scene {
     this.isLeveling = true;
     this.levelUpOptionActions = [];
     this.physics.pause();
+    this.director?.pause?.();
+    this.weaponSystem?.pause?.();
     this.player.body?.setVelocity(0, 0);
     this.applyHudModalFocus(true);
 
-    const centerX = 640;
-    const centerY = 360;
-    const panel = this.add
-      .rectangle(centerX, centerY, 620, 420, 0x22150d, 0.96)
-      .setStrokeStyle(3, 0xb48855, 0.96)
+    const cam = this.cameras.main;
+    const centerX = cam.width * 0.5;
+    const centerY = cam.height * 0.5;
+    const panelWidth = 320;
+    const panelHeight = 180;
+    const overlay = this.add
+      .rectangle(centerX, centerY, cam.width, cam.height, 0x000000, 0.6)
       .setScrollFactor(0)
       .setDepth(30);
+    const panel = this.add
+      .rectangle(centerX, centerY, panelWidth, panelHeight, 0x22150d, 0.96)
+      .setStrokeStyle(2, 0xb48855, 0.96)
+      .setScrollFactor(0)
+      .setDepth(31);
     const panelInset = this.add
-      .rectangle(centerX, centerY, 596, 396, 0x352215, 0.94)
+      .rectangle(centerX, centerY, panelWidth - 12, panelHeight - 12, 0x352215, 0.94)
       .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
-      .setDepth(30.2);
-    const { titleChip, title } = this.createModalTitle(centerX, centerY - 162, "LEVEL UP", {
-      fontSize: 34,
-      minWidth: 208,
-      badgeDepth: 30.4,
-      textDepth: 31
-    });
-    const subtitle = this.add
-      .text(centerX, centerY - 119, "Choose one upgrade", {
+      .setDepth(31.1);
+    const title = this.add
+      .text(centerX, centerY - 66, "LEVEL UP", {
         fontFamily: "Arial",
-        fontSize: "18px",
-        color: "#e8d0a5",
+        fontSize: "30px",
+        color: "#f3dfb9",
         stroke: "#2a1a10",
-        strokeThickness: 3
+        strokeThickness: 4
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(31);
+      .setDepth(32);
 
     const choices = Phaser.Utils.Array.Shuffle([...LEVEL_UP_UPGRADES]).slice(0, 3);
     const optionObjects = [];
 
     choices.forEach((upgrade, index) => {
-      const y = centerY - 36 + index * 96;
+      const y = centerY - 18 + index * 42;
       const box = this.add
-        .rectangle(centerX, y, 530, 76, 0x4a2f1d, 0.98)
-        .setStrokeStyle(2, 0xb48855, 0.92)
+        .rectangle(centerX, y, 280, 34, 0x4a2f1d, 0.98)
+        .setStrokeStyle(1, 0xb48855, 0.92)
         .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0)
-        .setDepth(31);
-      const boxInlay = this.add
-        .rectangle(centerX, y, 514, 60, 0xead7b7, 0.9)
-        .setStrokeStyle(1, 0x6d4a31, 0.6)
-        .setInteractive({ useHandCursor: true })
-        .setScrollFactor(0)
-        .setDepth(31.2);
-
-      const heading = this.add
-        .text(centerX - 244, y - 12, `[${index + 1}] ${upgrade.label}`, {
-          fontFamily: "Arial",
-          fontSize: "23px",
-          color: "#2e170d",
-          stroke: "#f7e8cc",
-          strokeThickness: 1
-        })
-        .setOrigin(0, 0.5)
         .setScrollFactor(0)
         .setDepth(32);
-      const description = this.add
-        .text(centerX - 244, y + 14, upgrade.description, {
+
+      const label = this.add
+        .text(centerX, y, `[${index + 1}] ${upgrade.label}`, {
           fontFamily: "Arial",
-          fontSize: "14px",
-          color: "#6a4d36",
-          stroke: "#f7e8cc",
-          strokeThickness: 1
+          fontSize: "16px",
+          color: "#f7e8cc",
+          stroke: "#2a170f",
+          strokeThickness: 3
         })
-        .setOrigin(0, 0.5)
+        .setOrigin(0.5)
         .setScrollFactor(0)
         .setDepth(32);
 
@@ -4259,15 +4245,13 @@ export class GameScene extends Phaser.Scene {
         this.closeLevelUpChoices();
       };
       box.on("pointerdown", chooseUpgrade);
-      boxInlay.on("pointerdown", chooseUpgrade);
-      heading.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
-      description.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
+      label.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
       this.levelUpOptionActions.push(chooseUpgrade);
 
-      optionObjects.push(box, boxInlay, heading, description);
+      optionObjects.push(box, label);
     });
 
-    this.levelUpUi = [panel, panelInset, titleChip, title, subtitle, ...optionObjects];
+    this.levelUpUi = [overlay, panel, panelInset, title, ...optionObjects];
   }
 
   handleLevelUpInput() {
@@ -4536,6 +4520,8 @@ export class GameScene extends Phaser.Scene {
 
     this.isLeveling = false;
     this.applyHudModalFocus(false);
+    this.director?.resume?.();
+    this.weaponSystem?.resume?.();
     this.physics.resume();
 
     if (this.pendingLevelUps > 0) {
