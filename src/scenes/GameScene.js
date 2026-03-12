@@ -118,6 +118,9 @@ const OFFSCREEN_INDICATOR_MAX = 12;
 const OFFSCREEN_PRIORITY_BONUS_ELITE = 10000;
 const OFFSCREEN_PRIORITY_BONUS_BOSS = 20000;
 const COMBO_RESET_WINDOW_MS = 2000;
+const HUD_PANEL_PADDING = 12;
+const HUD_PANEL_HEIGHT = 72;
+const HUD_EXP_BAR_HEIGHT = 6;
 const HUD_ALERT_POOL_SIZE = 3;
 const HUD_ALERT_STYLE = Object.freeze({
   fontFamily: "Arial",
@@ -771,9 +774,9 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
     this.hudLevelText = this.add
-      .text(24, 15, "", {
+      .text(20, 24, "", {
         fontFamily: "Arial",
-        fontSize: "28px",
+        fontSize: "22px",
         color: "#fff0cf",
         stroke: "#28170f",
         strokeThickness: 4
@@ -781,7 +784,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudStatsText = this.add
-      .text(24, 47, "", {
+      .text(20, 44, "", {
         fontFamily: "Arial",
         fontSize: "13px",
         color: "#cdb28a",
@@ -813,9 +816,9 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudXpLabelText = this.add
-      .text(36, 60, "EXP", {
+      .text(36, 63, "EXP", {
         fontFamily: "Arial",
-        fontSize: "10px",
+        fontSize: "9px",
         color: "#e7d6b4",
         stroke: "#28170f",
         strokeThickness: 2
@@ -837,9 +840,9 @@ export class GameScene extends Phaser.Scene {
       .setDepth(10);
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)) {
       this.hudPanelBack = this.add
-        .image(170, 64, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
+        .image(170, HUD_PANEL_PADDING + HUD_PANEL_HEIGHT * 0.5, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
         .setOrigin(0.5)
-        .setDisplaySize(324, 88)
+        .setDisplaySize(324, HUD_PANEL_HEIGHT)
         .setScrollFactor(0)
         .setDepth(8)
         .setTint(0x8e5b33)
@@ -854,9 +857,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)) {
       this.hudXpFrame = this.add
-        .image(170, 83, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
+        .image(170, 67, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
         .setOrigin(0.5)
-        .setDisplaySize(284, 16)
+        .setDisplaySize(284, 10)
         .setScrollFactor(0)
         .setDepth(8.8)
         .setTint(0xd2b07e)
@@ -4655,10 +4658,10 @@ export class GameScene extends Phaser.Scene {
     const xpFillColor = xpPulseActive ? this.lerpColor(0x66f5b2, 0xffe38a, xpPulse) : 0x66f5b2;
     const xpFillAlpha = xpPulseActive ? 0.84 + xpPulse * 0.16 : 0.95;
     const xpBorderColor = xpPulseActive ? this.lerpColor(0x91a6c8, 0xffeab0, xpPulse) : 0x91a6c8;
-    const barX = 24;
-    const xpBarY = 72;
+    const barX = 20;
+    const xpBarY = 62;
     const barWidth = 284;
-    const barHeight = 14;
+    const barHeight = 10;
 
     const hpColor = hpRatio <= 0.25 ? "#ffb2a2" : hpRatio <= 0.5 ? "#ffd598" : "#fff0cf";
     const runGoldPreview = this.isGameOver ? this.lastRunMetaCurrency : this.calculateRunCoinReward();
@@ -4666,7 +4669,7 @@ export class GameScene extends Phaser.Scene {
     this.hudLevelText.setText(`${this.player.hp}/${this.player.maxHp} HP`);
     this.hudTimerText?.setText(this.formatRunTime(this.runTimeMs));
     this.hudGoldText?.setText(`GOLD ${runGoldPreview}`);
-    this.hudStatsText.setText(`EXP ${this.currentXp}/${this.xpToNext}`);
+    this.hudStatsText.setText(`LV ${this.level}   EXP ${this.currentXp}/${this.xpToNext}`);
     this.hudHeaderChip?.setVisible(false);
     this.hudCoreLabelText?.setVisible(false);
     this.hudXpLabelText?.setVisible(true);
@@ -4696,14 +4699,19 @@ export class GameScene extends Phaser.Scene {
 
     if (this.hudBarsGraphics) {
       this.hudBarsGraphics.clear();
-      this.hudBarsGraphics.fillStyle(0x432615, 0.9);
-      this.hudBarsGraphics.fillRect(barX + 3, xpBarY + 3, barWidth - 6, barHeight - 6);
+      this.hudBarsGraphics.fillStyle(0x432615, 0.92);
+      this.hudBarsGraphics.fillRect(barX, xpBarY, barWidth, barHeight);
       this.hudBarsGraphics.fillStyle(xpFillColor, xpFillAlpha);
-      this.hudBarsGraphics.fillRect(barX + 5, xpBarY + 5, Math.max(4, (barWidth - 10) * displayedXpRatio), barHeight - 10);
+      this.hudBarsGraphics.fillRect(
+        barX + 2,
+        xpBarY + 2,
+        Math.max(3, (barWidth - 4) * displayedXpRatio),
+        HUD_EXP_BAR_HEIGHT
+      );
       this.hudBarsGraphics.fillStyle(0x2e170d, 0.96);
-      this.hudBarsGraphics.fillRect(barX + 6, xpBarY - 12, 30, 10);
+      this.hudBarsGraphics.fillRect(barX + 2, xpBarY - 10, 26, 8);
       this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.85);
-      this.hudBarsGraphics.strokeRect(barX + 3, xpBarY + 3, barWidth - 6, barHeight - 6);
+      this.hudBarsGraphics.strokeRect(barX, xpBarY, barWidth, barHeight);
     }
   }
 
