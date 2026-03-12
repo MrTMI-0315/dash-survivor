@@ -1474,6 +1474,26 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  spawnWeaponHitParticles(x, y, count = 3) {
+    if (!this.ensureParticleEmitters()) {
+      return;
+    }
+    if (typeof this.damageEmitter.setLifespan === "function") {
+      this.damageEmitter.setLifespan(200);
+    }
+    if (typeof this.damageEmitter.setTint === "function") {
+      this.damageEmitter.setTint([0xff7a7a, 0xff4a4a, 0xff2d2d]);
+    }
+    const particleCount = Math.max(1, Math.min(6, Math.round(Number(count) || 3)));
+    this.damageEmitter.explode(particleCount, x, y);
+    if (typeof this.damageEmitter.setLifespan === "function") {
+      this.damageEmitter.setLifespan({ min: 90, max: 220 });
+    }
+    if (typeof this.damageEmitter.setTint === "function") {
+      this.damageEmitter.setTint([0xffffff, 0xffd6ad, 0xffb87f]);
+    }
+  }
+
   spawnKillParticles(x, y, count = 10) {
     if (!this.ensureParticleEmitters()) {
       return;
@@ -1540,7 +1560,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const flash = this.add.circle(x, y, 10, 0xfff1bf, 0.7).setDepth(8.4).setScale(1);
+    const flash = this.add.circle(x, y, 10, 0xffffff, 0.78).setDepth(8.4).setScale(1);
     this.tweens.add({
       targets: flash,
       scaleX: 1.4,

@@ -9,6 +9,9 @@ import { Enemy } from "../entities/Enemy.js";
 const PROJECTILE_VISUAL_SCALE = 1.4;
 const PROJECTILE_GLOW_ALPHA = 0.6;
 const PROJECTILE_TRAIL_LIFETIME_MS = 200;
+const PROJECTILE_RECT_TRAIL_LIFETIME_MS = 180;
+const PROJECTILE_RECT_TRAIL_MAX = 320;
+const PROJECTILE_GLOW_TINT = 0xffffaa;
 const PROJECTILE_RENDER_DEPTH = 30;
 const PROJECTILE_EFFECT_DEPTH = 31;
 const PROJECTILE_TINT_BY_WEAPON = Object.freeze({
@@ -58,6 +61,8 @@ export class WeaponSystem {
     this.globalCooldownMultiplier = 1;
     this.projectileCount = 1;
     this.projectileGlowGraphics = scene.add.graphics().setDepth(PROJECTILE_RENDER_DEPTH);
+    this.projectileTrailRectsGraphics = scene.add.graphics().setDepth(PROJECTILE_RENDER_DEPTH - 1);
+    this.projectileTrailRects = [];
     this.projectileTrailParticles = null;
     this.projectileTrailEmitter = null;
     this.projectileTrailAccumulatorMs = 0;
@@ -110,7 +115,7 @@ export class WeaponSystem {
   }
 
   getProjectileVisualColor(type) {
-    return PROJECTILE_TINT_BY_WEAPON[type] ?? 0xffffff;
+    return PROJECTILE_GLOW_TINT;
   }
 
   getProjectileVisualProfile(type) {
@@ -415,6 +420,24 @@ export class WeaponSystem {
 
   updateProjectiles(delta) {
     this.projectileGlowGraphics?.clear();
+    this.projectileTrailRectsGraphics?.clear();
+    for (let i = this.projectileTrailRects.length - 1; i >= 0; i -= 1) {
+      const segment = this.projectileTrailRects[i];
+      segment.life -= delta;
+      if (segment.life <= 0) {
+        this.projectileTrailRects.splice(i, 1);
+        continue;
+      }
+
+      const alpha = Phaser.Math.Clamp(segment.life / segment.maxLife, 0, 1) * 0.42;
+      this.projectileTrailRectsGraphics?.fillStyle(segment.color, alpha);
+      this.projectileTrailRectsGraphics?.fillRect(
+        Math.round(segment.x) - 2,
+        Math.round(segment.y) - 1,
+        4,
+        3
+      );
+    }
     this.projectileTrailAccumulatorMs += delta;
     const shouldEmitTrail = this.projectileTrailAccumulatorMs >= 16;
     if (shouldEmitTrail) {
@@ -435,6 +458,22 @@ export class WeaponSystem {
         const trailBurst = Math.max(1, Math.min(3, Math.floor(projectile.getData("trailBurst") ?? 1)));
         this.projectileTrailEmitter.setTint(glowColor);
         this.projectileTrailEmitter.emitParticleAt(projectile.x, projectile.y, trailBurst);
+      }
+      if (shouldEmitTrail) {
+        const vx = projectile.body?.velocity?.x ?? 0;
+        const vy = projectile.body?.velocity?.y ?? 0;
+        const trailX = projectile.x - vx * 0.012;
+        const trailY = projectile.y - vy * 0.012;
+        this.projectileTrailRects.push({
+          x: trailX,
+          y: trailY,
+          color: glowColor,
+          life: PROJECTILE_RECT_TRAIL_LIFETIME_MS,
+          maxLife: PROJECTILE_RECT_TRAIL_LIFETIME_MS
+        });
+        if (this.projectileTrailRects.length > PROJECTILE_RECT_TRAIL_MAX) {
+          this.projectileTrailRects.shift();
+        }
       }
 
       projectile.travelled += (projectile.speed * delta) / 1000;
@@ -759,6 +798,9 @@ export class WeaponSystem {
     const safeDamage = Number.isFinite(damage) ? damage : 0;
     const safeKnockback = Number.isFinite(knockbackForce) ? knockbackForce : 0;
     enemy?.takeDamage(safeDamage);
+    if (this.scene.spawnWeaponHitParticles) {
+      this.scene.spawnWeaponHitParticles(enemy.x, enemy.y, 3);
+    }
     enemy?.applyKnockbackFrom(sourceX, sourceY, safeKnockback);
 
     if (!enemy.isDead()) {
