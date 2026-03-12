@@ -462,6 +462,7 @@ export class GameScene extends Phaser.Scene {
     this.hudLevelText = null;
     this.hudStatsText = null;
     this.hudTimerText = null;
+    this.hudGoldText = null;
     this.hudDashStatusText = null;
     this.hudSecondaryText = null;
     this.hudCoreLabelText = null;
@@ -643,6 +644,17 @@ export class GameScene extends Phaser.Scene {
         fontFamily: "Arial",
         fontSize: "18px",
         color: "#f0dfbe",
+        stroke: "#28170f",
+        strokeThickness: 4
+      })
+      .setOrigin(1, 0.5)
+      .setScrollFactor(0)
+      .setDepth(10);
+    this.hudGoldText = this.add
+      .text(1210, 44, "", {
+        fontFamily: "Arial",
+        fontSize: "16px",
+        color: "#e6cc86",
         stroke: "#28170f",
         strokeThickness: 4
       })
@@ -1980,6 +1992,7 @@ export class GameScene extends Phaser.Scene {
       this.hudLevelText,
       this.hudStatsText,
       this.hudTimerText,
+      this.hudGoldText,
       this.hudXpLabelText,
       this.hudCoreLabelText,
       this.hudXpFrame
@@ -4337,9 +4350,11 @@ export class GameScene extends Phaser.Scene {
     const barHeight = 14;
 
     const hpColor = hpRatio <= 0.25 ? "#ffb2a2" : hpRatio <= 0.5 ? "#ffd598" : "#fff0cf";
+    const runGoldPreview = this.isGameOver ? this.lastRunMetaCurrency : this.calculateRunCoinReward();
     this.hudLevelText.setColor(hpColor);
     this.hudLevelText.setText(`${this.player.hp}/${this.player.maxHp} HP`);
     this.hudTimerText?.setText(this.formatRunTime(this.runTimeMs));
+    this.hudGoldText?.setText(`GOLD ${runGoldPreview}`);
     this.hudStatsText.setText(`EXP ${this.currentXp}/${this.xpToNext}`);
     this.hudHeaderChip?.setVisible(false);
     this.hudCoreLabelText?.setVisible(false);
