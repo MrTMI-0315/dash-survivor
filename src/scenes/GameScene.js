@@ -86,6 +86,10 @@ const ELITE_BONUS_XP_ORB_MAX = 4;
 const ELITE_BONUS_XP_ORB_VALUE_FACTOR = 0.35;
 const ELITE_UPGRADE_DROP_CHANCE = 0.28;
 const ELITE_BONUS_UPGRADE_IDS = ["weapon_damage", "attack_speed", "movement_speed", "pickup_radius", "projectile_count"];
+const MINI_BOSS_GOLD_BUNDLE = 12;
+const MINI_BOSS_XP_BURST_COUNT = 8;
+const MINI_BOSS_XP_BURST_MIN_FACTOR = 0.3;
+const MINI_BOSS_XP_BURST_MAX_FACTOR = 0.45;
 const PERFORMANCE_MAX_ACTIVE_ENEMIES = 80;
 const PARTICLE_LOAD_SOFT_CAP_ENEMIES = 50;
 const PARTICLE_LOAD_HARD_CAP_ENEMIES = PERFORMANCE_MAX_ACTIVE_ENEMIES;
@@ -2655,8 +2659,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   processDirectorMiniBossSpawns() {
+    if (this.hasActiveMiniBoss()) {
+      return;
+    }
     const pendingMiniBossSpawns = this.director.consumeMiniBossSpawnRequests();
-    for (let i = 0; i < pendingMiniBossSpawns; i += 1) {
+    for (let i = 0; i < Math.min(1, pendingMiniBossSpawns); i += 1) {
       this.spawnMiniBossEnemy();
     }
   }
@@ -3650,6 +3657,7 @@ export class GameScene extends Phaser.Scene {
       orb.setData("pickupType", null);
     }
     orb.setData("rewardUpgradeId", config.rewardUpgradeId ?? null);
+    orb.setData("rewardCoins", Math.max(0, Math.floor(Number(config.rewardCoins) || 0)));
   }
 
   spawnEliteBonusXpOrbs(enemy) {
@@ -3677,6 +3685,28 @@ export class GameScene extends Phaser.Scene {
       radius: 8
     });
     return true;
+  }
+
+  spawnMiniBossRewardDrops(enemy) {
+    const goldBundle = MINI_BOSS_GOLD_BUNDLE;
+    const xpBase = Math.max(4, Math.round(enemy.xpValue ?? 20));
+    const centerX = enemy.x;
+    const centerY = enemy.y;
+
+    this.spawnXpOrb(centerX, centerY, 0, {
+      texture: "upgrade_orb",
+      pickupType: "mini_boss_gold",
+      rewardCoins: goldBundle,
+      radius: 8
+    });
+
+    for (let i = 0; i < MINI_BOSS_XP_BURST_COUNT; i += 1) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Phaser.Math.Between(14, 42);
+      const xpFactor = Phaser.Math.FloatBetween(MINI_BOSS_XP_BURST_MIN_FACTOR, MINI_BOSS_XP_BURST_MAX_FACTOR);
+      const xpValue = Math.max(3, Math.round(xpBase * xpFactor));
+      this.spawnXpOrb(centerX + Math.cos(angle) * distance, centerY + Math.sin(angle) * distance, xpValue);
+    }
   }
 
   applyEliteUpgradeReward(rewardUpgradeId) {
@@ -3755,7 +3785,13 @@ export class GameScene extends Phaser.Scene {
       this.spawnEliteKillParticles(enemy.x, enemy.y, 20);
     }
     this.spawnKillParticles(enemy.x, enemy.y, enemy.isElite ? 14 : 10);
-    this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
+    const archetype = enemy.getData("archetype");
+    if (archetype === "mini_boss" || enemy.getData("bossVariant") === "mini") {
+      this.spawnMiniBossRewardDrops(enemy);
+      this.showHudAlert("MINI BOSS LOOT", 1200);
+    } else {
+      this.spawnXpOrb(enemy.x, enemy.y, enemy.xpValue);
+    }
     if (enemy.isElite) {
       this.spawnEliteBonusXpOrbs(enemy);
       const droppedUpgrade = this.spawnEliteUpgradePickup(enemy.x, enemy.y);
@@ -3796,6 +3832,10 @@ export class GameScene extends Phaser.Scene {
     const pickupType = orb.getData("pickupType");
     if (pickupType === "elite_upgrade") {
       this.applyEliteUpgradeReward(orb.getData("rewardUpgradeId"));
+    } else if (pickupType === "mini_boss_gold") {
+      const rewardCoins = Math.max(0, Math.floor(Number(orb.getData("rewardCoins")) || 0));
+      this.runMetaCurrency += rewardCoins;
+      this.showHudAlert(`+${rewardCoins} GOLD`, 900);
     }
     orb.destroy();
   }
@@ -4367,6 +4407,12 @@ export class GameScene extends Phaser.Scene {
     return this.enemies.getChildren().filter((enemy) => enemy.active).length;
   }
 
+  hasActiveMiniBoss() {
+    return this.enemies
+      .getChildren()
+      .some((enemy) => enemy?.active && (enemy.getData("archetype") === "mini_boss" || enemy.getData("bossVariant") === "mini"));
+  }
+
   loadCoinBank() {
     if (typeof window === "undefined" || !window.localStorage) {
       return 0;
@@ -4459,7 +4505,8 @@ export class GameScene extends Phaser.Scene {
     const timeSurvivedSec = Math.max(0, Math.floor(this.runTimeMs / 1000));
     const timeReward = Math.floor(timeSurvivedSec / 10);
     const killReward = this.totalKills * 0.1;
-    return Math.max(0, Math.round(timeReward + killReward));
+    const bundleReward = Math.max(0, Math.floor(Number(this.runMetaCurrency) || 0));
+    return Math.max(0, Math.round(timeReward + killReward + bundleReward));
   }
 
   recordPlayerDamage(amount) {

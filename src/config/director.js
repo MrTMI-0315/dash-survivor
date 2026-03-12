@@ -17,7 +17,8 @@ export const DIRECTOR_BOSS_SPAWN = {
 };
 
 export const DIRECTOR_MINI_BOSS_EVENT = {
-  atMs: 90000
+  firstAtMs: 60000,
+  intervalMs: 60000
 };
 
 export const DIRECTOR_HATCH_BREACH_EVENT = {

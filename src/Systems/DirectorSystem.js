@@ -53,8 +53,8 @@ export class DirectorSystem {
     this.bossSpawnIntervalMs = config.bossSpawnIntervalMs ?? DIRECTOR_BOSS_SPAWN.intervalMs;
     this.nextBossSpawnAtMs = this.bossSpawnIntervalMs;
     this.pendingBossSpawnCount = 0;
-    this.miniBossSpawnAtMs = config.miniBossSpawnAtMs ?? DIRECTOR_MINI_BOSS_EVENT.atMs;
-    this.hasMiniBossSpawned = false;
+    this.miniBossSpawnIntervalMs = config.miniBossSpawnIntervalMs ?? DIRECTOR_MINI_BOSS_EVENT.intervalMs;
+    this.nextMiniBossSpawnAtMs = config.firstMiniBossSpawnAtMs ?? DIRECTOR_MINI_BOSS_EVENT.firstAtMs;
     this.pendingMiniBossSpawnCount = 0;
     this.spawnBurstIntervalMs = config.spawnBurstIntervalMs ?? DIRECTOR_DENSITY_REWORK.burstIntervalMs;
     this.nextSpawnBurstAtMs = this.spawnBurstIntervalMs;
@@ -111,16 +111,10 @@ export class DirectorSystem {
   }
 
   updateMiniBossSpawnSchedule() {
-    if (this.hasMiniBossSpawned) {
-      return;
+    while (this.totalElapsedMs >= this.nextMiniBossSpawnAtMs) {
+      this.pendingMiniBossSpawnCount = 1;
+      this.nextMiniBossSpawnAtMs += this.miniBossSpawnIntervalMs;
     }
-
-    if (this.totalElapsedMs < this.miniBossSpawnAtMs) {
-      return;
-    }
-
-    this.pendingMiniBossSpawnCount = 1;
-    this.hasMiniBossSpawned = true;
   }
 
   updateLadderSpawnSchedule() {

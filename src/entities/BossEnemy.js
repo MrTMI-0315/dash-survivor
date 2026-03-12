@@ -20,12 +20,12 @@ const BOSS_VARIANTS = {
     radialBurstBulletSpeed: 220
   },
   mini: {
-    hp: 420,
-    speed: 74,
+    hp: 112,
+    speed: 88,
     damage: 22,
     xpValue: 220,
     radius: 24,
-    scale: 1.9,
+    scale: 1.8,
     tint: 0xb36dff,
     shockwaveIntervalMs: 3200,
     shockwaveRadius: 155,
