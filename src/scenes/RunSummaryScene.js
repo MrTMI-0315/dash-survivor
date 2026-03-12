@@ -16,11 +16,11 @@ export class RunSummaryScene extends Phaser.Scene {
     const centerX = camera.width * 0.5;
     const centerY = camera.height * 0.5;
     const cardWidth = 400;
-    const cardHeight = 500;
+    const cardHeight = 440;
     const panelPadding = 32;
     const titleMarginBottom = 24;
     const statLineSpacing = 12;
-    const buttonGap = 14;
+    const buttonGap = 18;
     const primaryButtonWidth = 260;
     const primaryButtonHeight = 56;
     const secondaryButtonWidth = 220;
@@ -29,7 +29,6 @@ export class RunSummaryScene extends Phaser.Scene {
     const stats = {
       timeSurvivedMs: data.timeSurvivedMs ?? 0,
       enemiesKilled: data.enemiesKilled ?? 0,
-      maxCombo: data.maxCombo ?? 0,
       levelReached: data.levelReached ?? 1,
       coinsEarned: data.coinsEarned ?? 0,
       totalCoins: this.resolveTotalCoins(data.totalCoins)
@@ -70,16 +69,13 @@ export class RunSummaryScene extends Phaser.Scene {
     const lines = [
       `Time Survived: ${this.formatTime(stats.timeSurvivedMs)}`,
       `Enemies Killed: ${stats.enemiesKilled}`,
-      `Max Combo: x${Math.max(0, stats.maxCombo)}`,
-      `Level Reached: ${stats.levelReached}`,
-      `Coins Earned: +${stats.coinsEarned}`,
-      `Coin Bank: ${stats.totalCoins}`
+      `Max Level: ${stats.levelReached}`,
+      `Coins Earned: +${stats.coinsEarned}`
     ];
-    const copyText = ["DashSurvivor Run Summary", ...lines].join("\n");
 
     const titleBottomY = titleY + titleText.height;
     const statsTopY = titleBottomY + titleMarginBottom;
-    const statsContainerHeight = 168;
+    const statsContainerHeight = 132;
     const statsCenterY = statsTopY + statsContainerHeight * 0.5;
     this.add
       .rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0x152947, 0.92)
@@ -101,32 +97,16 @@ export class RunSummaryScene extends Phaser.Scene {
     statsText.setY(statsCenterY - statsText.height * 0.5 + 2);
 
     const panelBottom = panelTop + cardHeight;
-    const buttonStackHeight = primaryButtonHeight + secondaryButtonHeight * 2 + buttonGap * 2;
+    const buttonStackHeight = primaryButtonHeight + secondaryButtonHeight + buttonGap;
     const buttonsContainerTop = panelBottom - panelPadding - buttonStackHeight;
     const retryY = buttonsContainerTop + primaryButtonHeight * 0.5;
-    const copyY = retryY + primaryButtonHeight * 0.5 + buttonGap + secondaryButtonHeight * 0.5;
-    const menuY = copyY + secondaryButtonHeight + buttonGap;
-    this.copyStatusText = this.add
-      .text(centerX, buttonsContainerTop - 18, "", {
-        fontFamily: "Arial",
-        fontSize: "16px",
-        color: "#c9e8ff",
-        stroke: "#0f1d2e",
-        strokeThickness: 4
-      })
-      .setOrigin(0.5)
-      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2)
-      .setVisible(false);
+    const menuY = retryY + primaryButtonHeight * 0.5 + buttonGap + secondaryButtonHeight * 0.5;
 
-    this.createActionButton(centerX, retryY, "RETRY", () => {
+    this.createActionButton(centerX, retryY, "RESTART", () => {
       this.scene.stop("RunSummaryScene");
       this.scene.stop("GameScene");
       this.scene.start("GameScene");
     }, { variant: "primary", width: primaryButtonWidth, height: primaryButtonHeight });
-
-    this.createActionButton(centerX, copyY, "COPY STATS", () => {
-      this.copyRunSummaryStats(copyText);
-    }, { variant: "secondary", width: secondaryButtonWidth, height: secondaryButtonHeight });
 
     this.createActionButton(centerX, menuY, "MAIN MENU", () => {
       this.scene.stop("RunSummaryScene");
@@ -139,52 +119,6 @@ export class RunSummaryScene extends Phaser.Scene {
       this.scene.stop("GameScene");
       this.scene.start("GameScene");
     }, { variant: "secondary", width: secondaryButtonWidth, height: secondaryButtonHeight });
-  }
-
-  copyRunSummaryStats(text) {
-    if (!text) {
-      return;
-    }
-
-    const showStatus = (message) => {
-      if (!this.copyStatusText) {
-        return;
-      }
-      this.copyStatusText.setText(message);
-      this.copyStatusText.setVisible(true);
-      const previousHideTimer = this.copyStatusText.getData("hideTimer");
-      if (previousHideTimer) {
-        previousHideTimer.remove(false);
-      }
-      const hideTimer = this.time.delayedCall(1200, () => {
-        if (this.copyStatusText) {
-          this.copyStatusText.setVisible(false);
-          this.copyStatusText.setData("hideTimer", null);
-        }
-      });
-      this.copyStatusText.setData("hideTimer", hideTimer);
-    };
-
-    const fallbackLog = () => {
-      // Keep fallback available in non-secure contexts.
-      console.log(`[RunSummary] COPY STATS\n${text}`);
-      showStatus("Stats logged to console");
-    };
-
-    if (typeof navigator === "undefined" || !navigator.clipboard?.writeText) {
-      fallbackLog();
-      return;
-    }
-
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        console.log(`[RunSummary] COPY STATS\n${text}`);
-        showStatus("Stats copied");
-      })
-      .catch(() => {
-        fallbackLog();
-      });
   }
 
   createActionButton(x, y, label, onClick, options = {}) {
