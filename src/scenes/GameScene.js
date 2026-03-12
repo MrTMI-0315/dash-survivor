@@ -139,6 +139,9 @@ const HUD_COMBO_STYLE = Object.freeze({
   strokeThickness: 6
 });
 const GAMEPLAY_CAMERA_ZOOM = 1.5;
+const DECK_BRIGHTNESS_MULTIPLIER = 0.9;
+const DECK_HIGHLIGHT_OPACITY = 0.6;
+const EDGE_FOG_VIGNETTE_OPACITY = 0.35;
 const DECK_TILE_VARIANTS = Object.freeze([
   Object.freeze({
     key: "deck_a",
@@ -414,6 +417,18 @@ function pickWeightedDeckVariant(variants, excludedKey = null) {
     }
   }
   return available[available.length - 1];
+}
+
+function scaleHexColor(hexColor, multiplier = 1) {
+  const color = Number.isFinite(hexColor) ? hexColor : 0x000000;
+  const factor = Phaser.Math.Clamp(Number(multiplier) || 1, 0, 2);
+  const r = Math.round(((color >> 16) & 0xff) * factor);
+  const g = Math.round(((color >> 8) & 0xff) * factor);
+  const b = Math.round((color & 0xff) * factor);
+  const nr = Phaser.Math.Clamp(r, 0, 255);
+  const ng = Phaser.Math.Clamp(g, 0, 255);
+  const nb = Phaser.Math.Clamp(b, 0, 255);
+  return (nr << 16) | (ng << 8) | nb;
 }
 
 function pickWeightedRandomObstacleSpec(specs) {
@@ -1749,7 +1764,7 @@ export class GameScene extends Phaser.Scene {
     const hasDeckPlankTexture = DECK_TILE_VARIANTS.some((variant) => this.textures.exists(variant.key));
     const hasDeckTrimTexture = this.textures.exists(IMPORTED_PIXEL_ASSETS.deckPlankTrim.key);
 
-    graphics.fillStyle(0x5b3b25, 1);
+    graphics.fillStyle(scaleHexColor(0x5b3b25, DECK_BRIGHTNESS_MULTIPLIER), 1);
     graphics.fillRect(deckLeft, deckTop, deckWidth, deckHeight);
 
     let lastVariantKey = null;
@@ -1776,19 +1791,23 @@ export class GameScene extends Phaser.Scene {
           textureKey
         );
         plankRow.setDepth(0);
-        plankRow.setTint(plankIndex % 2 === 0 ? deckVariant.tintEven : deckVariant.tintOdd);
+        const plankTint = plankIndex % 2 === 0 ? deckVariant.tintEven : deckVariant.tintOdd;
+        plankRow.setTint(scaleHexColor(plankTint, DECK_BRIGHTNESS_MULTIPLIER));
         plankRow.tileScaleX = 1;
         plankRow.tileScaleY = 1;
         plankRow.tilePositionX = (plankIndex % 5) * deckVariant.tileOffsetStep;
       } else {
         const plankColor = plankIndex % 2 === 0 ? deckVariant.fallbackEven : deckVariant.fallbackOdd;
-        graphics.fillStyle(plankColor, 1);
+        graphics.fillStyle(scaleHexColor(plankColor, DECK_BRIGHTNESS_MULTIPLIER), 1);
         graphics.fillRect(deckLeft, y, deckWidth, rowHeight);
       }
 
       const seamInset = 28 + (plankIndex % 4) * 18;
       const seamWidth = Math.max(120, deckWidth - seamInset * 2);
-      graphics.fillStyle(0x8b603f, plankIndex % 2 === 0 ? 0.08 : 0.14);
+      graphics.fillStyle(
+        scaleHexColor(0x8b603f, DECK_BRIGHTNESS_MULTIPLIER),
+        (plankIndex % 2 === 0 ? 0.08 : 0.14) * DECK_HIGHLIGHT_OPACITY
+      );
       graphics.fillRect(deckLeft + seamInset, y, seamWidth, 2);
 
       if (hasDeckTrimTexture) {
@@ -1800,17 +1819,26 @@ export class GameScene extends Phaser.Scene {
           IMPORTED_PIXEL_ASSETS.deckPlankTrim.key
         );
         trimRow.setDepth(0.1);
-        trimRow.setTint(plankIndex % 2 === 0 ? 0xd9b48c : 0xc49263);
+        trimRow.setTint(
+          scaleHexColor(plankIndex % 2 === 0 ? 0xd9b48c : 0xc49263, DECK_BRIGHTNESS_MULTIPLIER)
+        );
+        trimRow.setAlpha(DECK_HIGHLIGHT_OPACITY);
       }
 
       const jointSteps = [148, 206, 172, 228];
       let jointX = deckLeft + 76 + ((plankIndex % 5) * 22);
       let jointIndex = plankIndex % jointSteps.length;
       while (jointX < deckRight - 72) {
-        graphics.fillStyle(0x4a2f1f, 0.22);
+        graphics.fillStyle(
+          scaleHexColor(0x4a2f1f, DECK_BRIGHTNESS_MULTIPLIER),
+          0.22 * DECK_HIGHLIGHT_OPACITY
+        );
         graphics.fillRect(jointX, y + 4, 3, DECK_TILE_SIZE - 10);
         if ((jointIndex + plankIndex) % 3 === 0) {
-          graphics.fillStyle(0x2f1d12, 0.1);
+          graphics.fillStyle(
+            scaleHexColor(0x2f1d12, DECK_BRIGHTNESS_MULTIPLIER),
+            0.1 * DECK_HIGHLIGHT_OPACITY
+          );
           graphics.fillRect(jointX + 6, y + 8, 22, 2);
         }
         jointX += jointSteps[jointIndex];
@@ -4800,7 +4828,7 @@ export class GameScene extends Phaser.Scene {
       .image(width * 0.5, height * 0.5, EDGE_FOG_TEXTURE_KEY)
       .setScrollFactor(0)
       .setDepth(8.7)
-      .setAlpha(0.94);
+      .setAlpha(EDGE_FOG_VIGNETTE_OPACITY);
   }
 
   rebuildEdgeFogTexture() {
