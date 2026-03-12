@@ -608,6 +608,7 @@ export class GameScene extends Phaser.Scene {
     this.baseSpawnCheckIntervalMs = BASE_SPAWN_CHECK_INTERVAL_MS;
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
+    this.playTime = 0;
     this.runStartTimeMs = 0;
     this.hudElapsedSeconds = -1;
     this.targetEnemies = 0;
@@ -730,6 +731,7 @@ export class GameScene extends Phaser.Scene {
     this.levelUpUi = [];
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
+    this.playTime = 0;
     this.runStartTimeMs = this.time?.now ?? 0;
     this.hudElapsedSeconds = -1;
     this.targetEnemies = 0;
@@ -1059,7 +1061,7 @@ export class GameScene extends Phaser.Scene {
     this.registerSceneShutdownCleanup();
     this.openWeaponSelection();
     this.maintainEnemyDensity();
-    this.updateHud();
+    this.updateHUD();
   }
 
   preload() {
@@ -1130,7 +1132,7 @@ export class GameScene extends Phaser.Scene {
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
-      this.updateHud();
+      this.updateHUD();
       return;
     }
 
@@ -1143,7 +1145,7 @@ export class GameScene extends Phaser.Scene {
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
-      this.updateHud();
+      this.updateHUD();
       return;
     }
 
@@ -1153,6 +1155,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.runTimeMs += delta;
+    this.playTime += delta;
     if ((this.time?.now ?? 0) - this.lastKillAtMs > COMBO_RESET_WINDOW_MS) {
       this.killCombo = 0;
     }
@@ -1210,7 +1213,7 @@ export class GameScene extends Phaser.Scene {
     this.updateDashCooldownRing();
     this.updateOffscreenEnemyIndicators();
     this.updateDebugDirectorOverlay();
-    this.updateHud();
+    this.updateHUD();
   }
 
   createTextures() {
@@ -4978,18 +4981,15 @@ export class GameScene extends Phaser.Scene {
     const expToNext = Number.isFinite(this.player.expToNext) ? this.player.expToNext : this.xpToNext;
     const xpRatio = expToNext > 0 ? Phaser.Math.Clamp(currentExp / expToNext, 0, 1) : 0;
     const xpPercent = Math.round(xpRatio * 100);
-    const nowMs = this.time?.now ?? 0;
-    const elapsedMs = Math.max(0, nowMs - this.runStartTimeMs);
+    const elapsedMs = Math.max(0, Number.isFinite(this.playTime) ? this.playTime : this.runTimeMs);
     const elapsedSeconds = Math.floor(elapsedMs / 1000);
     this.layoutHUDToCamera();
 
     this.hpText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
     this.expText.setText(`LV ${levelValue} | EXP ${xpPercent}%`);
     this.expBarFill.displayWidth = 120 * xpRatio;
-    if (elapsedSeconds !== this.hudElapsedSeconds) {
-      this.hudElapsedSeconds = elapsedSeconds;
-      this.timeText.setText(`TIME: ${this.formatRunTime(elapsedMs)}`);
-    }
+    this.hudElapsedSeconds = elapsedSeconds;
+    this.timeText.setText(`TIME: ${this.formatRunTime(elapsedMs)}`);
     this.killText.setText(`KILLS: ${this.totalKills}`);
   }
 
