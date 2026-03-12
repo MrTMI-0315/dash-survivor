@@ -124,6 +124,7 @@ const HUD_COMBO_STYLE = Object.freeze({
   stroke: "#2d1f08",
   strokeThickness: 6
 });
+const GAMEPLAY_CAMERA_ZOOM = 1.5;
 const IMPORTED_PIXEL_ASSETS = Object.freeze({
   deckPlankMain: Object.freeze({
     key: "sprite_deck_plank_main",
@@ -636,6 +637,7 @@ export class GameScene extends Phaser.Scene {
     this.applyMetaBonusesForRun();
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    this.cameras.main.setZoom(GAMEPLAY_CAMERA_ZOOM);
     this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
 
     this.hudLevelText = this.add
