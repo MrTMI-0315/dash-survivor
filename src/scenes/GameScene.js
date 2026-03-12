@@ -20,6 +20,8 @@ import {
   SPAWN_BURST_CONFIG,
   TARGET_ENEMY_CURVE,
   TARGET_ENEMY_FALLBACK,
+  TARGET_ENEMY_WAVE_DURATION_SEC,
+  TARGET_ENEMY_WAVE_INCREMENT,
   WORLD_HEIGHT,
   WORLD_WIDTH,
   XP_REQUIREMENTS
@@ -84,7 +86,7 @@ const ELITE_BONUS_XP_ORB_MAX = 4;
 const ELITE_BONUS_XP_ORB_VALUE_FACTOR = 0.35;
 const ELITE_UPGRADE_DROP_CHANCE = 0.28;
 const ELITE_BONUS_UPGRADE_IDS = ["weapon_damage", "attack_speed", "movement_speed", "pickup_radius", "projectile_count"];
-const PERFORMANCE_MAX_ACTIVE_ENEMIES = 160;
+const PERFORMANCE_MAX_ACTIVE_ENEMIES = 80;
 const PARTICLE_LOAD_SOFT_CAP_ENEMIES = 50;
 const PARTICLE_LOAD_HARD_CAP_ENEMIES = PERFORMANCE_MAX_ACTIVE_ENEMIES;
 const MIN_PARTICLE_LOAD_SCALE = 0.38;
@@ -2325,7 +2327,11 @@ export class GameScene extends Phaser.Scene {
         return Phaser.Math.Linear(segment.from, segment.to, progress);
       }
     }
-    return TARGET_ENEMY_FALLBACK;
+
+    const lastSegmentEndSec = TARGET_ENEMY_CURVE[TARGET_ENEMY_CURVE.length - 1]?.endSec ?? 0;
+    const elapsedPostWaveSec = Math.max(0, seconds - lastSegmentEndSec);
+    const postWaveCount = Math.floor(elapsedPostWaveSec / TARGET_ENEMY_WAVE_DURATION_SEC) + 1;
+    return TARGET_ENEMY_FALLBACK + postWaveCount * TARGET_ENEMY_WAVE_INCREMENT;
   }
 
   getSpawnBurst(seconds, deficit) {

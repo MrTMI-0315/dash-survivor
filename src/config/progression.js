@@ -63,14 +63,16 @@ export const SPAWN_LANE_RULES = Object.freeze({
 });
 
 export const TARGET_ENEMY_CURVE = [
-  { startSec: 0, endSec: 20, from: 3, to: 7 },
-  { startSec: 20, endSec: 60, from: 7, to: 15 },
-  { startSec: 60, endSec: 100, from: 15, to: 19 },
-  { startSec: 100, endSec: 150, from: 22, to: 17 },
-  { startSec: 150, endSec: 240, from: 17, to: 21 }
+  { startSec: 0, endSec: 30, from: 10, to: 10 },
+  { startSec: 30, endSec: 60, from: 14, to: 14 },
+  { startSec: 60, endSec: 90, from: 18, to: 18 },
+  { startSec: 90, endSec: 120, from: 22, to: 22 },
+  { startSec: 120, endSec: 150, from: 26, to: 26 }
 ];
 
-export const TARGET_ENEMY_FALLBACK = 21;
+export const TARGET_ENEMY_FALLBACK = 26;
+export const TARGET_ENEMY_WAVE_DURATION_SEC = 30;
+export const TARGET_ENEMY_WAVE_INCREMENT = 4;
 
 export const SPAWN_BURST_CONFIG = {
   defaultBurst: 1,
