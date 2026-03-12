@@ -245,7 +245,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     } else if (this.scene.spawnDamageParticles) {
       this.scene.spawnDamageParticles(this.x, this.y, HIT_SPARK_PARTICLE_COUNT);
     }
-    if (this.scene.spawnDamageNumber) {
+    if (this.scene.spawnDamageText) {
+      this.scene.spawnDamageText(this.x, this.y - (this.isElite ? 4 : 0), appliedDamage, this);
+    } else if (this.scene.spawnDamageNumber) {
       this.scene.spawnDamageNumber(this.x, this.y - (this.isElite ? 4 : 0), appliedDamage, this);
     }
     const player = this.scene?.player;

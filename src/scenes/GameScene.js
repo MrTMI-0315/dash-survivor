@@ -117,7 +117,7 @@ const RENDER_DEPTH = Object.freeze({
   ENEMIES: 10,
   PLAYER: 20,
   PROJECTILES: 30,
-  DAMAGE_TEXT: 40,
+  DAMAGE_TEXT: 50,
   HUD: 1000,
   MENUS: 2000
 });
@@ -3208,17 +3208,17 @@ export class GameScene extends Phaser.Scene {
 
     const isBoss = Boolean(enemy?.getData?.("isBoss")) || enemy?.type === "boss";
     const isElite = Boolean(enemy?.isElite);
-    const textColor = isBoss ? "#ff3b3b" : isElite ? "#ffb347" : "#ffffff";
+    const textColor = isBoss ? "#ff3b3b" : isElite ? "#ffb347" : "#ff4444";
 
     let text = this.damageNumberPool.find((entry) => !entry.active);
     if (!text) {
       text = this.add
         .text(x, y, "", {
           fontFamily: "Arial",
-          fontSize: "16px",
-          color: "#ffffff",
-          stroke: "#2f1c14",
-          strokeThickness: 4
+          fontSize: "14px",
+          color: "#ff4444",
+          stroke: "#000000",
+          strokeThickness: 2
         })
         .setOrigin(0.5)
         .setDepth(RENDER_DEPTH.DAMAGE_TEXT)
@@ -3238,7 +3238,7 @@ export class GameScene extends Phaser.Scene {
 
     text.setText(`${safeAmount}`);
     text.setStyle({
-      fontSize: isBoss ? "20px" : isElite ? "18px" : "16px",
+      fontSize: isBoss ? "16px" : isElite ? "15px" : "14px",
       color: textColor
     });
     text.setPosition(x, y);
@@ -3262,9 +3262,9 @@ export class GameScene extends Phaser.Scene {
 
     const tween = this.tweens.add({
       targets: text,
-      y: y - (isElite ? 36 : 28),
+      y: y - 20,
       alpha: 0,
-      duration: isElite ? 420 : 320,
+      duration: 600,
       ease: "Cubic.easeOut",
       onComplete: () => {
         text.setVisible(false);
@@ -3274,6 +3274,10 @@ export class GameScene extends Phaser.Scene {
       }
     });
     text.setData("damageTween", tween);
+  }
+
+  spawnDamageText(x, y, damage, enemy = null) {
+    this.spawnDamageNumber(x, y, damage, enemy);
   }
 
   formatRunTime(ms) {
