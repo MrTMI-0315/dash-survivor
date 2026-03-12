@@ -1041,6 +1041,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    const isRunSummaryOpen = this.scene.isActive("RunSummaryScene");
+    if (isRunSummaryOpen) {
+      if (this.input?.enabled) {
+        this.input.enabled = false;
+      }
+      return;
+    }
+    if (this.input && !this.input.enabled) {
+      this.input.enabled = true;
+    }
+
     this.updateHelpOverlayPresentation();
     this.updateSeaWaves(time);
     this.handlePlaytestHotkeys();
@@ -4356,14 +4367,15 @@ export class GameScene extends Phaser.Scene {
 
     this.isGameOver = true;
     this.physics.pause();
+    this.input.enabled = false;
     this.player.body?.setVelocity(0, 0);
     this.updateBestTimeRecord(this.runTimeMs);
     this.finalizeMetaRun();
     this.refreshGameOverText();
-    this.gameOverText.setVisible(true);
+    this.gameOverText.setVisible(false);
     if (this.gameOverRestartButton && this.gameOverRestartLabel) {
-      this.gameOverRestartButton.setVisible(true);
-      this.gameOverRestartLabel.setVisible(true);
+      this.gameOverRestartButton.setVisible(false);
+      this.gameOverRestartLabel.setVisible(false);
     }
 
     const summaryPayload = {

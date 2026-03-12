@@ -1,3 +1,11 @@
+const UI_LAYER_ORDER = Object.freeze({
+  GAME_WORLD: 0,
+  COMBAT_UI: 20,
+  HUD: 40,
+  OVERLAY: 60,
+  RUN_SUMMARY: 80
+});
+
 export class RunSummaryScene extends Phaser.Scene {
   constructor() {
     super("RunSummaryScene");
@@ -27,11 +35,23 @@ export class RunSummaryScene extends Phaser.Scene {
       totalCoins: this.resolveTotalCoins(data.totalCoins)
     };
 
-    this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x000000, 0.72).setDepth(1);
-    this.add.rectangle(centerX, centerY, cardWidth + 16, cardHeight + 16, 0x071120, 0.98).setDepth(2);
-    this.add.rectangle(centerX, centerY, cardWidth, cardHeight, 0x111827, 0.98).setDepth(2);
-    this.add.rectangle(centerX, centerY, cardWidth, cardHeight, 0, 0).setStrokeStyle(4, 0x5ca7ff, 1).setDepth(3);
-    this.add.rectangle(centerX, centerY, cardWidth - 12, cardHeight - 12, 0, 0).setStrokeStyle(2, 0xb8e0ff, 0.95).setDepth(3);
+    this.add
+      .rectangle(centerX, centerY, camera.width, camera.height, 0x000000, 0.65)
+      .setDepth(UI_LAYER_ORDER.OVERLAY);
+    this.add
+      .rectangle(centerX, centerY, cardWidth + 16, cardHeight + 16, 0x071120, 0.98)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY);
+    this.add
+      .rectangle(centerX, centerY, cardWidth, cardHeight, 0x111827, 0.98)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY);
+    this.add
+      .rectangle(centerX, centerY, cardWidth, cardHeight, 0, 0)
+      .setStrokeStyle(4, 0x5ca7ff, 1)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 1);
+    this.add
+      .rectangle(centerX, centerY, cardWidth - 12, cardHeight - 12, 0, 0)
+      .setStrokeStyle(2, 0xb8e0ff, 0.95)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 1);
 
     const panelTop = centerY - cardHeight * 0.5;
     const panelLeft = centerX - cardWidth * 0.5;
@@ -45,7 +65,7 @@ export class RunSummaryScene extends Phaser.Scene {
         strokeThickness: 5
       })
       .setOrigin(0.5, 0)
-      .setDepth(3);
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2);
 
     const lines = [
       `Time Survived: ${this.formatTime(stats.timeSurvivedMs)}`,
@@ -61,8 +81,13 @@ export class RunSummaryScene extends Phaser.Scene {
     const statsTopY = titleBottomY + titleMarginBottom;
     const statsContainerHeight = 168;
     const statsCenterY = statsTopY + statsContainerHeight * 0.5;
-    this.add.rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0x152947, 0.92).setDepth(3);
-    this.add.rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0, 0).setStrokeStyle(2, 0x7bc3ff, 1).setDepth(3);
+    this.add
+      .rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0x152947, 0.92)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 1);
+    this.add
+      .rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0, 0)
+      .setStrokeStyle(2, 0x7bc3ff, 1)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 1);
     const statsText = this.add
       .text(centerX, statsCenterY, lines.join("\n"), {
         fontFamily: "Arial",
@@ -72,7 +97,7 @@ export class RunSummaryScene extends Phaser.Scene {
         lineSpacing: statLineSpacing
       })
       .setOrigin(0.5)
-      .setDepth(3);
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2);
     statsText.setY(statsCenterY - statsText.height * 0.5 + 2);
 
     const panelBottom = panelTop + cardHeight;
@@ -90,7 +115,7 @@ export class RunSummaryScene extends Phaser.Scene {
         strokeThickness: 4
       })
       .setOrigin(0.5)
-      .setDepth(4)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2)
       .setVisible(false);
 
     this.createActionButton(centerX, retryY, "RETRY", () => {
@@ -171,13 +196,18 @@ export class RunSummaryScene extends Phaser.Scene {
     const hoverFill = this.adjustHexBrightness(baseFill, variant === "primary" ? 0.08 : 0.06);
     const hoverStroke = this.adjustHexBrightness(baseStroke, variant === "primary" ? 0.08 : 0.06);
 
-    const shadow = this.add.rectangle(x, y + 3, width + 12, height + 8, 0x0b1423, 0.95).setDepth(3);
+    const shadow = this.add
+      .rectangle(x, y + 3, width + 12, height + 8, 0x0b1423, 0.95)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 1);
     const bg = this.add
       .rectangle(x, y, width, height, baseFill, 1)
       .setStrokeStyle(3, baseStroke, 1)
       .setInteractive({ useHandCursor: true })
-      .setDepth(4);
-    this.add.rectangle(x, y, width - 10, height - 10, 0, 0).setStrokeStyle(1, 0xb8e0ff, 0.9).setDepth(4);
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2);
+    this.add
+      .rectangle(x, y, width - 10, height - 10, 0, 0)
+      .setStrokeStyle(1, 0xb8e0ff, 0.9)
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2);
     const text = this.add
       .text(x, y, label, {
         fontFamily: "Arial",
@@ -187,7 +217,7 @@ export class RunSummaryScene extends Phaser.Scene {
         strokeThickness: 5
       })
       .setOrigin(0.5)
-      .setDepth(5);
+      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 3);
 
     const trigger = () => {
       if (typeof onClick === "function") {
