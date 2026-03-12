@@ -121,7 +121,10 @@ const COMBO_RESET_WINDOW_MS = 2000;
 const COMBO_TEXT_SCALE = 1.3;
 const COMBO_TEXT_FADE_TIME_MS = 800;
 const HUD_PANEL_PADDING = 12;
-const HUD_PANEL_HEIGHT = 72;
+const HUD_PANEL_X = 16;
+const HUD_PANEL_Y = 16;
+const HUD_PANEL_WIDTH = 324;
+const HUD_PANEL_HEIGHT = 108;
 const HUD_EXP_BAR_HEIGHT = 6;
 const HUD_ALERT_POOL_SIZE = 3;
 const HUD_ALERT_STYLE = Object.freeze({
@@ -746,6 +749,7 @@ export class GameScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     this.player = new Player(this, WORLD_WIDTH / 2, WORLD_HEIGHT / 2);
+    this.player.level = this.level;
     this.enemies = this.add.group();
     this.enemyPool = new ObjectPool(this, this.enemies, { initialSize: ENEMY_POOL_SIZE });
     this.xpOrbs = this.physics.add.group();
@@ -793,7 +797,7 @@ export class GameScene extends Phaser.Scene {
     this.hudLevelText = this.add
       .text(20, 24, "", {
         fontFamily: "Arial",
-        fontSize: "22px",
+        fontSize: "21px",
         color: "#fff0cf",
         stroke: "#28170f",
         strokeThickness: 4
@@ -801,9 +805,9 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudStatsText = this.add
-      .text(20, 44, "", {
+      .text(20, 58, "", {
         fontFamily: "Arial",
-        fontSize: "13px",
+        fontSize: "14px",
         color: "#cdb28a",
         stroke: "#28170f",
         strokeThickness: 2
@@ -811,36 +815,33 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudTimerText = this.add
-      .text(1210, 18, "", {
+      .text(20, 74, "", {
         fontFamily: "Arial",
-        fontSize: "18px",
+        fontSize: "14px",
         color: "#f0dfbe",
         stroke: "#28170f",
-        strokeThickness: 4
+        strokeThickness: 3
       })
-      .setOrigin(1, 0.5)
       .setScrollFactor(0)
       .setDepth(10);
     this.hudGoldText = this.add
-      .text(1210, 44, "", {
+      .text(20, 90, "", {
         fontFamily: "Arial",
-        fontSize: "16px",
+        fontSize: "14px",
         color: "#e6cc86",
         stroke: "#28170f",
-        strokeThickness: 4
+        strokeThickness: 3
       })
-      .setOrigin(1, 0.5)
       .setScrollFactor(0)
       .setDepth(10);
     this.hudXpLabelText = this.add
-      .text(36, 63, "EXP", {
+      .text(20, 44, "EXP", {
         fontFamily: "Arial",
         fontSize: "9px",
         color: "#e7d6b4",
         stroke: "#28170f",
         strokeThickness: 2
       })
-      .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(10);
     this.hudSecondaryText = this.add
@@ -857,9 +858,9 @@ export class GameScene extends Phaser.Scene {
       .setDepth(10);
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)) {
       this.hudPanelBack = this.add
-        .image(170, HUD_PANEL_PADDING + HUD_PANEL_HEIGHT * 0.5, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
+        .image(HUD_PANEL_X + HUD_PANEL_WIDTH * 0.5, HUD_PANEL_Y + HUD_PANEL_HEIGHT * 0.5, IMPORTED_PIXEL_ASSETS.uiPanelBrown.key)
         .setOrigin(0.5)
-        .setDisplaySize(324, HUD_PANEL_HEIGHT)
+        .setDisplaySize(HUD_PANEL_WIDTH, HUD_PANEL_HEIGHT)
         .setScrollFactor(0)
         .setDepth(8)
         .setTint(0x8e5b33)
@@ -874,7 +875,7 @@ export class GameScene extends Phaser.Scene {
     }
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)) {
       this.hudXpFrame = this.add
-        .image(170, 67, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
+        .image(162, 47, IMPORTED_PIXEL_ASSETS.uiPanelTanInlay.key)
         .setOrigin(0.5)
         .setDisplaySize(284, 10)
         .setScrollFactor(0)
@@ -3921,6 +3922,7 @@ export class GameScene extends Phaser.Scene {
     while (this.currentXp >= this.xpToNext) {
       this.currentXp -= this.xpToNext;
       this.level += 1;
+      this.player.level = this.level;
       this.pendingLevelUps += 1;
       this.xpToNext = this.getXpRequirement(this.level);
       hasLeveledUp = true;
@@ -4720,17 +4722,18 @@ export class GameScene extends Phaser.Scene {
     const xpFillAlpha = xpPulseActive ? 0.84 + xpPulse * 0.16 : 0.95;
     const xpBorderColor = xpPulseActive ? this.lerpColor(0x91a6c8, 0xffeab0, xpPulse) : 0x91a6c8;
     const barX = 20;
-    const xpBarY = 62;
+    const xpBarY = 46;
     const barWidth = 284;
     const barHeight = 10;
 
     const hpColor = hpRatio <= 0.25 ? "#ffb2a2" : hpRatio <= 0.5 ? "#ffd598" : "#fff0cf";
-    const runGoldPreview = this.isGameOver ? this.lastRunMetaCurrency : this.calculateRunCoinReward();
+    const levelValue = Number.isFinite(this.player?.level) ? this.player.level : this.level;
     this.hudLevelText.setColor(hpColor);
-    this.hudLevelText.setText(`${this.player.hp}/${this.player.maxHp} HP`);
-    this.hudTimerText?.setText(this.formatRunTime(this.runTimeMs));
-    this.hudGoldText?.setText(`GOLD ${runGoldPreview}`);
-    this.hudStatsText.setText(`LV ${this.level}   EXP ${this.currentXp}/${this.xpToNext}`);
+    this.hudLevelText.setText(`HP ${this.player.hp} / ${this.player.maxHp}`);
+    this.hudXpLabelText?.setText(`EXP ${this.currentXp}/${this.xpToNext}`);
+    this.hudStatsText.setText(`LEVEL ${levelValue}`);
+    this.hudTimerText?.setText(`TIME ${this.formatRunTime(this.runTimeMs)}`);
+    this.hudGoldText?.setText(`KILLS ${this.totalKills}`);
     this.hudHeaderChip?.setVisible(false);
     this.hudCoreLabelText?.setVisible(false);
     this.hudXpLabelText?.setVisible(true);
