@@ -457,6 +457,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverRestartButton = null;
     this.gameOverRestartLabel = null;
     this.hudBarsGraphics = null;
+    this.enemyHealthBarsGraphics = null;
     this.dashCooldownRingGraphics = null;
     this.playerReadabilityGraphics = null;
     this.hudLevelText = null;
@@ -746,6 +747,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
+    this.enemyHealthBarsGraphics = this.add.graphics().setDepth(8.6);
     const weaponSlotCount = Math.max(1, this.player?.maxWeaponSlots ?? 3);
     const slotGap = 44;
     const slotStartX = 640 - ((weaponSlotCount - 1) * slotGap) / 2;
@@ -872,6 +874,7 @@ export class GameScene extends Phaser.Scene {
 
     if (this.isGameOver) {
       this.updateBossProjectiles(time);
+      this.updateEnemyHealthBars();
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
@@ -883,6 +886,7 @@ export class GameScene extends Phaser.Scene {
       this.handleLevelUpInput();
       this.updateBossProjectiles(time);
       this.player.body?.setVelocity(0, 0);
+      this.updateEnemyHealthBars();
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
@@ -894,6 +898,7 @@ export class GameScene extends Phaser.Scene {
       this.handleWeaponSelectionInput();
       this.updateBossProjectiles(time);
       this.player.body?.setVelocity(0, 0);
+      this.updateEnemyHealthBars();
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
@@ -959,6 +964,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    this.updateEnemyHealthBars();
     this.updateDashCooldownRing();
     this.updateOffscreenEnemyIndicators();
     this.updateDebugDirectorOverlay();
@@ -2005,6 +2011,7 @@ export class GameScene extends Phaser.Scene {
       .filter(Boolean)
       .forEach((obj) => obj.setAlpha(hudAlpha));
     this.dashCooldownRingGraphics?.setAlpha(isModalOpen ? 0.2 : 1);
+    this.enemyHealthBarsGraphics?.setAlpha(isModalOpen ? 0.25 : 1);
     this.offscreenIndicatorGraphics?.setAlpha(isModalOpen ? 0.08 : 1);
     this.modalBackdrop?.setVisible(isModalOpen);
 
@@ -4394,5 +4401,42 @@ export class GameScene extends Phaser.Scene {
       this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.85);
       this.hudBarsGraphics.strokeRect(barX + 3, xpBarY + 3, barWidth - 6, barHeight - 6);
     }
+  }
+
+  updateEnemyHealthBars() {
+    if (!this.enemyHealthBarsGraphics) {
+      return;
+    }
+    this.enemyHealthBarsGraphics.clear();
+    const worldView = this.cameras?.main?.worldView;
+    this.enemies.getChildren().forEach((enemy) => {
+      if (!enemy?.active || enemy.hp <= 0) {
+        return;
+      }
+      const maxHp = Math.max(1, Number(enemy.maxHp ?? enemy.hp));
+      const hpRatio = Phaser.Math.Clamp(enemy.hp / maxHp, 0, 1);
+      const isBoss = Boolean(enemy.getData?.("isBoss"));
+      const isElite = Boolean(enemy.isElite);
+      if (!isBoss && !isElite && hpRatio >= 0.999) {
+        return;
+      }
+      if (worldView && !Phaser.Geom.Rectangle.Overlaps(worldView, enemy.getBounds())) {
+        return;
+      }
+
+      const width = isBoss ? 96 : isElite ? 46 : 34;
+      const height = isBoss ? 9 : 6;
+      const x = Math.round(enemy.x - width / 2);
+      const y = Math.round(enemy.y - Math.max(28, enemy.displayHeight * 0.58));
+      const innerWidth = Math.max(2, Math.round((width - 4) * hpRatio));
+      const fillColor = isBoss ? 0xff5959 : isElite ? 0xffb347 : 0xff7d7d;
+
+      this.enemyHealthBarsGraphics.fillStyle(0x1b1010, 0.86);
+      this.enemyHealthBarsGraphics.fillRect(x, y, width, height);
+      this.enemyHealthBarsGraphics.fillStyle(fillColor, 0.96);
+      this.enemyHealthBarsGraphics.fillRect(x + 2, y + 2, innerWidth, Math.max(1, height - 4));
+      this.enemyHealthBarsGraphics.lineStyle(1, 0xf2d5b5, isBoss ? 0.92 : 0.78);
+      this.enemyHealthBarsGraphics.strokeRect(x, y, width, height);
+    });
   }
 }

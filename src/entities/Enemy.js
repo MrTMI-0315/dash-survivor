@@ -45,6 +45,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.damage = config.damage ?? archetype.damage;
     this.baseDamage = this.damage;
     this.hp = config.hp ?? archetype.hp;
+    this.maxHp = this.hp;
     this.xpValue = config.xpValue ?? archetype.xpValue;
     this.knockbackVx = 0;
     this.knockbackVy = 0;
@@ -244,6 +245,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.nextPoisonTickAtMs = 0;
 
     this.hp = Math.round(this.hp * eliteConfig.hpMultiplier);
+    this.maxHp = this.hp;
     this.damage = Math.round(this.damage * 1.35);
     this.baseDamage = this.damage;
     this.speed *= 1.1;
