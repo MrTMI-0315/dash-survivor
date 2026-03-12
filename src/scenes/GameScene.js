@@ -460,6 +460,7 @@ export class GameScene extends Phaser.Scene {
     this.enemyHealthBarsGraphics = null;
     this.dashCooldownRingGraphics = null;
     this.playerReadabilityGraphics = null;
+    this.lowHealthVignetteGraphics = null;
     this.hudLevelText = null;
     this.hudStatsText = null;
     this.hudTimerText = null;
@@ -776,6 +777,7 @@ export class GameScene extends Phaser.Scene {
       this.hudWeaponSlotLabels.push(label);
     }
     this.playerReadabilityGraphics = this.add.graphics().setDepth(5);
+    this.lowHealthVignetteGraphics = this.add.graphics().setScrollFactor(0).setDepth(21);
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
     this.modalBackdrop = this.add
@@ -875,6 +877,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isGameOver) {
       this.updateBossProjectiles(time);
       this.updateEnemyHealthBars();
+      this.updateLowHealthVignette();
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
@@ -887,6 +890,7 @@ export class GameScene extends Phaser.Scene {
       this.updateBossProjectiles(time);
       this.player.body?.setVelocity(0, 0);
       this.updateEnemyHealthBars();
+      this.updateLowHealthVignette();
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
@@ -899,6 +903,7 @@ export class GameScene extends Phaser.Scene {
       this.updateBossProjectiles(time);
       this.player.body?.setVelocity(0, 0);
       this.updateEnemyHealthBars();
+      this.updateLowHealthVignette();
       this.updateDashCooldownRing();
       this.updateOffscreenEnemyIndicators();
       this.updateDebugDirectorOverlay();
@@ -965,6 +970,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.updateEnemyHealthBars();
+    this.updateLowHealthVignette();
     this.updateDashCooldownRing();
     this.updateOffscreenEnemyIndicators();
     this.updateDebugDirectorOverlay();
@@ -4438,5 +4444,32 @@ export class GameScene extends Phaser.Scene {
       this.enemyHealthBarsGraphics.lineStyle(1, 0xf2d5b5, isBoss ? 0.92 : 0.78);
       this.enemyHealthBarsGraphics.strokeRect(x, y, width, height);
     });
+  }
+
+  updateLowHealthVignette() {
+    if (!this.lowHealthVignetteGraphics || !this.player?.active) {
+      return;
+    }
+    this.lowHealthVignetteGraphics.clear();
+    const hpRatio = Phaser.Math.Clamp(this.player.getHpRatio(), 0, 1);
+    if (hpRatio > 0.55) {
+      return;
+    }
+
+    const baseIntensity = hpRatio <= 0.2 ? 0.28 : hpRatio <= 0.35 ? 0.18 : 0.1;
+    const pulse = (Math.sin((this.time?.now ?? 0) / 150) + 1) * 0.5;
+    const modalDampen = this.isLeveling || this.isWeaponSelecting ? 0.65 : 1;
+    const alpha = (baseIntensity + pulse * 0.08) * modalDampen;
+    const width = this.scale?.width ?? 1280;
+    const height = this.scale?.height ?? 720;
+    const edge = Math.max(26, Math.round(Math.min(width, height) * 0.08));
+
+    this.lowHealthVignetteGraphics.fillStyle(0x7d1010, alpha * 0.6);
+    this.lowHealthVignetteGraphics.fillRect(0, 0, width, edge);
+    this.lowHealthVignetteGraphics.fillRect(0, height - edge, width, edge);
+    this.lowHealthVignetteGraphics.fillRect(0, 0, edge, height);
+    this.lowHealthVignetteGraphics.fillRect(width - edge, 0, edge, height);
+    this.lowHealthVignetteGraphics.lineStyle(2, 0xff4d4d, alpha * 0.75);
+    this.lowHealthVignetteGraphics.strokeRect(1, 1, width - 2, height - 2);
   }
 }
