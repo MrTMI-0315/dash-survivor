@@ -15,6 +15,32 @@ const PROJECTILE_TINT_BY_WEAPON = Object.freeze({
   meteor: 0xff8757,
   lightning: 0xc6f1ff
 });
+const PROJECTILE_VISUAL_PROFILE_BY_WEAPON = Object.freeze({
+  dagger: Object.freeze({
+    scaleX: 1.65,
+    scaleY: 0.7,
+    glowAlpha: 0.42,
+    trailBurst: 1
+  }),
+  fireball: Object.freeze({
+    scaleX: 1.85,
+    scaleY: 1.85,
+    glowAlpha: 0.75,
+    trailBurst: 2
+  }),
+  meteor: Object.freeze({
+    scaleX: 2.1,
+    scaleY: 2.1,
+    glowAlpha: 0.82,
+    trailBurst: 2
+  }),
+  default: Object.freeze({
+    scaleX: PROJECTILE_VISUAL_SCALE,
+    scaleY: PROJECTILE_VISUAL_SCALE,
+    glowAlpha: PROJECTILE_GLOW_ALPHA,
+    trailBurst: 1
+  })
+});
 
 function getWeaponDefinition(type) {
   return WEAPON_DEFINITIONS[type] ?? null;
@@ -76,6 +102,10 @@ export class WeaponSystem {
     return PROJECTILE_TINT_BY_WEAPON[type] ?? 0xffffff;
   }
 
+  getProjectileVisualProfile(type) {
+    return PROJECTILE_VISUAL_PROFILE_BY_WEAPON[type] ?? PROJECTILE_VISUAL_PROFILE_BY_WEAPON.default;
+  }
+
   normalizeProjectileEnemyPair(a, b) {
     let projectile = a;
     let enemy = b;
@@ -124,7 +154,7 @@ export class WeaponSystem {
         projectile.explosionRadius = 0;
         projectile.explosionDamage = 0;
         projectile.body.setCircle(projectile.displayWidth * 0.45, 0, 0);
-        projectile.setScale(PROJECTILE_VISUAL_SCALE);
+        projectile.setScale(PROJECTILE_VISUAL_SCALE, PROJECTILE_VISUAL_SCALE);
         projectile.disableBody(true, true);
         freeList.push(projectile);
       }
@@ -168,7 +198,11 @@ export class WeaponSystem {
     projectile.explosionRadius = 0;
     projectile.explosionDamage = 0;
     projectile.setTint(0xffffff);
-    projectile.setScale(PROJECTILE_VISUAL_SCALE);
+    projectile.setScale(PROJECTILE_VISUAL_SCALE, PROJECTILE_VISUAL_SCALE);
+    projectile.setRotation(0);
+    projectile.setData("visualColor", 0xffffff);
+    projectile.setData("glowAlpha", PROJECTILE_GLOW_ALPHA);
+    projectile.setData("trailBurst", 1);
     projectile.setData("inProjectilePool", true);
     projectile.disableBody(true, true);
     freeList.push(projectile);
@@ -379,12 +413,14 @@ export class WeaponSystem {
       }
 
       const glowColor = projectile.getData("visualColor") ?? 0xffffff;
+      const glowAlpha = projectile.getData("glowAlpha") ?? PROJECTILE_GLOW_ALPHA;
       const glowRadius = Math.max(3, projectile.displayWidth * 0.42);
-      this.projectileGlowGraphics?.lineStyle(2, glowColor, PROJECTILE_GLOW_ALPHA);
+      this.projectileGlowGraphics?.lineStyle(2, glowColor, glowAlpha);
       this.projectileGlowGraphics?.strokeCircle(projectile.x, projectile.y, glowRadius);
       if (shouldEmitTrail && this.projectileTrailEmitter) {
+        const trailBurst = Math.max(1, Math.min(3, Math.floor(projectile.getData("trailBurst") ?? 1)));
         this.projectileTrailEmitter.setTint(glowColor);
-        this.projectileTrailEmitter.emitParticleAt(projectile.x, projectile.y, 1);
+        this.projectileTrailEmitter.emitParticleAt(projectile.x, projectile.y, trailBurst);
       }
 
       projectile.travelled += (projectile.speed * delta) / 1000;
@@ -539,11 +575,21 @@ export class WeaponSystem {
     let sourceX = this.player.x;
     let sourceY = this.player.y;
 
-    const gfx = this.scene.add.graphics();
-    gfx.lineStyle(3, 0xc1f6ff, 1);
+    const gfx = this.scene.add.graphics().setDepth(8.6);
 
     for (let i = 0; i < maxJumps && currentTarget; i += 1) {
+      const segmentFalloff = 1 - i * 0.22;
+      const coreAlpha = Phaser.Math.Clamp(0.95 * segmentFalloff, 0.35, 0.95);
+      const outerAlpha = Phaser.Math.Clamp(0.62 * segmentFalloff, 0.2, 0.62);
+      const lineWidth = Phaser.Math.Linear(4.2, 2.2, i / Math.max(1, maxJumps - 1));
+
+      gfx.lineStyle(lineWidth, 0xc1f6ff, coreAlpha);
       gfx.lineBetween(sourceX, sourceY, currentTarget.x, currentTarget.y);
+      gfx.lineStyle(Math.max(1.4, lineWidth * 0.52), 0x74d8ff, outerAlpha);
+      gfx.lineBetween(sourceX, sourceY, currentTarget.x, currentTarget.y);
+      gfx.fillStyle(0xd8fbff, Phaser.Math.Clamp(0.6 * segmentFalloff, 0.24, 0.6));
+      gfx.fillCircle(currentTarget.x, currentTarget.y, Math.max(3, 7 - i));
+
       const falloff = i === 0 ? 1 : i === 1 ? 0.8 : 0.65;
       const scaledDamage = this.getScaledWeaponDamage(weapon);
       this.applyDamage(currentTarget, Math.round(scaledDamage * falloff), weapon.knockbackForce, sourceX, sourceY);
@@ -589,10 +635,18 @@ export class WeaponSystem {
     projectile.behavior = config.behavior;
     projectile.explosionRadius = config.explosionRadius ?? 0;
     projectile.explosionDamage = config.explosionDamage ?? 0;
+    const visualProfile = this.getProjectileVisualProfile(type);
     const visualColor = this.getProjectileVisualColor(type);
     projectile.setTint(visualColor);
     projectile.setData("visualColor", visualColor);
-    projectile.setScale(PROJECTILE_VISUAL_SCALE);
+    projectile.setData("glowAlpha", visualProfile.glowAlpha);
+    projectile.setData("trailBurst", visualProfile.trailBurst);
+    projectile.setScale(visualProfile.scaleX, visualProfile.scaleY);
+    if (type === "dagger") {
+      projectile.setRotation(Math.atan2(ny, nx));
+    } else {
+      projectile.setRotation(0);
+    }
 
     projectile.enableBody(true, position.x, position.y, true, true);
     projectile.body.setVelocity(nx * config.speed, ny * config.speed);
@@ -654,6 +708,10 @@ export class WeaponSystem {
     const gfx = this.scene.add.graphics();
     gfx.fillStyle(0xffb169, 0.6);
     gfx.fillCircle(x, y, safeRadius);
+    gfx.lineStyle(2, 0xffd8a8, 0.82);
+    gfx.strokeCircle(x, y, safeRadius * 0.88);
+    gfx.lineStyle(1.5, 0xfff0cc, 0.64);
+    gfx.strokeCircle(x, y, safeRadius * 0.56);
     this.scene.tweens.add({
       targets: gfx,
       alpha: 0,
