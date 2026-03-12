@@ -12,39 +12,41 @@
 ### Core UI System Inventory (Code-Synced)
 | System | Status | Current Implementation | Code Hook |
 |---|---|---|---|
-| Player HP | Implemented | `LV/HP/DIR` text + HP value in top-left line | `updateHud()` |
-| XP bar | Implemented | Horizontal XP bar + `XP current/next` text | `updateHud()` |
-| Level indicator | Implemented | `LV` text + level-up panel | `updateHud()`, `openLevelUpChoices()` |
-| Dash cooldown indicator | Implemented | Dash bar + status text (`Charging/Active/Ready`) | `updateHud()`, `Player.getDashRatio()` |
-| Weapon slots | Partial | `WPN used/max` text only (no slot icons) | `updateHud()`, `player.weapons` |
-| Gold counter | Partial | `META` total shown (meta currency), no dedicated gold-only widget | `updateHud()`, `runMetaCurrency` |
-| Run timer | Not Implemented | Runtime exists (`runTimeMs`) but no on-screen timer | `update()` |
+| Player HP | Implemented | Minimal top-left HP value (`current/max HP`) | `updateHud()` |
+| XP bar | Implemented | Horizontal XP bar + `EXP current/next` text | `updateHud()` |
+| Level indicator | Partial | Level is used in progression/modal but not pinned as persistent HUD text | `openLevelUpChoices()`, `gainXp()` |
+| Dash cooldown indicator | Implemented | Player-near circular cooldown ring (ready pulse + charge arc) | `updateDashCooldownRing()`, `Player.getDashRatio()` |
+| Weapon slots | Not Implemented | No persistent icon row yet (selection modal exists) | `openWeaponSelection()` |
+| Gold counter | Partial | In-run gold/meta value not shown as dedicated persistent HUD widget | `runMetaCurrency`, `metaData.currency` |
+| Run timer | Implemented | `PLAYTIME mm:ss` shown in top-left stats line | `updateHud()`, `formatRunTime()` |
 | Boss warning indicator | Implemented | Top-center alert text + camera shake | `showHudAlert()`, `spawnBossEnemy()` |
 | Boss HP bar | Not Implemented | No boss-specific HP overlay widget | N/A |
-| Damage numbers | Not Implemented | Hit flash/particles exist, numeric popup 없음 | `Enemy.takeDamage()` |
+| Damage numbers | Implemented | Floating damage numbers with pooled text objects | `spawnDamageNumber()`, `Enemy.takeDamage()` |
 | Pickup indicators (XP/gold) | Partial | XP orb + elite upgrade orb visual pickup implemented; gold pickup widget 없음 | `spawnXpOrb()`, `handleXpOrbPickup()` |
+| Debug overlay | Implemented | `F2` toggled director/debug metrics panel, separate from player HUD | `updateDebugDirectorOverlay()`, `toggleDebugOverlay()` |
 
 ## Implementation Targets
 
 ### HUD Layout Targets (Current + Delta)
 - Top-left:
-  - `HP` + `LV` + `DIR` (implemented)
+  - `HP`, `PLAYTIME`, `EXP current/next` (implemented)
   - Keep as primary combat snapshot (implemented)
 - Top-center:
-  - `XP` progress bar and level context (implemented via top-left + bar row)
-  - Optional move of level text to center (planned)
+  - Weapon slot icon row (planned)
 - Top-right:
   - Dedicated `Gold` counter (planned)
-  - `Run timer` (`mm:ss`) (planned)
+  - Optional secondary run context only (planned)
 - Bottom-right:
-  - Dash cooldown indicator (implemented as bar + text)
-  - Circular dash icon indicator (planned)
+  - System controls / pause affordance (planned)
+- Around player:
+  - Dash cooldown ring with ready pulse (implemented)
 - Bottom-left:
-  - Weapon slots with icons (planned)
+  - Control hint overlay (implemented as lightweight DOM helper)
 - Center overlays:
   - Level-up selection (implemented)
+  - Start weapon selection (implemented)
   - Boss/miniboss warning text (implemented)
-  - Run-end summary (implemented: Game Over + meta summary)
+  - Run-end summary scene (implemented)
 
 ### Pixel-UI Direction (Planned)
 - HUD chrome should snap to a `16px` sub-grid even if gameplay art uses a `32px` world grid.
@@ -58,14 +60,15 @@
 
 ### Implementation Checklist
 - [x] HUD text + bars update every frame from live game state.
+- [x] Debug metrics are separated to toggled overlay (`F2`) and not mixed into core HUD.
 - [x] Level-up modal pauses gameplay and resumes cleanly.
 - [x] Boss/miniboss warning events are visible and time-bound.
 - [x] Mobile touch controls for move/dash are visible and functional.
-- [ ] Add dedicated run timer widget (`runTimeMs -> mm:ss`).
+- [x] Run timer (`PLAYTIME`) is shown in persistent HUD.
 - [ ] Add dedicated gold counter separate from `META` summary.
 - [ ] Add boss HP overlay bar.
 - [ ] Add weapon slot icon row.
-- [ ] Add floating damage numbers.
+- [x] Add floating damage numbers.
 
 ## Validation Checklist
 - [ ] HP UI changes immediately when player takes collision/poison damage.
