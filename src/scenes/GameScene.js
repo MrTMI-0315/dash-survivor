@@ -91,6 +91,9 @@ const MINI_BOSS_XP_BURST_COUNT = 8;
 const MINI_BOSS_XP_BURST_MIN_FACTOR = 0.3;
 const MINI_BOSS_XP_BURST_MAX_FACTOR = 0.45;
 const PERFORMANCE_MAX_ACTIVE_ENEMIES = 80;
+const EDGE_FOG_TEXTURE_KEY = "edge_fog_vignette";
+const EDGE_FOG_INNER_RADIUS_TILES = 12;
+const EDGE_FOG_OUTER_RADIUS_TILES = 14;
 const PARTICLE_LOAD_SOFT_CAP_ENEMIES = 50;
 const PARTICLE_LOAD_HARD_CAP_ENEMIES = PERFORMANCE_MAX_ACTIVE_ENEMIES;
 const MIN_PARTICLE_LOAD_SCALE = 0.38;
@@ -604,6 +607,8 @@ export class GameScene extends Phaser.Scene {
     this.dashCooldownRingGraphics = null;
     this.playerReadabilityGraphics = null;
     this.lowHealthVignetteGraphics = null;
+    this.edgeFogOverlay = null;
+    this.edgeFogRebuildState = { width: 0, height: 0, zoom: 0 };
     this.hudLevelText = null;
     this.hudStatsText = null;
     this.hudTimerText = null;
@@ -922,6 +927,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.playerReadabilityGraphics = this.add.graphics().setDepth(5);
     this.lowHealthVignetteGraphics = this.add.graphics().setScrollFactor(0).setDepth(21);
+    this.createEdgeFogOverlay();
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
     this.modalBackdrop = this.add
@@ -1033,6 +1039,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHelpOverlayPresentation();
     this.updateSeaWaves(time);
     this.handlePlaytestHotkeys();
+    this.updateEdgeFogOverlay();
 
     if (this.isGameOver) {
       this.updateBossProjectiles(time);
@@ -4735,6 +4742,75 @@ export class GameScene extends Phaser.Scene {
       this.enemyHealthBarsGraphics.lineStyle(1, 0xf2d5b5, isBoss ? 0.92 : 0.78);
       this.enemyHealthBarsGraphics.strokeRect(x, y, width, height);
     });
+  }
+
+  createEdgeFogOverlay() {
+    this.rebuildEdgeFogTexture();
+    const width = Math.max(1, this.scale?.width ?? 1280);
+    const height = Math.max(1, this.scale?.height ?? 720);
+    if (this.edgeFogOverlay) {
+      this.edgeFogOverlay.setTexture(EDGE_FOG_TEXTURE_KEY);
+      this.edgeFogOverlay.setPosition(width * 0.5, height * 0.5);
+      return;
+    }
+
+    this.edgeFogOverlay = this.add
+      .image(width * 0.5, height * 0.5, EDGE_FOG_TEXTURE_KEY)
+      .setScrollFactor(0)
+      .setDepth(8.7)
+      .setAlpha(0.94);
+  }
+
+  rebuildEdgeFogTexture() {
+    const width = Math.max(1, Math.round(this.scale?.width ?? 1280));
+    const height = Math.max(1, Math.round(this.scale?.height ?? 720));
+    const zoom = Number(this.cameras?.main?.zoom) || GAMEPLAY_CAMERA_ZOOM || 1;
+
+    const prev = this.edgeFogRebuildState;
+    if (prev.width === width && prev.height === height && Math.abs(prev.zoom - zoom) < 0.001) {
+      return;
+    }
+
+    if (this.textures.exists(EDGE_FOG_TEXTURE_KEY)) {
+      this.textures.remove(EDGE_FOG_TEXTURE_KEY);
+    }
+
+    const texture = this.textures.createCanvas(EDGE_FOG_TEXTURE_KEY, width, height);
+    if (!texture) {
+      return;
+    }
+
+    const ctx = texture.context;
+    const cx = width * 0.5;
+    const cy = height * 0.5;
+    const innerRadius = EDGE_FOG_INNER_RADIUS_TILES * DECK_TILE_SIZE * zoom;
+    const outerRadius = Math.max(innerRadius + 1, EDGE_FOG_OUTER_RADIUS_TILES * DECK_TILE_SIZE * zoom);
+    const gradient = ctx.createRadialGradient(cx, cy, innerRadius, cx, cy, outerRadius);
+    gradient.addColorStop(0, "rgba(4, 10, 18, 0)");
+    gradient.addColorStop(0.45, "rgba(4, 10, 18, 0.12)");
+    gradient.addColorStop(1, "rgba(4, 10, 18, 0.62)");
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    texture.refresh();
+
+    this.edgeFogRebuildState = { width, height, zoom };
+  }
+
+  updateEdgeFogOverlay() {
+    if (!this.edgeFogOverlay) {
+      return;
+    }
+
+    this.rebuildEdgeFogTexture();
+    if (this.edgeFogOverlay.texture?.key !== EDGE_FOG_TEXTURE_KEY && this.textures.exists(EDGE_FOG_TEXTURE_KEY)) {
+      this.edgeFogOverlay.setTexture(EDGE_FOG_TEXTURE_KEY);
+    }
+
+    const width = Math.max(1, this.scale?.width ?? 1280);
+    const height = Math.max(1, this.scale?.height ?? 720);
+    this.edgeFogOverlay.setPosition(width * 0.5, height * 0.5);
   }
 
   updateLowHealthVignette() {
