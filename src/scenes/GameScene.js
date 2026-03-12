@@ -658,6 +658,8 @@ export class GameScene extends Phaser.Scene {
     this.expText = null;
     this.timeText = null;
     this.killText = null;
+    this.expBarBg = null;
+    this.expBarFill = null;
     this.debugDirectorText = null;
     this.debugOverlayPanel = null;
     this.debugOverlayEnabled = false;
@@ -4912,9 +4914,16 @@ export class GameScene extends Phaser.Scene {
     this.hud = this.add.container(0, 0).setScrollFactor(0).setDepth(1000);
     this.hpText = this.add.text(margin, margin + lineSpacing * 0, "HP: 100/100", style).setOrigin(0, 0);
     this.expText = this.add.text(margin, margin + lineSpacing * 1, "LV 1 | EXP 0%", style).setOrigin(0, 0);
+    this.expBarBg = this.add
+      .rectangle(margin, margin + 36, 120, 6, 0x2b1f16, 0.9)
+      .setOrigin(0, 0)
+      .setStrokeStyle(1, 0x7b6047, 0.8);
+    this.expBarFill = this.add
+      .rectangle(margin, margin + 36, 120, 6, 0x6fd7ff, 0.95)
+      .setOrigin(0, 0);
     this.timeText = this.add.text(margin, margin + lineSpacing * 2, "TIME: 00:00", style).setOrigin(0, 0);
     this.killText = this.add.text(margin, margin + lineSpacing * 3, "KILLS: 0", style).setOrigin(0, 0);
-    this.hud.add([this.hpText, this.expText, this.timeText, this.killText]);
+    this.hud.add([this.hpText, this.expText, this.expBarBg, this.expBarFill, this.timeText, this.killText]);
     this.layoutHUDToCamera();
 
     // Keep legacy references wired for existing UI effects.
@@ -4945,7 +4954,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   layoutHUDToCamera() {
-    if (!this.hud || !this.hpText || !this.expText || !this.timeText || !this.killText) {
+    if (!this.hud || !this.hpText || !this.expText || !this.timeText || !this.killText || !this.expBarBg || !this.expBarFill) {
       return;
     }
     const cam = this.cameras?.main;
@@ -4958,17 +4967,21 @@ export class GameScene extends Phaser.Scene {
     this.hud.setPosition(anchorX, anchorY);
     this.hpText.setPosition(0, 0);
     this.expText.setPosition(0, 18);
-    this.timeText.setPosition(0, 36);
-    this.killText.setPosition(0, 54);
+    this.expBarBg.setPosition(0, 36);
+    this.expBarFill.setPosition(0, 36);
+    this.timeText.setPosition(0, 52);
+    this.killText.setPosition(0, 70);
   }
 
   updateHUD() {
-    if (!this.player || !this.hpText || !this.expText || !this.timeText || !this.killText) {
+    if (!this.player || !this.hpText || !this.expText || !this.timeText || !this.killText || !this.expBarFill) {
       return;
     }
 
     const levelValue = Number.isFinite(this.player.level) ? this.player.level : this.level;
-    const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
+    const currentExp = Number.isFinite(this.player.exp) ? this.player.exp : this.currentXp;
+    const expToNext = Number.isFinite(this.player.expToNext) ? this.player.expToNext : this.xpToNext;
+    const xpRatio = expToNext > 0 ? Phaser.Math.Clamp(currentExp / expToNext, 0, 1) : 0;
     const xpPercent = Math.round(xpRatio * 100);
     const nowMs = this.time?.now ?? 0;
     const elapsedMs = Math.max(0, nowMs - this.runStartTimeMs);
@@ -4977,6 +4990,7 @@ export class GameScene extends Phaser.Scene {
 
     this.hpText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
     this.expText.setText(`LV ${levelValue} | EXP ${xpPercent}%`);
+    this.expBarFill.displayWidth = 120 * xpRatio;
     if (elapsedSeconds !== this.hudElapsedSeconds) {
       this.hudElapsedSeconds = elapsedSeconds;
       this.timeText.setText(`TIME: ${this.formatRunTime(elapsedMs)}`);
