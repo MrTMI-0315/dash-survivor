@@ -8,10 +8,15 @@ export class RunSummaryScene extends Phaser.Scene {
     const centerX = camera.width * 0.5;
     const centerY = camera.height * 0.5;
     const cardWidth = 400;
-    const cardHeight = 430;
+    const cardHeight = 500;
     const panelPadding = 32;
     const titleMarginBottom = 24;
     const statLineSpacing = 12;
+    const buttonGap = 14;
+    const primaryButtonWidth = 260;
+    const primaryButtonHeight = 56;
+    const secondaryButtonWidth = 220;
+    const secondaryButtonHeight = 48;
 
     const stats = {
       timeSurvivedMs: data.timeSurvivedMs ?? 0,
@@ -70,9 +75,14 @@ export class RunSummaryScene extends Phaser.Scene {
       .setDepth(3);
     statsText.setY(statsCenterY - statsText.height * 0.5 + 2);
 
-    const buttonsTopY = statsTopY + statsContainerHeight + panelPadding;
+    const panelBottom = panelTop + cardHeight;
+    const buttonStackHeight = primaryButtonHeight + secondaryButtonHeight * 2 + buttonGap * 2;
+    const buttonsContainerTop = panelBottom - panelPadding - buttonStackHeight;
+    const retryY = buttonsContainerTop + primaryButtonHeight * 0.5;
+    const copyY = retryY + primaryButtonHeight * 0.5 + buttonGap + secondaryButtonHeight * 0.5;
+    const menuY = copyY + secondaryButtonHeight + buttonGap;
     this.copyStatusText = this.add
-      .text(centerX, buttonsTopY + 4, "", {
+      .text(centerX, buttonsContainerTop - 18, "", {
         fontFamily: "Arial",
         fontSize: "16px",
         color: "#c9e8ff",
@@ -83,17 +93,17 @@ export class RunSummaryScene extends Phaser.Scene {
       .setDepth(4)
       .setVisible(false);
 
-    this.createActionButton(centerX, buttonsTopY + 34, "COPY STATS", () => {
-      this.copyRunSummaryStats(copyText);
-    });
-
-    this.createActionButton(centerX, buttonsTopY + 86, "RETRY", () => {
+    this.createActionButton(centerX, retryY, "RETRY", () => {
       this.scene.stop("RunSummaryScene");
       this.scene.stop("GameScene");
       this.scene.start("GameScene");
-    });
+    }, { variant: "primary", width: primaryButtonWidth, height: primaryButtonHeight });
 
-    this.createActionButton(centerX, buttonsTopY + 138, "MAIN MENU", () => {
+    this.createActionButton(centerX, copyY, "COPY STATS", () => {
+      this.copyRunSummaryStats(copyText);
+    }, { variant: "secondary", width: secondaryButtonWidth, height: secondaryButtonHeight });
+
+    this.createActionButton(centerX, menuY, "MAIN MENU", () => {
       this.scene.stop("RunSummaryScene");
       const hasMainMenuScene = Boolean(this.scene.manager?.keys?.MainMenuScene);
       if (hasMainMenuScene) {
@@ -103,7 +113,7 @@ export class RunSummaryScene extends Phaser.Scene {
       }
       this.scene.stop("GameScene");
       this.scene.start("GameScene");
-    });
+    }, { variant: "secondary", width: secondaryButtonWidth, height: secondaryButtonHeight });
   }
 
   copyRunSummaryStats(text) {
@@ -152,25 +162,32 @@ export class RunSummaryScene extends Phaser.Scene {
       });
   }
 
-  createActionButton(x, y, label, onClick) {
-    const shadow = this.add.rectangle(x, y + 3, 242, 48, 0x0b1423, 0.95).setDepth(3);
+  createActionButton(x, y, label, onClick, options = {}) {
+    const variant = options.variant === "primary" ? "primary" : "secondary";
+    const width = Number.isFinite(options.width) ? options.width : variant === "primary" ? 260 : 220;
+    const height = Number.isFinite(options.height) ? options.height : variant === "primary" ? 56 : 48;
+    const baseFill = variant === "primary" ? 0x255283 : 0x1b2d45;
+    const baseStroke = variant === "primary" ? 0x8ccfff : 0x6eb9ff;
+    const hoverFill = this.adjustHexBrightness(baseFill, variant === "primary" ? 0.08 : 0.06);
+    const hoverStroke = this.adjustHexBrightness(baseStroke, variant === "primary" ? 0.08 : 0.06);
+
+    const shadow = this.add.rectangle(x, y + 3, width + 12, height + 8, 0x0b1423, 0.95).setDepth(3);
     const bg = this.add
-      .rectangle(x, y, 230, 44, 0x1b2d45, 1)
-      .setStrokeStyle(3, 0x6eb9ff, 1)
+      .rectangle(x, y, width, height, baseFill, 1)
+      .setStrokeStyle(3, baseStroke, 1)
       .setInteractive({ useHandCursor: true })
       .setDepth(4);
-    this.add.rectangle(x, y, 220, 34, 0, 0).setStrokeStyle(1, 0xb8e0ff, 0.9).setDepth(4);
+    this.add.rectangle(x, y, width - 10, height - 10, 0, 0).setStrokeStyle(1, 0xb8e0ff, 0.9).setDepth(4);
     const text = this.add
       .text(x, y, label, {
         fontFamily: "Arial",
-        fontSize: "24px",
+        fontSize: variant === "primary" ? "26px" : "22px",
         color: "#ffffff",
         stroke: "#0e1a2a",
         strokeThickness: 5
       })
       .setOrigin(0.5)
-      .setDepth(5)
-      .setInteractive({ useHandCursor: true });
+      .setDepth(5);
 
     const trigger = () => {
       if (typeof onClick === "function") {
@@ -178,9 +195,28 @@ export class RunSummaryScene extends Phaser.Scene {
       }
     };
 
+    bg.on("pointerover", () => {
+      bg.setFillStyle(hoverFill, 1);
+      bg.setStrokeStyle(3, hoverStroke, 1);
+    });
+    bg.on("pointerout", () => {
+      bg.setFillStyle(baseFill, 1);
+      bg.setStrokeStyle(3, baseStroke, 1);
+    });
     bg.on("pointerdown", trigger);
-    text.on("pointerdown", trigger);
     shadow.setData("decorative", true);
+  }
+
+  adjustHexBrightness(hexColor, ratio) {
+    const color = Number.isFinite(hexColor) ? hexColor : 0x000000;
+    const factor = Math.max(0, Number(ratio) || 0);
+    const r = (color >> 16) & 0xff;
+    const g = (color >> 8) & 0xff;
+    const b = color & 0xff;
+    const nr = Math.min(255, Math.round(r * (1 + factor)));
+    const ng = Math.min(255, Math.round(g * (1 + factor)));
+    const nb = Math.min(255, Math.round(b * (1 + factor)));
+    return (nr << 16) | (ng << 8) | nb;
   }
 
   formatTime(ms) {
