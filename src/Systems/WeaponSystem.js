@@ -437,19 +437,21 @@ export class WeaponSystem {
   }
 
   fireWeapon(weapon) {
+    let fired = false;
     if (weapon.type === "dagger") {
-      return this.fireDagger(weapon);
+      fired = this.fireDagger(weapon);
+    } else if (weapon.type === "fireball") {
+      fired = this.fireFireball(weapon);
+    } else if (weapon.type === "meteor") {
+      fired = this.fireMeteor(weapon);
+    } else if (weapon.type === "lightning") {
+      fired = this.fireLightning(weapon);
     }
-    if (weapon.type === "fireball") {
-      return this.fireFireball(weapon);
+
+    if (fired && this.scene?.playWeaponFireFeedback) {
+      this.scene.playWeaponFireFeedback(this.player.x, this.player.y, weapon.type);
     }
-    if (weapon.type === "meteor") {
-      return this.fireMeteor(weapon);
-    }
-    if (weapon.type === "lightning") {
-      return this.fireLightning(weapon);
-    }
-    return false;
+    return fired;
   }
 
   fireDagger(weapon) {

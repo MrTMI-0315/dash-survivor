@@ -308,21 +308,24 @@ const SFX_KEY_BY_TYPE = {
   enemy_hit: "enemy_hit",
   enemy_death: "enemy_death",
   level_up: "level_up",
-  boss_warning: "boss_warning"
+  boss_warning: "boss_warning",
+  weapon_fire: null
 };
 const SFX_VOLUME = {
   dash: 0.12,
   enemy_hit: 0.1,
   enemy_death: 0.12,
   level_up: 0.13,
-  boss_warning: 0.13
+  boss_warning: 0.13,
+  weapon_fire: 0.08
 };
 const SFX_THROTTLE_MS = {
   enemy_hit: 42,
   enemy_death: 55,
   dash: 90,
   level_up: 220,
-  boss_warning: 300
+  boss_warning: 300,
+  weapon_fire: 48
 };
 const CHARACTER_DIRECTION_NAMES = Object.freeze([
   "south",
@@ -1490,6 +1493,26 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  playWeaponFireFeedback(x, y, _weaponType = "") {
+    if (!this.add || !this.tweens) {
+      return;
+    }
+
+    const flash = this.add.circle(x, y, 10, 0xfff1bf, 0.7).setDepth(8.4).setScale(1);
+    this.tweens.add({
+      targets: flash,
+      scaleX: 1.4,
+      scaleY: 1.4,
+      alpha: 0,
+      duration: 80,
+      ease: "Cubic.easeOut",
+      onComplete: () => flash.destroy()
+    });
+
+    this.cameras?.main?.shake(60, 0.0008, true);
+    this.playSfx("weapon_fire");
+  }
+
   emitDashTrail(delta) {
     if (!this.ensureParticleEmitters() || !this.player || !this.player.active || !this.player.isDashing()) {
       this.dashTrailTickMs = 0;
@@ -1614,6 +1637,17 @@ export class GameScene extends Phaser.Scene {
           gain: 0.05,
           curve: "linear"
         });
+      });
+      return;
+    }
+
+    if (type === "weapon_fire") {
+      this.playSfxTone({
+        wave: "square",
+        startFreq: 820,
+        endFreq: 560,
+        duration: 0.045,
+        gain: 0.022
       });
     }
   }
