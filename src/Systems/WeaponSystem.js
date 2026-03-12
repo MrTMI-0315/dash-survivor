@@ -6,6 +6,16 @@ import {
 } from "../config/weapons.js";
 import { Enemy } from "../entities/Enemy.js";
 
+const PROJECTILE_VISUAL_SCALE = 1.4;
+const PROJECTILE_GLOW_ALPHA = 0.6;
+const PROJECTILE_TRAIL_LIFETIME_MS = 200;
+const PROJECTILE_TINT_BY_WEAPON = Object.freeze({
+  dagger: 0xa8e7ff,
+  fireball: 0xffb36a,
+  meteor: 0xff8757,
+  lightning: 0xc6f1ff
+});
+
 function getWeaponDefinition(type) {
   return WEAPON_DEFINITIONS[type] ?? null;
 }
@@ -18,6 +28,10 @@ export class WeaponSystem {
     this.globalDamageMultiplier = 1;
     this.globalCooldownMultiplier = 1;
     this.projectileCount = 1;
+    this.projectileGlowGraphics = scene.add.graphics().setDepth(7.9);
+    this.projectileTrailParticles = null;
+    this.projectileTrailEmitter = null;
+    this.projectileTrailAccumulatorMs = 0;
 
     this.projectiles = scene.physics.add.group({
       allowGravity: false,
@@ -30,9 +44,36 @@ export class WeaponSystem {
     });
 
     this.preallocateProjectilePool();
+    this.createProjectileTrailEmitter();
 
     scene.physics.add.overlap(this.projectiles, scene.enemies, this.handleProjectileHit, this.isValidProjectileEnemyCollision, this);
     scene.physics.add.overlap(this.orbitBlades, scene.enemies, this.handleOrbitBladeHit, null, this);
+  }
+
+  createProjectileTrailEmitter() {
+    const textureKey = this.scene.textures?.exists("hit_particle")
+      ? "hit_particle"
+      : this.scene.textures?.exists("__WHITE")
+      ? "__WHITE"
+      : null;
+    if (!textureKey) {
+      return;
+    }
+
+    this.projectileTrailParticles = this.scene.add.particles(textureKey);
+    this.projectileTrailParticles.setDepth(7.8);
+    this.projectileTrailEmitter = this.projectileTrailParticles.createEmitter({
+      on: false,
+      lifespan: PROJECTILE_TRAIL_LIFETIME_MS,
+      speed: { min: 6, max: 28 },
+      scale: { start: 0.22, end: 0 },
+      alpha: { start: 0.45, end: 0 },
+      blendMode: "ADD"
+    });
+  }
+
+  getProjectileVisualColor(type) {
+    return PROJECTILE_TINT_BY_WEAPON[type] ?? 0xffffff;
   }
 
   normalizeProjectileEnemyPair(a, b) {
@@ -83,6 +124,7 @@ export class WeaponSystem {
         projectile.explosionRadius = 0;
         projectile.explosionDamage = 0;
         projectile.body.setCircle(projectile.displayWidth * 0.45, 0, 0);
+        projectile.setScale(PROJECTILE_VISUAL_SCALE);
         projectile.disableBody(true, true);
         freeList.push(projectile);
       }
@@ -125,6 +167,8 @@ export class WeaponSystem {
     projectile.behavior = "fast";
     projectile.explosionRadius = 0;
     projectile.explosionDamage = 0;
+    projectile.setTint(0xffffff);
+    projectile.setScale(PROJECTILE_VISUAL_SCALE);
     projectile.setData("inProjectilePool", true);
     projectile.disableBody(true, true);
     freeList.push(projectile);
@@ -322,9 +366,25 @@ export class WeaponSystem {
   }
 
   updateProjectiles(delta) {
+    this.projectileGlowGraphics?.clear();
+    this.projectileTrailAccumulatorMs += delta;
+    const shouldEmitTrail = this.projectileTrailAccumulatorMs >= 16;
+    if (shouldEmitTrail) {
+      this.projectileTrailAccumulatorMs = 0;
+    }
+
     this.projectiles.getChildren().forEach((projectile) => {
       if (!projectile.active) {
         return;
+      }
+
+      const glowColor = projectile.getData("visualColor") ?? 0xffffff;
+      const glowRadius = Math.max(3, projectile.displayWidth * 0.42);
+      this.projectileGlowGraphics?.lineStyle(2, glowColor, PROJECTILE_GLOW_ALPHA);
+      this.projectileGlowGraphics?.strokeCircle(projectile.x, projectile.y, glowRadius);
+      if (shouldEmitTrail && this.projectileTrailEmitter) {
+        this.projectileTrailEmitter.setTint(glowColor);
+        this.projectileTrailEmitter.emitParticleAt(projectile.x, projectile.y, 1);
       }
 
       projectile.travelled += (projectile.speed * delta) / 1000;
@@ -529,6 +589,10 @@ export class WeaponSystem {
     projectile.behavior = config.behavior;
     projectile.explosionRadius = config.explosionRadius ?? 0;
     projectile.explosionDamage = config.explosionDamage ?? 0;
+    const visualColor = this.getProjectileVisualColor(type);
+    projectile.setTint(visualColor);
+    projectile.setData("visualColor", visualColor);
+    projectile.setScale(PROJECTILE_VISUAL_SCALE);
 
     projectile.enableBody(true, position.x, position.y, true, true);
     projectile.body.setVelocity(nx * config.speed, ny * config.speed);
