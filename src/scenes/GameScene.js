@@ -663,6 +663,7 @@ export class GameScene extends Phaser.Scene {
     this.lastKillAtMs = Number.NEGATIVE_INFINITY;
     this.maxKillCombo = 0;
     this.totalKills = 0;
+    this.killCounterPulseTween = null;
     this.xpDisplayRatio = 0;
     this.expBarScaleY = 1;
     this.expBarPulseTween = null;
@@ -716,6 +717,7 @@ export class GameScene extends Phaser.Scene {
     this.lastKillAtMs = Number.NEGATIVE_INFINITY;
     this.maxKillCombo = 0;
     this.totalKills = 0;
+    this.killCounterPulseTween = null;
     this.xpDisplayRatio = 0;
     this.expBarScaleY = 1;
     this.expBarPulseTween = null;
@@ -3860,6 +3862,7 @@ export class GameScene extends Phaser.Scene {
       enemy.body.enable = false;
     }
     this.totalKills += 1;
+    this.playKillCounterPulse();
     this.recordKillEvent();
 
     this.updateKillCombo();
@@ -3980,6 +3983,31 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => {
         this.expBarScaleY = 1;
         this.expBarPulseTween = null;
+      }
+    });
+  }
+
+  playKillCounterPulse() {
+    if (!this.hudGoldText || !this.tweens) {
+      return;
+    }
+
+    if (this.killCounterPulseTween) {
+      this.killCounterPulseTween.stop();
+      this.killCounterPulseTween = null;
+    }
+
+    this.hudGoldText.setScale(1);
+    this.killCounterPulseTween = this.tweens.add({
+      targets: this.hudGoldText,
+      scaleX: 1.2,
+      scaleY: 1.2,
+      duration: 50,
+      ease: "Sine.easeOut",
+      yoyo: true,
+      onComplete: () => {
+        this.hudGoldText?.setScale(1);
+        this.killCounterPulseTween = null;
       }
     });
   }
