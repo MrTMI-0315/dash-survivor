@@ -16,14 +16,16 @@
 | XP bar | Implemented | Horizontal XP bar + `EXP current/next` text | `updateHud()` |
 | Level indicator | Partial | Level is used in progression/modal but not pinned as persistent HUD text | `openLevelUpChoices()`, `gainXp()` |
 | Dash cooldown indicator | Implemented | Player-near circular cooldown ring (ready pulse + charge arc) | `updateDashCooldownRing()`, `Player.getDashRatio()` |
-| Weapon slots | Not Implemented | No persistent icon row yet (selection modal exists) | `openWeaponSelection()` |
-| Gold counter | Partial | In-run gold/meta value not shown as dedicated persistent HUD widget | `runMetaCurrency`, `metaData.currency` |
+| Weapon slots | Implemented | Top-center slot row with equipped weapon initials | `updateHud()`, `player.weapons` |
+| Gold counter | Partial | Dedicated in-run `GOLD` widget added; meta bank is still menu/summary context | `updateHud()`, `calculateRunCoinReward()` |
 | Run timer | Implemented | `PLAYTIME mm:ss` shown in top-left stats line | `updateHud()`, `formatRunTime()` |
 | Boss warning indicator | Implemented | Top-center alert text + camera shake | `showHudAlert()`, `spawnBossEnemy()` |
 | Boss HP bar | Not Implemented | No boss-specific HP overlay widget | N/A |
 | Damage numbers | Implemented | Floating damage numbers with pooled text objects | `spawnDamageNumber()`, `Enemy.takeDamage()` |
+| Enemy HP bars | Implemented | In-world HP bars for damaged enemies + elite/boss emphasis | `updateEnemyHealthBars()` |
 | Pickup indicators (XP/gold) | Partial | XP orb + elite upgrade orb visual pickup implemented; gold pickup widget 없음 | `spawnXpOrb()`, `handleXpOrbPickup()` |
 | Debug overlay | Implemented | `F2` toggled director/debug metrics panel, separate from player HUD | `updateDebugDirectorOverlay()`, `toggleDebugOverlay()` |
+| Low HP danger vignette | Implemented | Screen-edge red vignette scales with HP danger state | `updateLowHealthVignette()` |
 
 ## Implementation Targets
 
@@ -32,9 +34,9 @@
   - `HP`, `PLAYTIME`, `EXP current/next` (implemented)
   - Keep as primary combat snapshot (implemented)
 - Top-center:
-  - Weapon slot icon row (planned)
+  - Weapon slot row (implemented)
 - Top-right:
-  - Dedicated `Gold` counter (planned)
+  - Dedicated `Gold` counter (implemented)
   - Optional secondary run context only (planned)
 - Bottom-right:
   - System controls / pause affordance (planned)
@@ -66,9 +68,12 @@
 - [x] Mobile touch controls for move/dash are visible and functional.
 - [x] Run timer (`PLAYTIME`) is shown in persistent HUD.
 - [ ] Add dedicated gold counter separate from `META` summary.
+- [x] Add dedicated in-run gold widget (meta bank remains outside core HUD).
 - [ ] Add boss HP overlay bar.
-- [ ] Add weapon slot icon row.
+- [x] Add weapon slot row.
 - [x] Add floating damage numbers.
+- [x] Add enemy HP bars with elite/boss readability emphasis.
+- [x] Add low-HP danger vignette.
 
 ## Validation Checklist
 - [ ] HP UI changes immediately when player takes collision/poison damage.
