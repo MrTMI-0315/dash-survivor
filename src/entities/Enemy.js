@@ -18,9 +18,11 @@ const ENEMY_TYPE_TO_FOLDER = Object.freeze({
   tank: "enemy_tank",
   hunter: "enemy_hunter"
 });
-const HIT_FLASH_DURATION_MS = 60;
+const HIT_FLASH_DURATION_MS = 100;
+const HIT_FLASH_TINT = 0xffaaaa;
 const HIT_VISUAL_PUSH_PX = 4;
-const HIT_SPARK_PARTICLE_COUNT = 3;
+const HIT_SPARK_PARTICLE_COUNT = 4;
+const HIT_KNOCKBACK_STRENGTH = 40;
 const ENEMY_RENDER_DEPTH = 10;
 
 function getArchetypeConfig(type) {
@@ -236,7 +238,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.flashToken += 1;
     const flashToken = this.flashToken;
 
-    this.setTint(0xffffff);
+    this.setTint(HIT_FLASH_TINT);
     if (this.scene.playSfx) {
       this.scene.playSfx("enemy_hit", { elite: this.isElite });
     }
@@ -252,18 +254,22 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
     const player = this.scene?.player;
     const duringDash = Boolean(player?.isDashing?.());
-    if (!duringDash && player?.active) {
+    if (!duringDash && player?.active && this.body) {
       const dx = this.x - player.x;
       const dy = this.y - player.y;
       const distance = Math.hypot(dx, dy);
       const nx = distance > 0.0001 ? dx / distance : 1;
       const ny = distance > 0.0001 ? dy / distance : 0;
+      this.body.setVelocity(
+        this.body.velocity.x + nx * HIT_KNOCKBACK_STRENGTH,
+        this.body.velocity.y + ny * HIT_KNOCKBACK_STRENGTH
+      );
       this.setPosition(this.x + nx * HIT_VISUAL_PUSH_PX, this.y + ny * HIT_VISUAL_PUSH_PX);
     }
     if (this.scene?.time?.delayedCall) {
       this.scene.time.delayedCall(HIT_FLASH_DURATION_MS, () => {
         if (this.active && this.flashToken === flashToken) {
-          this.setTint(this.baseTint);
+          this.clearTint();
         }
       });
     }

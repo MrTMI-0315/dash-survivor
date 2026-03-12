@@ -1454,12 +1454,24 @@ export class GameScene extends Phaser.Scene {
     this.damageEmitter.explode(Math.max(2, Math.min(12, scaledCount)), x, y);
   }
 
-  spawnHitSparkParticles(x, y, count = 3) {
+  spawnHitSparkParticles(x, y, count = 4) {
     if (!this.ensureParticleEmitters()) {
       return;
     }
-    const sparkCount = Math.max(1, Math.min(6, Math.round(Number(count) || 3)));
+    if (typeof this.damageEmitter.setLifespan === "function") {
+      this.damageEmitter.setLifespan(200);
+    }
+    if (typeof this.damageEmitter.setTint === "function") {
+      this.damageEmitter.setTint(0xffffff);
+    }
+    const sparkCount = Math.max(1, Math.min(6, Math.round(Number(count) || 4)));
     this.damageEmitter.explode(sparkCount, x, y);
+    if (typeof this.damageEmitter.setLifespan === "function") {
+      this.damageEmitter.setLifespan({ min: 90, max: 220 });
+    }
+    if (typeof this.damageEmitter.setTint === "function") {
+      this.damageEmitter.setTint([0xffffff, 0xffd6ad, 0xffb87f]);
+    }
   }
 
   spawnKillParticles(x, y, count = 10) {
@@ -3673,7 +3685,7 @@ export class GameScene extends Phaser.Scene {
     if (!damaged) {
       return;
     }
-    this.cameras.main.shake(85, 0.0019);
+    this.cameras.main.shake(80, 0.003);
 
     if (!player.isDead()) {
       return;
@@ -3697,7 +3709,7 @@ export class GameScene extends Phaser.Scene {
     if (!damaged) {
       return;
     }
-    this.cameras.main.shake(65, 0.0016);
+    this.cameras.main.shake(80, 0.003);
 
     if (player.isDead()) {
       this.triggerGameOver();
