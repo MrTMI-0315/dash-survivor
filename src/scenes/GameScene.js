@@ -653,6 +653,11 @@ export class GameScene extends Phaser.Scene {
     this.hudSecondaryLabelText = null;
     this.hudWeaponSlotFrames = [];
     this.hudWeaponSlotLabels = [];
+    this.hud = null;
+    this.hpText = null;
+    this.expText = null;
+    this.timeText = null;
+    this.killText = null;
     this.debugDirectorText = null;
     this.debugOverlayPanel = null;
     this.debugOverlayEnabled = false;
@@ -996,6 +1001,7 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(19);
     this.debugDirectorText.setVisible(this.debugOverlayEnabled);
+    this.createGameplayHUD();
     this.createHudAlertPool();
     this.applyHudModalFocus(false);
 
@@ -2368,6 +2374,7 @@ export class GameScene extends Phaser.Scene {
     [...(this.hudWeaponSlotFrames ?? []), ...(this.hudWeaponSlotLabels ?? [])]
       .filter(Boolean)
       .forEach((obj) => obj.setAlpha(hudAlpha));
+    this.hud?.setAlpha(hudAlpha);
     this.dashCooldownRingGraphics?.setAlpha(isModalOpen ? 0.2 : 1);
     this.enemyHealthBarsGraphics?.setAlpha(isModalOpen ? 0.25 : 1);
     this.offscreenIndicatorGraphics?.setAlpha(isModalOpen ? 0.08 : 1);
@@ -4886,93 +4893,99 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  updateHud() {
-    const hpRatio = Phaser.Math.Clamp(this.player.getHpRatio(), 0, 1);
-    const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
-    if (xpRatio < this.xpDisplayRatio) {
-      this.xpDisplayRatio = xpRatio;
-    } else {
-      this.xpDisplayRatio = Phaser.Math.Linear(this.xpDisplayRatio, xpRatio, 0.22);
+  createGameplayHUD() {
+    if (this.hud) {
+      this.hud.destroy(true);
+      this.hud = null;
     }
-    const displayedXpRatio = Phaser.Math.Clamp(this.xpDisplayRatio, 0, 1);
-    const dashRatio = Phaser.Math.Clamp(this.player.getDashRatio(), 0, 1);
+
+    const margin = 16;
+    const lineSpacing = 18;
+    const style = {
+      fontFamily: "Arial",
+      fontSize: "16px",
+      color: "#f7f3de",
+      stroke: "#1c130e",
+      strokeThickness: 3
+    };
+
+    this.hud = this.add.container(0, 0).setScrollFactor(0).setDepth(1000);
+    this.hpText = this.add.text(margin, margin + lineSpacing * 0, "HP: 100/100", style).setOrigin(0, 0);
+    this.expText = this.add.text(margin, margin + lineSpacing * 1, "LV 1 | EXP 0%", style).setOrigin(0, 0);
+    this.timeText = this.add.text(margin, margin + lineSpacing * 2, "TIME: 00:00", style).setOrigin(0, 0);
+    this.killText = this.add.text(margin, margin + lineSpacing * 3, "KILLS: 0", style).setOrigin(0, 0);
+    this.hud.add([this.hpText, this.expText, this.timeText, this.killText]);
+    this.layoutHUDToCamera();
+
+    // Keep legacy references wired for existing UI effects.
+    this.hudLevelText = this.hpText;
+    this.hudStatsText = this.expText;
+    this.hudTimerText = this.timeText;
+    this.hudGoldText = this.killText;
+
+    // Hide legacy HUD decorations to keep minimal gameplay panel.
+    [
+      this.hudPanelBack,
+      this.hudSecondaryPanel,
+      this.hudXpFrame,
+      this.hudHeaderChip,
+      this.hudSecondaryChip,
+      this.hudCoreLabelText,
+      this.hudSecondaryLabelText,
+      this.hudXpLabelText,
+      this.hudSecondaryText
+    ]
+      .filter(Boolean)
+      .forEach((obj) => obj.setVisible(false));
+    this.hudBarsGraphics?.clear();
+    this.hudBarsGraphics?.setVisible(false);
+    [...(this.hudWeaponSlotFrames ?? []), ...(this.hudWeaponSlotLabels ?? [])]
+      .filter(Boolean)
+      .forEach((obj) => obj.setVisible(false));
+  }
+
+  layoutHUDToCamera() {
+    if (!this.hud || !this.hpText || !this.expText || !this.timeText || !this.killText) {
+      return;
+    }
+    const cam = this.cameras?.main;
+    if (!cam) {
+      return;
+    }
+
+    const anchorX = (cam.x ?? 0) + 16;
+    const anchorY = (cam.y ?? 0) + 16;
+    this.hud.setPosition(anchorX, anchorY);
+    this.hpText.setPosition(0, 0);
+    this.expText.setPosition(0, 18);
+    this.timeText.setPosition(0, 36);
+    this.killText.setPosition(0, 54);
+  }
+
+  updateHUD() {
+    if (!this.player || !this.hpText || !this.expText || !this.timeText || !this.killText) {
+      return;
+    }
+
+    const levelValue = Number.isFinite(this.player.level) ? this.player.level : this.level;
+    const xpRatio = this.xpToNext > 0 ? Phaser.Math.Clamp(this.currentXp / this.xpToNext, 0, 1) : 0;
+    const xpPercent = Math.round(xpRatio * 100);
     const nowMs = this.time?.now ?? 0;
     const elapsedMs = Math.max(0, nowMs - this.runStartTimeMs);
     const elapsedSeconds = Math.floor(elapsedMs / 1000);
-    const xpPulseActive = !this.isLeveling && xpRatio >= 0.9;
-    const xpPulse = xpPulseActive ? (Math.sin(nowMs / 120) + 1) / 2 : 0;
-    const xpFillColor = xpPulseActive ? this.lerpColor(0x66f5b2, 0xffe38a, xpPulse) : 0x66f5b2;
-    const xpFillAlpha = xpPulseActive ? 0.84 + xpPulse * 0.16 : 0.95;
-    const xpBorderColor = xpPulseActive ? this.lerpColor(0x91a6c8, 0xffeab0, xpPulse) : 0x91a6c8;
-    const barX = 20;
-    const xpBarCenterY = 47;
-    const barWidth = HUD_EXP_BAR_WIDTH;
-    const barHeight = HUD_EXP_BAR_BASE_HEIGHT * Phaser.Math.Clamp(this.expBarScaleY ?? 1, 1, HUD_EXP_PULSE_SCALE);
-    const xpBarY = xpBarCenterY - barHeight * 0.5;
+    this.layoutHUDToCamera();
 
-    const hpColor = hpRatio <= 0.25 ? "#ffb2a2" : hpRatio <= 0.5 ? "#ffd598" : "#fff0cf";
-    const levelValue = Number.isFinite(this.player?.level) ? this.player.level : this.level;
-    this.hudLevelText.setColor(hpColor);
-    this.hudLevelText.setText(`HP ${this.player.hp} / ${this.player.maxHp}`);
-    this.hudXpLabelText?.setText(`EXP ${this.currentXp}/${this.xpToNext}`);
-    this.hudStatsText.setText(`LEVEL ${levelValue}`);
+    this.hpText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
+    this.expText.setText(`LV ${levelValue} | EXP ${xpPercent}%`);
     if (elapsedSeconds !== this.hudElapsedSeconds) {
       this.hudElapsedSeconds = elapsedSeconds;
-      this.hudTimerText?.setText(`TIME ${this.formatRunTime(elapsedMs)}`);
+      this.timeText.setText(`TIME: ${this.formatRunTime(elapsedMs)}`);
     }
-    this.hudGoldText?.setText(`KILLS ${this.totalKills}`);
-    this.hudHeaderChip?.setVisible(false);
-    this.hudCoreLabelText?.setVisible(false);
-    this.hudXpLabelText?.setVisible(true);
-    this.hudSecondaryPanel?.setVisible(false);
-    this.hudSecondaryChip?.setVisible(false);
-    this.hudSecondaryLabelText?.setVisible(false);
-    this.hudSecondaryText?.setVisible(false);
-    this.hudDashFrame?.setVisible(false);
-    this.hudDashStatusText?.setVisible(false);
+    this.killText.setText(`KILLS: ${this.totalKills}`);
+  }
 
-    const weapons = this.player?.weapons ?? [];
-    this.hudWeaponSlotFrames?.forEach((frame, index) => {
-      const weapon = weapons[index] ?? null;
-      if (weapon) {
-        frame.setFillStyle(0xa77347, 0.95);
-        frame.setStrokeStyle(2, 0xe4c392, 0.95);
-      } else {
-        frame.setFillStyle(0x2f1b12, 0.78);
-        frame.setStrokeStyle(1, 0x6d4a31, 0.68);
-      }
-    });
-    this.hudWeaponSlotLabels?.forEach((label, index) => {
-      const weapon = weapons[index] ?? null;
-      label.setText(weapon ? this.getWeaponSlotLabel(weapon) : "");
-      label.setAlpha(weapon ? 1 : 0.22);
-    });
-
-    if (this.hudBarsGraphics) {
-      this.hudBarsGraphics.clear();
-      this.hudBarsGraphics.fillStyle(0x432615, 0.92);
-      this.hudBarsGraphics.fillRect(barX, xpBarY, barWidth, barHeight);
-      this.hudBarsGraphics.fillGradientStyle(
-        HUD_EXP_BAR_START_COLOR,
-        HUD_EXP_BAR_END_COLOR,
-        HUD_EXP_BAR_START_COLOR,
-        HUD_EXP_BAR_END_COLOR,
-        xpFillAlpha,
-        xpFillAlpha,
-        xpFillAlpha,
-        xpFillAlpha
-      );
-      this.hudBarsGraphics.fillRect(
-        barX + 2,
-        xpBarY + 2,
-        Math.max(3, (barWidth - 4) * displayedXpRatio),
-        Math.max(2, barHeight - 4)
-      );
-      this.hudBarsGraphics.fillStyle(0x2e170d, 0.96);
-      this.hudBarsGraphics.fillRect(barX + 2, xpBarY - 10, 26, 8);
-      this.hudBarsGraphics.lineStyle(1, xpBorderColor, 0.85);
-      this.hudBarsGraphics.strokeRect(barX, xpBarY, barWidth, barHeight);
-    }
+  updateHud() {
+    this.updateHUD();
   }
 
   updateEnemyHealthBars() {
