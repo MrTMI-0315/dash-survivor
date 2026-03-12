@@ -169,6 +169,54 @@ const DECK_TILE_VARIANTS = Object.freeze([
     fallbackOdd: 0x66442f
   })
 ]);
+const RANDOM_DECK_OBSTACLE_SPAWN_TABLE = Object.freeze([
+  Object.freeze({
+    objectType: "crate",
+    type: "terrain_rock",
+    textureKey: "terrain_crate",
+    weight: 40,
+    scaleMin: 0.72,
+    scaleMax: 0.96,
+    anchorRadius: 32
+  }),
+  Object.freeze({
+    objectType: "barrel",
+    type: "terrain_rock",
+    textureKey: "terrain_rock",
+    weight: 24,
+    scaleMin: 0.54,
+    scaleMax: 0.72,
+    anchorRadius: 24,
+    tint: 0x855d3f
+  }),
+  Object.freeze({
+    objectType: "ropeBundle",
+    type: "terrain_pillar",
+    textureKey: "terrain_pillar",
+    weight: 20,
+    scaleMin: 0.52,
+    scaleMax: 0.68,
+    anchorRadius: 22,
+    tint: 0xb39163
+  }),
+  Object.freeze({
+    objectType: "deckVent",
+    type: "terrain_pillar",
+    textureKey: "terrain_pillar",
+    weight: 16,
+    scaleMin: 0.6,
+    scaleMax: 0.78,
+    anchorRadius: 24,
+    tint: 0x6b7689
+  })
+]);
+const RANDOM_DECK_OBSTACLE_DENSITY_MIN_TILES = 12;
+const RANDOM_DECK_OBSTACLE_DENSITY_MAX_TILES = 18;
+const RANDOM_DECK_OBSTACLE_TILE_GROUP_SIZE = DECK_TILE_SIZE * 3;
+const RANDOM_DECK_OBSTACLE_EDGE_SPAWN_BUFFER = DECK_TILE_SIZE * 6;
+const RANDOM_DECK_OBSTACLE_EVENT_CLEAR_RADIUS = DECK_TILE_SIZE * 4;
+const RANDOM_DECK_OBSTACLE_MAX_ATTEMPTS_MULTIPLIER = 28;
+const RANDOM_DECK_OBSTACLE_MIN_PADDING = 16;
 const IMPORTED_PIXEL_ASSETS = Object.freeze({
   deckPlankMain: Object.freeze({
     key: "sprite_deck_plank_main",
@@ -354,6 +402,18 @@ function pickWeightedDeckVariant(variants, excludedKey = null) {
     }
   }
   return available[available.length - 1];
+}
+
+function pickWeightedRandomObstacleSpec(specs) {
+  const totalWeight = specs.reduce((sum, spec) => sum + spec.weight, 0);
+  let roll = Math.random() * totalWeight;
+  for (let i = 0; i < specs.length; i += 1) {
+    roll -= specs[i].weight;
+    if (roll <= 0) {
+      return specs[i];
+    }
+  }
+  return specs[specs.length - 1];
 }
 
 const PIXEL_SWARM_PATTERN = [
@@ -2202,38 +2262,106 @@ export class GameScene extends Phaser.Scene {
 
     this.terrainObstacleAnchors = [];
     SHIP_DECK_OBSTACLE_LAYOUT.forEach((entry) => this.spawnTerrainObstacle(entry));
+    this.spawnRandomDeckObstacles();
     this.ensureNavigableDeckPassages();
+  }
+
+  spawnRandomDeckObstacles() {
+    const deckLeft = DECK_SURFACE_INSET;
+    const deckTop = DECK_SURFACE_INSET;
+    const deckWidth = WORLD_WIDTH - DECK_SURFACE_INSET * 2;
+    const deckHeight = WORLD_HEIGHT - DECK_SURFACE_INSET * 2;
+    const deckRight = deckLeft + deckWidth;
+    const deckBottom = deckTop + deckHeight;
+
+    const logicalCols = Math.max(1, Math.floor(deckWidth / RANDOM_DECK_OBSTACLE_TILE_GROUP_SIZE));
+    const logicalRows = Math.max(1, Math.floor(deckHeight / RANDOM_DECK_OBSTACLE_TILE_GROUP_SIZE));
+    const logicalTileCount = logicalCols * logicalRows;
+    const densityDivisor = Phaser.Math.Between(RANDOM_DECK_OBSTACLE_DENSITY_MIN_TILES, RANDOM_DECK_OBSTACLE_DENSITY_MAX_TILES);
+    const targetSpawnCount = Math.max(1, Math.floor(logicalTileCount / densityDivisor));
+    const maxAttempts = targetSpawnCount * RANDOM_DECK_OBSTACLE_MAX_ATTEMPTS_MULTIPLIER;
+
+    const playerStartX = WORLD_WIDTH * 0.5;
+    const playerStartY = WORLD_HEIGHT * 0.5;
+    const hatchClearRadius = RANDOM_DECK_OBSTACLE_EVENT_CLEAR_RADIUS;
+    let spawned = 0;
+
+    for (let attempt = 0; attempt < maxAttempts && spawned < targetSpawnCount; attempt += 1) {
+      const x = Phaser.Math.Between(deckLeft + RANDOM_DECK_OBSTACLE_MIN_PADDING, deckRight - RANDOM_DECK_OBSTACLE_MIN_PADDING);
+      const y = Phaser.Math.Between(deckTop + RANDOM_DECK_OBSTACLE_MIN_PADDING, deckBottom - RANDOM_DECK_OBSTACLE_MIN_PADDING);
+
+      if (Phaser.Math.Distance.Between(playerStartX, playerStartY, x, y) <= this.safeRadius) {
+        continue;
+      }
+
+      if (Phaser.Math.Distance.Between(HATCH_BREACH_POINT.x, HATCH_BREACH_POINT.y, x, y) <= hatchClearRadius) {
+        continue;
+      }
+
+      const minEdgeDistance = Math.min(x - deckLeft, deckRight - x, y - deckTop, deckBottom - y);
+      if (minEdgeDistance <= RANDOM_DECK_OBSTACLE_EDGE_SPAWN_BUFFER) {
+        continue;
+      }
+
+      if (this.isObstacleBlockedAt(x, y, RANDOM_DECK_OBSTACLE_MIN_PADDING)) {
+        continue;
+      }
+
+      const spec = pickWeightedRandomObstacleSpec(RANDOM_DECK_OBSTACLE_SPAWN_TABLE);
+      const scale = Phaser.Math.FloatBetween(spec.scaleMin, spec.scaleMax);
+      const obstacle = this.spawnTerrainObstacle({
+        type: spec.type,
+        role: spec.objectType,
+        textureKey: spec.textureKey,
+        x,
+        y,
+        scale,
+        anchorRadius: spec.anchorRadius,
+        tint: spec.tint
+      });
+
+      if (!obstacle) {
+        continue;
+      }
+
+      spawned += 1;
+    }
   }
 
   spawnTerrainObstacle(config = {}) {
     if (!this.obstacles) {
-      return;
+      return null;
     }
 
     const obstacleType = config.type === "terrain_pillar" ? "terrain_pillar" : "terrain_rock";
     const role = config.role ?? "misc";
-    let textureKey = obstacleType;
-    if (role === "mast") {
-      textureKey = "terrain_mast";
-    } else if (role === "crate") {
-      textureKey = "terrain_crate";
-    } else if (role === "cannon") {
-      textureKey = this.textures.exists(IMPORTED_PIXEL_ASSETS.cannon.key)
-        ? IMPORTED_PIXEL_ASSETS.cannon.key
-        : "terrain_cannon";
+    let textureKey = config.textureKey ?? obstacleType;
+    if (!config.textureKey) {
+      if (role === "mast") {
+        textureKey = "terrain_mast";
+      } else if (role === "crate") {
+        textureKey = "terrain_crate";
+      } else if (role === "cannon") {
+        textureKey = this.textures.exists(IMPORTED_PIXEL_ASSETS.cannon.key)
+          ? IMPORTED_PIXEL_ASSETS.cannon.key
+          : "terrain_cannon";
+      }
     }
     const x = Phaser.Math.Clamp(Number(config.x) || WORLD_WIDTH * 0.5, 12, WORLD_WIDTH - 12);
     const y = Phaser.Math.Clamp(Number(config.y) || WORLD_HEIGHT * 0.5, 12, WORLD_HEIGHT - 12);
-    const scale = Phaser.Math.Clamp(Number(config.scale) || 1, 0.72, 1.9);
+    const scale = Phaser.Math.Clamp(Number(config.scale) || 1, 0.5, 1.9);
 
     const obstacle = this.obstacles.create(x, y, textureKey);
     if (!obstacle) {
-      return;
+      return null;
     }
 
     obstacle.setScale(scale);
     obstacle.setDepth(2);
     obstacle.setData("obstacleRole", role);
+    if (Number.isFinite(config.tint)) {
+      obstacle.setTint(config.tint);
+    }
     obstacle.refreshBody();
 
     let anchorRadius = obstacleType === "terrain_rock" ? 36 : 40;
@@ -2244,6 +2372,9 @@ export class GameScene extends Phaser.Scene {
     } else if (role === "cannon") {
       anchorRadius = 32;
     }
+    if (Number.isFinite(config.anchorRadius)) {
+      anchorRadius = config.anchorRadius;
+    }
     this.terrainObstacleAnchors.push({
       x,
       y,
@@ -2251,6 +2382,7 @@ export class GameScene extends Phaser.Scene {
       obstacle,
       role
     });
+    return obstacle;
   }
 
   resolveDevAntiJamEnabled() {
