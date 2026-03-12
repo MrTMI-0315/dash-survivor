@@ -465,6 +465,8 @@ export class GameScene extends Phaser.Scene {
     this.hudSecondaryText = null;
     this.hudCoreLabelText = null;
     this.hudSecondaryLabelText = null;
+    this.hudWeaponSlotFrames = [];
+    this.hudWeaponSlotLabels = [];
     this.debugDirectorText = null;
     this.debugOverlayPanel = null;
     this.debugOverlayEnabled = false;
@@ -720,6 +722,33 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(10);
     this.hudBarsGraphics = this.add.graphics().setScrollFactor(0).setDepth(9);
+    const weaponSlotCount = Math.max(1, this.player?.maxWeaponSlots ?? 3);
+    const slotGap = 44;
+    const slotStartX = 640 - ((weaponSlotCount - 1) * slotGap) / 2;
+    const slotY = 22;
+    this.hudWeaponSlotFrames = [];
+    this.hudWeaponSlotLabels = [];
+    for (let i = 0; i < weaponSlotCount; i += 1) {
+      const slotX = Math.round(slotStartX + i * slotGap);
+      const frame = this.add
+        .rectangle(slotX, slotY, 34, 34, 0x2f1b12, 0.8)
+        .setStrokeStyle(2, 0x6d4a31, 0.8)
+        .setScrollFactor(0)
+        .setDepth(10);
+      const label = this.add
+        .text(slotX, slotY, "", {
+          fontFamily: "Arial",
+          fontSize: "15px",
+          color: "#f4e5c8",
+          stroke: "#2a170f",
+          strokeThickness: 3
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(11);
+      this.hudWeaponSlotFrames.push(frame);
+      this.hudWeaponSlotLabels.push(label);
+    }
     this.playerReadabilityGraphics = this.add.graphics().setDepth(5);
     this.dashCooldownRingGraphics = this.add.graphics().setDepth(9);
     this.offscreenIndicatorGraphics = this.add.graphics().setScrollFactor(0).setDepth(19);
@@ -1946,6 +1975,9 @@ export class GameScene extends Phaser.Scene {
       .forEach((obj) => obj.setAlpha(hudAlpha));
     [this.hudPanelBack].filter(Boolean).forEach((obj) => obj.setAlpha(panelAlpha));
     [this.hudBarsGraphics].filter(Boolean).forEach((obj) => obj.setAlpha(hudAlpha));
+    [...(this.hudWeaponSlotFrames ?? []), ...(this.hudWeaponSlotLabels ?? [])]
+      .filter(Boolean)
+      .forEach((obj) => obj.setAlpha(hudAlpha));
     this.dashCooldownRingGraphics?.setAlpha(isModalOpen ? 0.2 : 1);
     this.offscreenIndicatorGraphics?.setAlpha(isModalOpen ? 0.08 : 1);
     this.modalBackdrop?.setVisible(isModalOpen);
@@ -2739,6 +2771,16 @@ export class GameScene extends Phaser.Scene {
     const m = Math.floor(totalSec / 60);
     const s = totalSec % 60;
     return `${m}:${String(s).padStart(2, "0")}`;
+  }
+
+  getWeaponSlotLabel(weapon) {
+    const baseType = weapon?.baseType ?? weapon?.type ?? "";
+    if (baseType === "dagger") return "D";
+    if (baseType === "fireball") return "F";
+    if (baseType === "lightning") return "L";
+    if (baseType === "meteor") return "M";
+    if (baseType === "orbit_blades") return "O";
+    return "?";
   }
 
   loadSpawnPacingPresetKey() {
@@ -4294,6 +4336,23 @@ export class GameScene extends Phaser.Scene {
     this.hudSecondaryText?.setVisible(false);
     this.hudDashFrame?.setVisible(false);
     this.hudDashStatusText?.setVisible(false);
+
+    const weapons = this.player?.weapons ?? [];
+    this.hudWeaponSlotFrames?.forEach((frame, index) => {
+      const weapon = weapons[index] ?? null;
+      if (weapon) {
+        frame.setFillStyle(0xa77347, 0.95);
+        frame.setStrokeStyle(2, 0xe4c392, 0.95);
+      } else {
+        frame.setFillStyle(0x2f1b12, 0.78);
+        frame.setStrokeStyle(1, 0x6d4a31, 0.68);
+      }
+    });
+    this.hudWeaponSlotLabels?.forEach((label, index) => {
+      const weapon = weapons[index] ?? null;
+      label.setText(weapon ? this.getWeaponSlotLabel(weapon) : "");
+      label.setAlpha(weapon ? 1 : 0.22);
+    });
 
     if (this.hudBarsGraphics) {
       this.hudBarsGraphics.clear();
