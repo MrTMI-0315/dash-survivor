@@ -9,6 +9,9 @@ export class RunSummaryScene extends Phaser.Scene {
     const centerY = camera.height * 0.5;
     const cardWidth = 400;
     const cardHeight = 430;
+    const panelPadding = 32;
+    const titleMarginBottom = 24;
+    const statLineSpacing = 12;
 
     const stats = {
       timeSurvivedMs: data.timeSurvivedMs ?? 0,
@@ -25,15 +28,18 @@ export class RunSummaryScene extends Phaser.Scene {
     this.add.rectangle(centerX, centerY, cardWidth, cardHeight, 0, 0).setStrokeStyle(4, 0x5ca7ff, 1).setDepth(3);
     this.add.rectangle(centerX, centerY, cardWidth - 12, cardHeight - 12, 0, 0).setStrokeStyle(2, 0xb8e0ff, 0.95).setDepth(3);
 
-    this.add
-      .text(centerX, centerY - 142, "RUN SUMMARY", {
+    const panelTop = centerY - cardHeight * 0.5;
+    const panelLeft = centerX - cardWidth * 0.5;
+    const titleY = panelTop + panelPadding;
+    const titleText = this.add
+      .text(centerX, titleY, "RUN SUMMARY", {
         fontFamily: "Arial",
         fontSize: "34px",
         color: "#ffffff",
         stroke: "#0b1220",
         strokeThickness: 5
       })
-      .setOrigin(0.5)
+      .setOrigin(0.5, 0)
       .setDepth(3);
 
     const lines = [
@@ -46,21 +52,27 @@ export class RunSummaryScene extends Phaser.Scene {
     ];
     const copyText = ["DashSurvivor Run Summary", ...lines].join("\n");
 
-    this.add.rectangle(centerX, centerY - 44, 312, 168, 0x152947, 0.92).setDepth(3);
-    this.add.rectangle(centerX, centerY - 44, 312, 168, 0, 0).setStrokeStyle(2, 0x7bc3ff, 1).setDepth(3);
-    this.add
-      .text(centerX, centerY - 46, lines.join("\n"), {
+    const titleBottomY = titleY + titleText.height;
+    const statsTopY = titleBottomY + titleMarginBottom;
+    const statsContainerHeight = 168;
+    const statsCenterY = statsTopY + statsContainerHeight * 0.5;
+    this.add.rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0x152947, 0.92).setDepth(3);
+    this.add.rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0, 0).setStrokeStyle(2, 0x7bc3ff, 1).setDepth(3);
+    const statsText = this.add
+      .text(centerX, statsCenterY, lines.join("\n"), {
         fontFamily: "Arial",
         fontSize: "22px",
         color: "#f3f7ff",
         align: "center",
-        lineSpacing: 12
+        lineSpacing: statLineSpacing
       })
       .setOrigin(0.5)
       .setDepth(3);
+    statsText.setY(statsCenterY - statsText.height * 0.5 + 2);
 
+    const buttonsTopY = statsTopY + statsContainerHeight + panelPadding;
     this.copyStatusText = this.add
-      .text(centerX, centerY + 88, "", {
+      .text(centerX, buttonsTopY + 4, "", {
         fontFamily: "Arial",
         fontSize: "16px",
         color: "#c9e8ff",
@@ -71,17 +83,17 @@ export class RunSummaryScene extends Phaser.Scene {
       .setDepth(4)
       .setVisible(false);
 
-    this.createActionButton(centerX, centerY + 122, "COPY STATS", () => {
+    this.createActionButton(centerX, buttonsTopY + 34, "COPY STATS", () => {
       this.copyRunSummaryStats(copyText);
     });
 
-    this.createActionButton(centerX, centerY + 174, "RETRY", () => {
+    this.createActionButton(centerX, buttonsTopY + 86, "RETRY", () => {
       this.scene.stop("RunSummaryScene");
       this.scene.stop("GameScene");
       this.scene.start("GameScene");
     });
 
-    this.createActionButton(centerX, centerY + 226, "MAIN MENU", () => {
+    this.createActionButton(centerX, buttonsTopY + 138, "MAIN MENU", () => {
       this.scene.stop("RunSummaryScene");
       const hasMainMenuScene = Boolean(this.scene.manager?.keys?.MainMenuScene);
       if (hasMainMenuScene) {
