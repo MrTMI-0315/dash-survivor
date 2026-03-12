@@ -1,9 +1,9 @@
 const UI_LAYER_ORDER = Object.freeze({
   GAME_WORLD: 0,
-  COMBAT_UI: 20,
-  HUD: 40,
-  OVERLAY: 60,
-  RUN_SUMMARY: 80
+  COMBAT_UI: 40,
+  HUD: 1000,
+  OVERLAY: 1999,
+  RUN_SUMMARY: 2000
 });
 
 export class RunSummaryScene extends Phaser.Scene {

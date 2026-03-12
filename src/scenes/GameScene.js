@@ -112,6 +112,15 @@ const WEAPON_UNLOCK_STORAGE_KEY = "dashsurvivor_weapon_unlocks_v1";
 const PLAYTEST_SPAWN_PACING_STORAGE_KEY = "dashsurvivor_playtest_spawn_pacing_v1";
 const DEBUG_HUD_X = 16;
 const DEBUG_HUD_Y = 116;
+const RENDER_DEPTH = Object.freeze({
+  WORLD: 0,
+  ENEMIES: 10,
+  PLAYER: 20,
+  PROJECTILES: 30,
+  DAMAGE_TEXT: 40,
+  HUD: 1000,
+  MENUS: 2000
+});
 const OFFSCREEN_INDICATOR_INSET = 18;
 const OFFSCREEN_INDICATOR_SIZE = 9;
 const OFFSCREEN_INDICATOR_MAX = 12;
@@ -981,7 +990,7 @@ export class GameScene extends Phaser.Scene {
     this.modalBackdrop = this.add
       .rectangle(640, 360, 1280, 720, 0x05080d, 0.28)
       .setScrollFactor(0)
-      .setDepth(24)
+      .setDepth(RENDER_DEPTH.MENUS - 1)
       .setVisible(false);
     this.damageNumberPool = [];
     this.offscreenIndicatorPool = [];
@@ -990,7 +999,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setStrokeStyle(2, 0x6d4a31, 0.56)
       .setScrollFactor(0)
-      .setDepth(18)
+      .setDepth(RENDER_DEPTH.HUD + 2)
       .setVisible(false);
     this.debugDirectorText = this.add
       .text(1024, 108, "", {
@@ -1001,7 +1010,7 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 3
       })
       .setScrollFactor(0)
-      .setDepth(19);
+      .setDepth(RENDER_DEPTH.HUD + 3);
     this.debugDirectorText.setVisible(this.debugOverlayEnabled);
     this.createGameplayHUD();
     this.createHudAlertPool();
@@ -1018,14 +1027,14 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(12)
+      .setDepth(RENDER_DEPTH.MENUS + 10)
       .setVisible(false);
 
     this.gameOverRestartButton = this.add
       .rectangle(640, 540, 240, 58, 0x17304f, 0.95)
       .setStrokeStyle(2, 0x66b9ff, 1)
       .setScrollFactor(0)
-      .setDepth(13)
+      .setDepth(RENDER_DEPTH.MENUS + 11)
       .setInteractive({ useHandCursor: true })
       .setVisible(false);
     this.gameOverRestartLabel = this.add
@@ -1038,7 +1047,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(14)
+      .setDepth(RENDER_DEPTH.MENUS + 12)
       .setInteractive({ useHandCursor: true })
       .setVisible(false);
 
@@ -3040,7 +3049,7 @@ export class GameScene extends Phaser.Scene {
         .text(640, 74, "", HUD_ALERT_STYLE)
         .setOrigin(0.5)
         .setScrollFactor(0)
-        .setDepth(25)
+        .setDepth(RENDER_DEPTH.HUD + 4)
         .setVisible(false)
         .setActive(false);
       text.setData("alertKind", null);
@@ -3104,7 +3113,7 @@ export class GameScene extends Phaser.Scene {
 
     text.setStyle(HUD_ALERT_STYLE);
     text.setPosition(640, 74);
-    text.setDepth(20);
+    text.setDepth(RENDER_DEPTH.HUD + 4);
     text.setText(message);
 
     const hideEvent = this.time.delayedCall(durationMs, () => {
@@ -3209,7 +3218,7 @@ export class GameScene extends Phaser.Scene {
           strokeThickness: 4
         })
         .setOrigin(0.5)
-        .setDepth(18)
+        .setDepth(RENDER_DEPTH.DAMAGE_TEXT)
         .setVisible(false)
         .setActive(false);
       this.damageNumberPool.push(text);
@@ -4193,17 +4202,17 @@ export class GameScene extends Phaser.Scene {
     const overlay = this.add
       .rectangle(centerX, centerY, cam.width, cam.height, 0x000000, 0.6)
       .setScrollFactor(0)
-      .setDepth(30);
+      .setDepth(RENDER_DEPTH.MENUS);
     const panel = this.add
       .rectangle(centerX, centerY, panelWidth, panelHeight, 0x22150d, 0.96)
       .setStrokeStyle(2, 0xb48855, 0.96)
       .setScrollFactor(0)
-      .setDepth(31);
+      .setDepth(RENDER_DEPTH.MENUS + 1);
     const panelInset = this.add
       .rectangle(centerX, centerY, panelWidth - 12, panelHeight - 12, 0x352215, 0.94)
       .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
-      .setDepth(31.1);
+      .setDepth(RENDER_DEPTH.MENUS + 2);
     const title = this.add
       .text(centerX, centerY - 66, "LEVEL UP", {
         fontFamily: "Arial",
@@ -4214,7 +4223,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(32);
+      .setDepth(RENDER_DEPTH.MENUS + 3);
 
     const choices = Phaser.Utils.Array.Shuffle([...LEVEL_UP_UPGRADES]).slice(0, 3);
     const optionObjects = [];
@@ -4226,7 +4235,7 @@ export class GameScene extends Phaser.Scene {
         .setStrokeStyle(1, 0xb48855, 0.92)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
-        .setDepth(32);
+        .setDepth(RENDER_DEPTH.MENUS + 3);
 
       const label = this.add
         .text(centerX, y, `[${index + 1}] ${upgrade.label}`, {
@@ -4238,7 +4247,7 @@ export class GameScene extends Phaser.Scene {
         })
         .setOrigin(0.5)
         .setScrollFactor(0)
-        .setDepth(32);
+        .setDepth(RENDER_DEPTH.MENUS + 3);
 
       const chooseUpgrade = () => {
         this.applyLevelUpUpgrade(upgrade);
@@ -4283,12 +4292,12 @@ export class GameScene extends Phaser.Scene {
       .rectangle(centerX, centerY, 700, 500, 0x22150d, 0.96)
       .setStrokeStyle(3, 0xb48855, 0.96)
       .setScrollFactor(0)
-      .setDepth(35);
+      .setDepth(RENDER_DEPTH.MENUS + 1);
     const panelInset = this.add
       .rectangle(centerX, centerY, 672, 470, 0x342214, 0.94)
       .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
-      .setDepth(35.2);
+      .setDepth(RENDER_DEPTH.MENUS + 2);
     const { titleChip, title } = this.createModalTitle(
       centerX,
       centerY - 206,
@@ -4296,8 +4305,8 @@ export class GameScene extends Phaser.Scene {
       {
         fontSize: 32,
         minWidth: 292,
-        badgeDepth: 35.4,
-        textDepth: 36
+        badgeDepth: RENDER_DEPTH.MENUS + 3,
+        textDepth: RENDER_DEPTH.MENUS + 4
       }
     );
 
@@ -4311,7 +4320,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(36);
+      .setDepth(RENDER_DEPTH.MENUS + 4);
 
     const subtitle = this.add
       .text(centerX, centerY - 130, "Pick one weapon to begin this run", {
@@ -4323,7 +4332,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(36);
+      .setDepth(RENDER_DEPTH.MENUS + 4);
 
     const statusText = this.add
       .text(centerX, centerY + 204, "", {
@@ -4335,7 +4344,7 @@ export class GameScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
-      .setDepth(36);
+      .setDepth(RENDER_DEPTH.MENUS + 4);
 
     const optionRows = [];
     START_WEAPON_OPTIONS.forEach((option, index) => {
@@ -4345,13 +4354,13 @@ export class GameScene extends Phaser.Scene {
         .setStrokeStyle(2, 0xb48855, 0.92)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
-        .setDepth(36);
+        .setDepth(RENDER_DEPTH.MENUS + 4);
       const boxInlay = this.add
         .rectangle(centerX, y, 604, 58, 0xead7b7, 0.88)
         .setStrokeStyle(1, 0x6d4a31, 0.6)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
-        .setDepth(36.2);
+        .setDepth(RENDER_DEPTH.MENUS + 5);
       const heading = this.add
         .text(centerX - 286, y - 13, `[${index + 1}] ${option.label}`, {
           fontFamily: "Arial",
@@ -4362,7 +4371,7 @@ export class GameScene extends Phaser.Scene {
         })
         .setOrigin(0, 0.5)
         .setScrollFactor(0)
-        .setDepth(37);
+        .setDepth(RENDER_DEPTH.MENUS + 6);
       const detail = this.add
         .text(centerX - 286, y + 15, "", {
           fontFamily: "Arial",
@@ -4373,7 +4382,7 @@ export class GameScene extends Phaser.Scene {
         })
         .setOrigin(0, 0.5)
         .setScrollFactor(0)
-        .setDepth(37);
+        .setDepth(RENDER_DEPTH.MENUS + 6);
 
       const refreshOption = () => {
         const unlocked = Boolean(this.weaponUnlocks[option.id]);
@@ -4897,7 +4906,7 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 3
     };
 
-    this.hud = this.add.container(0, 0).setScrollFactor(0).setDepth(1000);
+    this.hud = this.add.container(0, 0).setScrollFactor(0).setDepth(RENDER_DEPTH.HUD);
     this.hpText = this.add.text(margin, margin + lineSpacing * 0, "HP: 100/100", style).setOrigin(0, 0);
     this.expText = this.add.text(margin, margin + lineSpacing * 1, "LV 1 | EXP 0%", style).setOrigin(0, 0);
     this.expBarBg = this.add

@@ -21,6 +21,7 @@ const ENEMY_TYPE_TO_FOLDER = Object.freeze({
 const HIT_FLASH_DURATION_MS = 60;
 const HIT_VISUAL_PUSH_PX = 4;
 const HIT_SPARK_PARTICLE_COUNT = 3;
+const ENEMY_RENDER_DEPTH = 10;
 
 function getArchetypeConfig(type) {
   return ENEMY_ARCHETYPE_CONFIGS[type] ?? ENEMY_ARCHETYPE_CONFIGS.chaser;
@@ -109,7 +110,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.baseTint = config.tint ?? archetype.tint;
     this.setTexture(getEnemyTextureKey(this.type, this.scene, this.facingDirection));
     this.setScale(config.scale ?? archetype.scale);
-    this.setDepth(this.type === "boss" ? 7 : 6);
+    this.setDepth(ENEMY_RENDER_DEPTH);
     this.setCircle(config.radius ?? archetype.radius, 0, 0);
     const spawnX = config.x ?? this.x;
     const spawnY = config.y ?? this.y;

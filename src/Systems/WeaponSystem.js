@@ -9,6 +9,8 @@ import { Enemy } from "../entities/Enemy.js";
 const PROJECTILE_VISUAL_SCALE = 1.4;
 const PROJECTILE_GLOW_ALPHA = 0.6;
 const PROJECTILE_TRAIL_LIFETIME_MS = 200;
+const PROJECTILE_RENDER_DEPTH = 30;
+const PROJECTILE_EFFECT_DEPTH = 31;
 const PROJECTILE_TINT_BY_WEAPON = Object.freeze({
   dagger: 0xa8e7ff,
   fireball: 0xffb36a,
@@ -55,7 +57,7 @@ export class WeaponSystem {
     this.globalDamageMultiplier = 1;
     this.globalCooldownMultiplier = 1;
     this.projectileCount = 1;
-    this.projectileGlowGraphics = scene.add.graphics().setDepth(7.9);
+    this.projectileGlowGraphics = scene.add.graphics().setDepth(PROJECTILE_RENDER_DEPTH);
     this.projectileTrailParticles = null;
     this.projectileTrailEmitter = null;
     this.projectileTrailAccumulatorMs = 0;
@@ -96,7 +98,7 @@ export class WeaponSystem {
     }
 
     this.projectileTrailParticles = this.scene.add.particles(textureKey);
-    this.projectileTrailParticles.setDepth(7.8);
+    this.projectileTrailParticles.setDepth(PROJECTILE_RENDER_DEPTH);
     this.projectileTrailEmitter = this.projectileTrailParticles.createEmitter({
       on: false,
       lifespan: PROJECTILE_TRAIL_LIFETIME_MS,
@@ -152,7 +154,7 @@ export class WeaponSystem {
         const projectile = this.projectiles.create(-1000, -1000, texture);
         projectile.setData("poolTexture", texture);
         projectile.setData("inProjectilePool", true);
-        projectile.setDepth(8);
+        projectile.setDepth(PROJECTILE_RENDER_DEPTH);
         projectile.setAlpha(0.98);
         projectile.speed = 0;
         projectile.maxDistance = 0;
@@ -482,7 +484,7 @@ export class WeaponSystem {
     for (let i = 0; i < count; i += 1) {
       const blade = this.orbitBlades.create(this.player.x, this.player.y, "proj_orbit_blade");
       blade.body.setCircle(blade.displayWidth * 0.48, 0, 0);
-      blade.setDepth(8);
+      blade.setDepth(PROJECTILE_RENDER_DEPTH);
       blade.setAlpha(0.96);
       blade.setData("weaponBaseType", weapon.baseType);
       blade.setData("orbitHitKey", `orbit_hit_${weapon.baseType}`);
@@ -587,7 +589,7 @@ export class WeaponSystem {
     let sourceX = this.player.x;
     let sourceY = this.player.y;
 
-    const gfx = this.scene.add.graphics().setDepth(8.6);
+    const gfx = this.scene.add.graphics().setDepth(PROJECTILE_EFFECT_DEPTH);
 
     for (let i = 0; i < maxJumps && currentTarget; i += 1) {
       const segmentFalloff = 1 - i * 0.22;
