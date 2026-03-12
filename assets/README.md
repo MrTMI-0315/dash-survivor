@@ -5,6 +5,7 @@ This project currently uses `assets/` as the runtime asset source of truth.
 ## Live runtime paths
 - Character sprites: `assets/sprites/characters/*`
 - Legacy/mixed sprites: `assets/sprites/kenney/*`
+- Weapon icons: `assets/weapons/*`
 - Audio: `assets/audio/*`
 - Atlas: `assets/atlas/*`
 

@@ -15,4 +15,5 @@ For active runtime asset paths, see `/assets/README.md`.
 ## Notes
 - Files here are copies for organization/mapping only.
 - Runtime scenes currently load character rotations from `assets/sprites/characters/*`.
+- Weapon icon runtime source currently lives in `assets/weapons/*`.
 - Keep new production assets in `/assets` until a dedicated migration pass updates preload paths and build copy rules.
