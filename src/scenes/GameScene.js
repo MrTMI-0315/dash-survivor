@@ -127,6 +127,48 @@ const HUD_COMBO_STYLE = Object.freeze({
   strokeThickness: 6
 });
 const GAMEPLAY_CAMERA_ZOOM = 1.5;
+const DECK_TILE_VARIANTS = Object.freeze([
+  Object.freeze({
+    key: "deck_a",
+    path: "assets/sprites/kenney/deck_plank_main.png",
+    weight: 50,
+    tintEven: 0xe8d8c6,
+    tintOdd: 0xd8c0a7,
+    tileOffsetStep: 19,
+    fallbackEven: 0x6c4830,
+    fallbackOdd: 0x755138
+  }),
+  Object.freeze({
+    key: "deck_b",
+    path: "assets/sprites/kenney/deck_plank_main.png",
+    weight: 20,
+    tintEven: 0xe2ceb6,
+    tintOdd: 0xd4b394,
+    tileOffsetStep: 23,
+    fallbackEven: 0x67432d,
+    fallbackOdd: 0x714d36
+  }),
+  Object.freeze({
+    key: "deck_c",
+    path: "assets/sprites/kenney/deck_plank_main.png",
+    weight: 20,
+    tintEven: 0xd8c4ac,
+    tintOdd: 0xc8ac8c,
+    tileOffsetStep: 17,
+    fallbackEven: 0x623f2a,
+    fallbackOdd: 0x6a4731
+  }),
+  Object.freeze({
+    key: "deck_d",
+    path: "assets/sprites/kenney/deck_plank_main.png",
+    weight: 10,
+    tintEven: 0xcfb798,
+    tintOdd: 0xc29f7e,
+    tileOffsetStep: 29,
+    fallbackEven: 0x5e3c28,
+    fallbackOdd: 0x66442f
+  })
+]);
 const IMPORTED_PIXEL_ASSETS = Object.freeze({
   deckPlankMain: Object.freeze({
     key: "sprite_deck_plank_main",
@@ -296,6 +338,23 @@ const PIXEL_CHASER_PATTERN = [
   "................",
   "................"
 ];
+
+function pickWeightedDeckVariant(variants, excludedKey = null) {
+  const available = variants.filter((variant) => variant.key !== excludedKey);
+  if (available.length === 0) {
+    return variants[0];
+  }
+
+  const totalWeight = available.reduce((sum, variant) => sum + variant.weight, 0);
+  let roll = Math.random() * totalWeight;
+  for (let i = 0; i < available.length; i += 1) {
+    roll -= available[i].weight;
+    if (roll <= 0) {
+      return available[i];
+    }
+  }
+  return available[available.length - 1];
+}
 
 const PIXEL_SWARM_PATTERN = [
   "............",
@@ -891,6 +950,12 @@ export class GameScene extends Phaser.Scene {
         }
         this.load.image(textureKey, `assets/sprites/characters/${folder}/rotations/${direction}.png`);
       });
+    });
+    DECK_TILE_VARIANTS.forEach(({ key, path }) => {
+      if (this.textures?.exists(key)) {
+        return;
+      }
+      this.load.image(key, path);
     });
     Object.values(IMPORTED_PIXEL_ASSETS).forEach(({ key, path }) => {
       if (this.textures?.exists(key)) {
@@ -1594,30 +1659,42 @@ export class GameScene extends Phaser.Scene {
     const deckHeight = WORLD_HEIGHT - DECK_SURFACE_INSET * 2;
     const deckRight = deckLeft + deckWidth;
     const deckBottom = deckTop + deckHeight;
-    const hasDeckPlankTexture = this.textures.exists(IMPORTED_PIXEL_ASSETS.deckPlankMain.key);
+    const hasDeckPlankTexture = DECK_TILE_VARIANTS.some((variant) => this.textures.exists(variant.key));
     const hasDeckTrimTexture = this.textures.exists(IMPORTED_PIXEL_ASSETS.deckPlankTrim.key);
 
     graphics.fillStyle(0x5b3b25, 1);
     graphics.fillRect(deckLeft, deckTop, deckWidth, deckHeight);
 
+    let lastVariantKey = null;
+    let variantRunLength = 0;
     for (let y = deckTop; y < deckBottom; y += DECK_TILE_SIZE) {
       const plankIndex = Math.floor((y - deckTop) / DECK_TILE_SIZE);
       const rowHeight = Math.min(DECK_TILE_SIZE - 2, deckBottom - y);
+      const excludedKey = variantRunLength >= 3 ? lastVariantKey : null;
+      const deckVariant = pickWeightedDeckVariant(DECK_TILE_VARIANTS, excludedKey);
+      if (deckVariant.key === lastVariantKey) {
+        variantRunLength += 1;
+      } else {
+        lastVariantKey = deckVariant.key;
+        variantRunLength = 1;
+      }
+
       if (hasDeckPlankTexture) {
+        const textureKey = this.textures.exists(deckVariant.key) ? deckVariant.key : IMPORTED_PIXEL_ASSETS.deckPlankMain.key;
         const plankRow = this.add.tileSprite(
           deckLeft + deckWidth * 0.5,
           y + rowHeight * 0.5,
           deckWidth,
           rowHeight,
-          IMPORTED_PIXEL_ASSETS.deckPlankMain.key
+          textureKey
         );
         plankRow.setDepth(0);
-        plankRow.setTint(plankIndex % 2 === 0 ? 0xe8d8c6 : 0xd8c0a7);
+        plankRow.setTint(plankIndex % 2 === 0 ? deckVariant.tintEven : deckVariant.tintOdd);
         plankRow.tileScaleX = 1;
         plankRow.tileScaleY = 1;
-        plankRow.tilePositionX = (plankIndex % 5) * 19;
+        plankRow.tilePositionX = (plankIndex % 5) * deckVariant.tileOffsetStep;
       } else {
-        const plankColor = plankIndex % 2 === 0 ? 0x6c4830 : 0x755138;
+        const plankColor = plankIndex % 2 === 0 ? deckVariant.fallbackEven : deckVariant.fallbackOdd;
         graphics.fillStyle(plankColor, 1);
         graphics.fillRect(deckLeft, y, deckWidth, rowHeight);
       }
