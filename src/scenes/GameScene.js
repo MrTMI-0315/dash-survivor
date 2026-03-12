@@ -596,6 +596,8 @@ export class GameScene extends Phaser.Scene {
     this.baseSpawnCheckIntervalMs = BASE_SPAWN_CHECK_INTERVAL_MS;
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
+    this.runStartTimeMs = 0;
+    this.hudElapsedSeconds = -1;
     this.targetEnemies = 0;
 
     this.attackIntervalMs = 800;
@@ -706,6 +708,8 @@ export class GameScene extends Phaser.Scene {
     this.levelUpUi = [];
     this.spawnAccumulatorMs = 0;
     this.runTimeMs = 0;
+    this.runStartTimeMs = this.time?.now ?? 0;
+    this.hudElapsedSeconds = -1;
     this.targetEnemies = 0;
     this.hudAlertPool = [];
     this.killCombo = 0;
@@ -3140,7 +3144,7 @@ export class GameScene extends Phaser.Scene {
     const totalSec = Math.max(0, Math.floor(ms / 1000));
     const m = Math.floor(totalSec / 60);
     const s = totalSec % 60;
-    return `${m}:${String(s).padStart(2, "0")}`;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
 
   getWeaponSlotLabel(weapon) {
@@ -4752,6 +4756,8 @@ export class GameScene extends Phaser.Scene {
     const displayedXpRatio = Phaser.Math.Clamp(this.xpDisplayRatio, 0, 1);
     const dashRatio = Phaser.Math.Clamp(this.player.getDashRatio(), 0, 1);
     const nowMs = this.time?.now ?? 0;
+    const elapsedMs = Math.max(0, nowMs - this.runStartTimeMs);
+    const elapsedSeconds = Math.floor(elapsedMs / 1000);
     const xpPulseActive = !this.isLeveling && xpRatio >= 0.9;
     const xpPulse = xpPulseActive ? (Math.sin(nowMs / 120) + 1) / 2 : 0;
     const xpFillColor = xpPulseActive ? this.lerpColor(0x66f5b2, 0xffe38a, xpPulse) : 0x66f5b2;
@@ -4769,7 +4775,10 @@ export class GameScene extends Phaser.Scene {
     this.hudLevelText.setText(`HP ${this.player.hp} / ${this.player.maxHp}`);
     this.hudXpLabelText?.setText(`EXP ${this.currentXp}/${this.xpToNext}`);
     this.hudStatsText.setText(`LEVEL ${levelValue}`);
-    this.hudTimerText?.setText(`TIME ${this.formatRunTime(this.runTimeMs)}`);
+    if (elapsedSeconds !== this.hudElapsedSeconds) {
+      this.hudElapsedSeconds = elapsedSeconds;
+      this.hudTimerText?.setText(`TIME ${this.formatRunTime(elapsedMs)}`);
+    }
     this.hudGoldText?.setText(`KILLS ${this.totalKills}`);
     this.hudHeaderChip?.setVisible(false);
     this.hudCoreLabelText?.setVisible(false);
