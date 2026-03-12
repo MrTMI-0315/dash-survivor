@@ -1,9 +1,9 @@
-# Asset Layout (Staging)
+# Asset Layout (Staging / Migration)
 
-This folder is the normalized asset layout for future runtime migration.
+This folder is a normalized staging layout for future migration work.
 
 Current game runtime still loads from `/assets/...` paths.
-No runtime path changes were made in this pass.
+For active runtime asset paths, see `/assets/README.md`.
 
 ## Structure
 - `characters/player/`: player sprites
@@ -13,5 +13,6 @@ No runtime path changes were made in this pass.
 - `tiles/`: floor/deck tile textures
 
 ## Notes
-- Files here are copied from `assets/sprites/kenney/*` to avoid breaking current paths.
-- Once runtime paths are migrated, old duplicates can be removed in a dedicated cleanup pass.
+- Files here are copies for organization/mapping only.
+- Runtime scenes currently load character rotations from `assets/sprites/characters/*`.
+- Keep new production assets in `/assets` until a dedicated migration pass updates preload paths and build copy rules.
