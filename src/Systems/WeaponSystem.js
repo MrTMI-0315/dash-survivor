@@ -102,16 +102,18 @@ export class WeaponSystem {
       return;
     }
 
-    this.projectileTrailParticles = this.scene.add.particles(textureKey);
-    this.projectileTrailParticles.setDepth(PROJECTILE_RENDER_DEPTH);
-    this.projectileTrailEmitter = this.projectileTrailParticles.createEmitter({
-      on: false,
+    this.projectileTrailEmitter = this.scene.add.particles(0, 0, textureKey, {
+      emitting: false,
+      quantity: 0,
+      frequency: -1,
       lifespan: PROJECTILE_TRAIL_LIFETIME_MS,
       speed: { min: 6, max: 28 },
       scale: { start: 0.22, end: 0 },
       alpha: { start: 0.45, end: 0 },
       blendMode: "ADD"
     });
+    this.projectileTrailEmitter.setDepth(PROJECTILE_RENDER_DEPTH);
+    this.projectileTrailParticles = this.projectileTrailEmitter;
   }
 
   getProjectileVisualColor(type) {
