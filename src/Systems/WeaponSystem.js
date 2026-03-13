@@ -458,8 +458,17 @@ export class WeaponSystem {
       this.projectileGlowGraphics?.strokeCircle(projectile.x, projectile.y, glowRadius);
       if (shouldEmitTrail && this.projectileTrailEmitter) {
         const trailBurst = Math.max(1, Math.min(3, Math.floor(projectile.getData("trailBurst") ?? 1)));
-        this.projectileTrailEmitter.setTint(glowColor);
-        this.projectileTrailEmitter.emitParticleAt(projectile.x, projectile.y, trailBurst);
+        if (typeof this.projectileTrailEmitter.setTint === "function") {
+          this.projectileTrailEmitter.setTint(glowColor);
+        } else if (typeof this.projectileTrailEmitter.setParticleTint === "function") {
+          this.projectileTrailEmitter.setParticleTint(glowColor);
+        }
+
+        if (typeof this.projectileTrailEmitter.emitParticleAt === "function") {
+          this.projectileTrailEmitter.emitParticleAt(projectile.x, projectile.y, trailBurst);
+        } else if (typeof this.projectileTrailEmitter.explode === "function") {
+          this.projectileTrailEmitter.explode(trailBurst, projectile.x, projectile.y);
+        }
       }
       if (shouldEmitTrail) {
         const vx = projectile.body?.velocity?.x ?? 0;
