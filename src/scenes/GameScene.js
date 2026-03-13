@@ -7,6 +7,7 @@ import { ObjectPool } from "../Systems/ObjectPool.js";
 import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS, HUNTER_UNLOCK_TIME_SEC } from "../config/enemies.js";
 import { LEVEL_UP_UPGRADES } from "../config/weapons.js";
 import { DIRECTOR_BOSS_SPAWN } from "../config/director.js";
+import { CHARACTER_ASSET_MANIFEST, CHARACTER_DIRECTIONS } from "../config/assets.manifest.js";
 import {
   BASE_SPAWN_CHECK_INTERVAL_MS,
   ENEMY_POOL_SIZE,
@@ -162,7 +163,7 @@ const EDGE_FOG_VIGNETTE_OPACITY = 0.35;
 const DECK_TILE_VARIANTS = Object.freeze([
   Object.freeze({
     key: "deck_a",
-    path: "assets/sprites/kenney/deck_plank_main.png",
+    path: "assets/sprites/tiles/deck_plank_main.png",
     weight: 50,
     tintEven: 0xe8d8c6,
     tintOdd: 0xd8c0a7,
@@ -172,7 +173,7 @@ const DECK_TILE_VARIANTS = Object.freeze([
   }),
   Object.freeze({
     key: "deck_b",
-    path: "assets/sprites/kenney/deck_plank_main.png",
+    path: "assets/sprites/tiles/deck_plank_main.png",
     weight: 20,
     tintEven: 0xe2ceb6,
     tintOdd: 0xd4b394,
@@ -182,7 +183,7 @@ const DECK_TILE_VARIANTS = Object.freeze([
   }),
   Object.freeze({
     key: "deck_c",
-    path: "assets/sprites/kenney/deck_plank_main.png",
+    path: "assets/sprites/tiles/deck_plank_main.png",
     weight: 20,
     tintEven: 0xd8c4ac,
     tintOdd: 0xc8ac8c,
@@ -192,7 +193,7 @@ const DECK_TILE_VARIANTS = Object.freeze([
   }),
   Object.freeze({
     key: "deck_d",
-    path: "assets/sprites/kenney/deck_plank_main.png",
+    path: "assets/sprites/tiles/deck_plank_main.png",
     weight: 10,
     tintEven: 0xcfb798,
     tintOdd: 0xc29f7e,
@@ -252,55 +253,55 @@ const RANDOM_DECK_OBSTACLE_MIN_PADDING = 16;
 const IMPORTED_PIXEL_ASSETS = Object.freeze({
   deckPlankMain: Object.freeze({
     key: "sprite_deck_plank_main",
-    path: "assets/sprites/kenney/deck_plank_main.png"
+    path: "assets/sprites/tiles/deck_plank_main.png"
   }),
   deckPlankTrim: Object.freeze({
     key: "sprite_deck_plank_trim",
-    path: "assets/sprites/kenney/deck_plank_trim.png"
+    path: "assets/sprites/tiles/deck_plank_trim.png"
   }),
   player: Object.freeze({
     key: "sprite_player_crew",
-    path: "assets/sprites/kenney/player_crew.png"
+    path: "assets/sprites/characters/player/player_crew.png"
   }),
   cannon: Object.freeze({
     key: "sprite_terrain_cannon",
-    path: "assets/sprites/kenney/terrain_cannon.png"
+    path: "assets/sprites/props/terrain_cannon.png"
   }),
   deckHullLarge: Object.freeze({
     key: "sprite_deck_hull_large",
-    path: "assets/sprites/kenney/deck_hull_large.png"
+    path: "assets/sprites/props/deck_hull_large.png"
   }),
   deckCannonLoose: Object.freeze({
     key: "sprite_deck_cannon_loose",
-    path: "assets/sprites/kenney/deck_cannon_loose.png"
+    path: "assets/sprites/props/deck_cannon_loose.png"
   }),
   deckCannonBall: Object.freeze({
     key: "sprite_deck_cannonball",
-    path: "assets/sprites/kenney/deck_cannonball.png"
+    path: "assets/sprites/props/deck_cannonball.png"
   }),
   uiPanelBrown: Object.freeze({
     key: "sprite_ui_panel_brown",
-    path: "assets/sprites/kenney/ui_panel_brown.png"
+    path: "assets/ui/ui_panel_brown.png"
   }),
   uiPanelBrownInlay: Object.freeze({
     key: "sprite_ui_panel_brown_inlay",
-    path: "assets/sprites/kenney/ui_panel_brown_inlay.png"
+    path: "assets/ui/ui_panel_brown_inlay.png"
   }),
   uiPanelTanInlay: Object.freeze({
     key: "sprite_ui_panel_tan_inlay",
-    path: "assets/sprites/kenney/ui_panel_tan_inlay.png"
+    path: "assets/ui/ui_panel_tan_inlay.png"
   }),
   enemyChaserBody: Object.freeze({
     key: "sprite_enemy_chaser_body",
-    path: "assets/sprites/kenney/enemy_chaser_body.png"
+    path: "assets/sprites/characters/enemies/chaser/parts/enemy_chaser_body.png"
   }),
   enemyChaserEye: Object.freeze({
     key: "sprite_enemy_chaser_eye",
-    path: "assets/sprites/kenney/enemy_chaser_eye.png"
+    path: "assets/sprites/characters/enemies/chaser/parts/enemy_chaser_eye.png"
   }),
   enemyChaserMouth: Object.freeze({
     key: "sprite_enemy_chaser_mouth",
-    path: "assets/sprites/kenney/enemy_chaser_mouth.png"
+    path: "assets/sprites/characters/enemies/chaser/parts/enemy_chaser_mouth.png"
   })
 });
 const BOSS_BULLET_MAX = 220;
@@ -336,24 +337,6 @@ const SFX_THROTTLE_MS = {
   boss_warning: 300,
   weapon_fire: 48
 };
-const CHARACTER_DIRECTION_NAMES = Object.freeze([
-  "south",
-  "south-east",
-  "east",
-  "north-east",
-  "north",
-  "north-west",
-  "west",
-  "south-west"
-]);
-const CHARACTER_ASSET_FOLDERS = Object.freeze([
-  "player_pirate",
-  "enemy_chaser",
-  "enemy_swarm",
-  "enemy_tank",
-  "enemy_hunter",
-  "enemy_miniboss_davy"
-]);
 const START_WEAPON_OPTIONS = [
   {
     id: "dash_blade",
@@ -1072,14 +1055,14 @@ export class GameScene extends Phaser.Scene {
       }
       this.load.audio(key, path);
     });
-    CHARACTER_ASSET_FOLDERS.forEach((folder) => {
-      CHARACTER_DIRECTION_NAMES.forEach((direction) => {
+    CHARACTER_ASSET_MANIFEST.forEach(({ keyPrefix, basePath }) => {
+      CHARACTER_DIRECTIONS.forEach((direction) => {
         const dirKey = direction.replace(/-/g, "_");
-        const textureKey = `char_${folder}_${dirKey}`;
+        const textureKey = `${keyPrefix}_${dirKey}`;
         if (this.textures?.exists(textureKey)) {
           return;
         }
-        this.load.image(textureKey, `assets/sprites/characters/${folder}/rotations/${direction}.png`);
+        this.load.image(textureKey, `${basePath}/rotations/${direction}.png`);
       });
     });
     DECK_TILE_VARIANTS.forEach(({ key, path }) => {
