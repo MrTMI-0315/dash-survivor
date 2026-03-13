@@ -26,7 +26,7 @@ const BOSS_VARIANTS = {
     xpValue: 220,
     radius: 24,
     scale: 1.8,
-    tint: 0xb36dff,
+    tint: 0xffffff,
     shockwaveIntervalMs: 3200,
     shockwaveRadius: 155,
     rushIntervalMs: 5800,
@@ -38,6 +38,7 @@ const BOSS_VARIANTS = {
     radialBurstBulletSpeed: 205
   }
 };
+const MINI_BOSS_TEXTURE_KEY = "char_enemy_miniboss_davy_south";
 
 export class BossEnemy extends Enemy {
   constructor(scene, x, y, options = {}) {
@@ -75,6 +76,10 @@ export class BossEnemy extends Enemy {
 
     this.setData("isBoss", true);
     this.setData("bossVariant", this.variant);
+
+    if (this.variant === "mini" && scene?.textures?.exists(MINI_BOSS_TEXTURE_KEY)) {
+      this.setTexture(MINI_BOSS_TEXTURE_KEY);
+    }
   }
 
   updateBossPattern(target, nowMs) {

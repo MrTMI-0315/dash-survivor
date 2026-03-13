@@ -351,7 +351,8 @@ const CHARACTER_ASSET_FOLDERS = Object.freeze([
   "enemy_chaser",
   "enemy_swarm",
   "enemy_tank",
-  "enemy_hunter"
+  "enemy_hunter",
+  "enemy_miniboss_davy"
 ]);
 const START_WEAPON_OPTIONS = [
   {
@@ -5017,13 +5018,8 @@ export class GameScene extends Phaser.Scene {
     if (!this.hud || !this.hpText || !this.expText || !this.timeText || !this.killText || !this.expBarBg || !this.expBarFill) {
       return;
     }
-    const cam = this.cameras?.main;
-    if (!cam) {
-      return;
-    }
-
-    const anchorX = (cam.x ?? 0) + 16;
-    const anchorY = (cam.y ?? 0) + 16;
+    const anchorX = 16;
+    const anchorY = 16;
     this.hud.setPosition(anchorX, anchorY);
     this.hpText.setPosition(0, 0);
     this.expText.setPosition(0, 18);
@@ -5052,7 +5048,7 @@ export class GameScene extends Phaser.Scene {
     this.expBarFill.displayWidth = 120 * xpRatio;
     this.hudElapsedSeconds = elapsedSeconds;
     this.timeText.setText(`TIME: ${this.formatRunTime(elapsedMs)}`);
-    this.killText.setText(`KILLS: ${this.totalKills}`);
+    this.killText.setText(`KILL COUNT: ${this.totalKills}`);
   }
 
   updateHud() {
