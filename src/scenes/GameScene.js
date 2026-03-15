@@ -674,6 +674,7 @@ export class GameScene extends Phaser.Scene {
     this.hud = null;
     this.hudObjects = [];
     this.domHudElement = null;
+    this.domHudRefs = null;
     this.hpText = null;
     this.expText = null;
     this.timeText = null;
@@ -2443,15 +2444,53 @@ export class GameScene extends Phaser.Scene {
     hud.className = "hud-core";
     hud.setAttribute("aria-live", "polite");
     hud.innerHTML = `
-      <div class="hud-core-row hud-core-row--hp"><span class="hud-core-label">HP</span><span class="hud-core-value" data-key="hp">-/-</span></div>
-      <div class="hud-core-bar"><span class="hud-core-bar-fill hud-core-bar-fill--hp" data-key="hp-bar"></span></div>
-      <div class="hud-core-row"><span class="hud-core-label">EXP</span><span class="hud-core-value" data-key="exp">LV 1 · 0%</span></div>
-      <div class="hud-core-bar"><span class="hud-core-bar-fill hud-core-bar-fill--exp" data-key="exp-bar"></span></div>
-      <div class="hud-core-row hud-core-row--meta"><span class="hud-core-label">TIME</span><span class="hud-core-value" data-key="time">00:00</span></div>
-      <div class="hud-core-row hud-core-row--meta"><span class="hud-core-label">KILLS</span><span class="hud-core-value" data-key="kills">0</span></div>
+      <div class="hud-top">
+        <div class="hud-chip hud-chip--time">
+          <span class="hud-chip-label">TIME</span>
+          <span class="hud-chip-value" data-key="time">00:00</span>
+        </div>
+      </div>
+      <div class="hud-bottom">
+        <div class="hud-corner hud-corner--left">
+          <span class="hud-corner-label">COINS</span>
+          <span class="hud-corner-value" data-key="coins">0</span>
+        </div>
+        <div class="hud-center">
+          <div class="hud-level-badge">
+            <span class="hud-level-label">LV</span>
+            <span class="hud-level-value" data-key="level">1</span>
+          </div>
+          <div class="hud-center-bars">
+            <div class="hud-bar-row hud-bar-row--hp">
+              <span class="hud-bar-label">HP</span>
+              <span class="hud-bar-track"><span class="hud-bar-fill hud-bar-fill--hp" data-key="hp-bar"></span></span>
+              <span class="hud-bar-value" data-key="hp">0/0</span>
+            </div>
+            <div class="hud-bar-row hud-bar-row--exp">
+              <span class="hud-bar-label">EXP</span>
+              <span class="hud-bar-track"><span class="hud-bar-fill hud-bar-fill--exp" data-key="exp-bar"></span></span>
+              <span class="hud-bar-value" data-key="exp">0%</span>
+            </div>
+          </div>
+        </div>
+        <div class="hud-corner hud-corner--right">
+          <span class="hud-corner-label">KILLS</span>
+          <span class="hud-corner-value" data-key="kills">0</span>
+        </div>
+      </div>
     `;
     appRoot.appendChild(hud);
     this.domHudElement = hud;
+    this.domHudRefs = {
+      hpText: hud.querySelector('[data-key="hp"]'),
+      expText: hud.querySelector('[data-key="exp"]'),
+      timeText: hud.querySelector('[data-key="time"]'),
+      killsText: hud.querySelector('[data-key="kills"]'),
+      coinsText: hud.querySelector('[data-key="coins"]'),
+      levelText: hud.querySelector('[data-key="level"]'),
+      hpBar: hud.querySelector('[data-key="hp-bar"]'),
+      expBar: hud.querySelector('[data-key="exp-bar"]')
+    };
   }
 
   setDomHudVisible(isVisible) {
@@ -2466,30 +2505,40 @@ export class GameScene extends Phaser.Scene {
       this.domHudElement.parentNode.removeChild(this.domHudElement);
     }
     this.domHudElement = null;
+    this.domHudRefs = null;
   }
 
   updateDomHudOverlay(levelValue, xpPercent, elapsedMs, xpRatio) {
-    if (!this.domHudElement || !this.player) {
+    if (!this.domHudElement || !this.player || !this.domHudRefs) {
       return;
     }
-    const hpLine = this.domHudElement.querySelector('[data-key="hp"]');
-    const expLine = this.domHudElement.querySelector('[data-key="exp"]');
-    const timeLine = this.domHudElement.querySelector('[data-key="time"]');
-    const killsLine = this.domHudElement.querySelector('[data-key="kills"]');
-    const hpBar = this.domHudElement.querySelector('[data-key="hp-bar"]');
-    const expBar = this.domHudElement.querySelector('[data-key="exp-bar"]');
+    const hpLine = this.domHudRefs.hpText;
+    const expLine = this.domHudRefs.expText;
+    const timeLine = this.domHudRefs.timeText;
+    const killsLine = this.domHudRefs.killsText;
+    const coinsLine = this.domHudRefs.coinsText;
+    const levelLine = this.domHudRefs.levelText;
+    const hpBar = this.domHudRefs.hpBar;
+    const expBar = this.domHudRefs.expBar;
+    const formatInt = (value) => Math.max(0, Math.floor(Number(value) || 0)).toLocaleString("en-US");
     const hpRatio = this.player.maxHp > 0 ? Phaser.Math.Clamp(this.player.hp / this.player.maxHp, 0, 1) : 0;
     if (hpLine) {
       hpLine.textContent = `${this.player.hp}/${this.player.maxHp}`;
     }
     if (expLine) {
-      expLine.textContent = `LV ${levelValue} · ${xpPercent}%`;
+      expLine.textContent = `${xpPercent}%`;
     }
     if (timeLine) {
       timeLine.textContent = this.formatRunTime(elapsedMs);
     }
     if (killsLine) {
-      killsLine.textContent = `${this.totalKills}`;
+      killsLine.textContent = formatInt(this.totalKills);
+    }
+    if (coinsLine) {
+      coinsLine.textContent = formatInt(this.runMetaCurrency);
+    }
+    if (levelLine) {
+      levelLine.textContent = `${levelValue}`;
     }
     if (hpBar) {
       hpBar.style.width = `${Math.round(hpRatio * 100)}%`;
