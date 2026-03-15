@@ -137,11 +137,14 @@ canvas {
   z-index: 42;
   min-width: 190px;
   padding: 10px 12px;
-  border-radius: 6px;
-  background: linear-gradient(180deg, rgba(45, 29, 18, 0.78) 0%, rgba(24, 15, 10, 0.76) 100%);
+  border-radius: 7px;
+  background:
+    linear-gradient(180deg, rgba(236, 203, 151, 0.08) 0%, rgba(236, 203, 151, 0) 26%),
+    linear-gradient(180deg, rgba(45, 29, 18, 0.8) 0%, rgba(24, 15, 10, 0.78) 100%);
   border: 1px solid rgba(196, 149, 88, 0.52);
   box-shadow:
     0 0 0 1px rgba(236, 197, 136, 0.24) inset,
+    0 0 0 2px rgba(57, 34, 18, 0.42),
     0 3px 10px rgba(0, 0, 0, 0.32);
   pointer-events: none;
   color: #f6ebd2;
