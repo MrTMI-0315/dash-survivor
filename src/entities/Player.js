@@ -37,6 +37,8 @@ function getPlayerTextureKey(scene, direction = "south") {
   return "player_triangle";
 }
 const PLAYER_RENDER_DEPTH = 20;
+const PLAYER_PIRATE_SCALE = 1.58;
+const PLAYER_CREW_SCALE = 2.0;
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -73,9 +75,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setCollideWorldBounds(true);
     this.setDepth(PLAYER_RENDER_DEPTH);
     if (this.texture?.key?.startsWith("char_player_pirate_")) {
-      this.setScale(1.32);
+      this.setScale(PLAYER_PIRATE_SCALE);
     } else if (this.texture?.key === "sprite_player_crew") {
-      this.setScale(1.7);
+      this.setScale(PLAYER_CREW_SCALE);
     }
   }
 
