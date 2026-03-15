@@ -2444,7 +2444,9 @@ export class GameScene extends Phaser.Scene {
     hud.setAttribute("aria-live", "polite");
     hud.innerHTML = `
       <div class="hud-core-row hud-core-row--hp"><span class="hud-core-label">HP</span><span class="hud-core-value" data-key="hp">-/-</span></div>
+      <div class="hud-core-bar"><span class="hud-core-bar-fill hud-core-bar-fill--hp" data-key="hp-bar"></span></div>
       <div class="hud-core-row"><span class="hud-core-label">EXP</span><span class="hud-core-value" data-key="exp">LV 1 · 0%</span></div>
+      <div class="hud-core-bar"><span class="hud-core-bar-fill hud-core-bar-fill--exp" data-key="exp-bar"></span></div>
       <div class="hud-core-row"><span class="hud-core-label">TIME</span><span class="hud-core-value" data-key="time">00:00</span></div>
       <div class="hud-core-row"><span class="hud-core-label">KILLS</span><span class="hud-core-value" data-key="kills">0</span></div>
     `;
@@ -2466,7 +2468,7 @@ export class GameScene extends Phaser.Scene {
     this.domHudElement = null;
   }
 
-  updateDomHudOverlay(levelValue, xpPercent, elapsedMs) {
+  updateDomHudOverlay(levelValue, xpPercent, elapsedMs, xpRatio) {
     if (!this.domHudElement || !this.player) {
       return;
     }
@@ -2474,6 +2476,9 @@ export class GameScene extends Phaser.Scene {
     const expLine = this.domHudElement.querySelector('[data-key="exp"]');
     const timeLine = this.domHudElement.querySelector('[data-key="time"]');
     const killsLine = this.domHudElement.querySelector('[data-key="kills"]');
+    const hpBar = this.domHudElement.querySelector('[data-key="hp-bar"]');
+    const expBar = this.domHudElement.querySelector('[data-key="exp-bar"]');
+    const hpRatio = this.player.maxHp > 0 ? Phaser.Math.Clamp(this.player.hp / this.player.maxHp, 0, 1) : 0;
     if (hpLine) {
       hpLine.textContent = `${this.player.hp}/${this.player.maxHp}`;
     }
@@ -2485,6 +2490,12 @@ export class GameScene extends Phaser.Scene {
     }
     if (killsLine) {
       killsLine.textContent = `${this.totalKills}`;
+    }
+    if (hpBar) {
+      hpBar.style.width = `${Math.round(hpRatio * 100)}%`;
+    }
+    if (expBar) {
+      expBar.style.width = `${Math.round(Phaser.Math.Clamp(xpRatio, 0, 1) * 100)}%`;
     }
     this.domHudElement.classList.toggle("modal-open", this.isLeveling || this.isWeaponSelecting);
   }
@@ -5241,7 +5252,7 @@ export class GameScene extends Phaser.Scene {
       this.updateHudWeaponIcons();
     }
     this.hudElapsedSeconds = elapsedSeconds;
-    this.updateDomHudOverlay(levelValue, xpPercent, elapsedMs);
+    this.updateDomHudOverlay(levelValue, xpPercent, elapsedMs, xpRatio);
     this.syncLegacyHudFallback(levelValue, xpPercent, elapsedMs);
   }
 

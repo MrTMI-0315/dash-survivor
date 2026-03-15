@@ -170,6 +170,32 @@ canvas {
   margin-top: 5px;
 }
 
+#hud-core .hud-core-bar {
+  width: 100%;
+  height: 6px;
+  margin-top: 4px;
+  margin-bottom: 1px;
+  border-radius: 999px;
+  background: rgba(33, 21, 13, 0.9);
+  border: 1px solid rgba(153, 111, 61, 0.34);
+  overflow: hidden;
+}
+
+#hud-core .hud-core-bar-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  transition: width 100ms linear;
+}
+
+#hud-core .hud-core-bar-fill--hp {
+  background: linear-gradient(90deg, #cb5050 0%, #ff8a6e 100%);
+}
+
+#hud-core .hud-core-bar-fill--exp {
+  background: linear-gradient(90deg, #4db5ff 0%, #8fffd4 100%);
+}
+
 #hud-core .hud-core-label {
   opacity: 0.8;
   font-size: 11px;
