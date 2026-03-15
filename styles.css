@@ -107,7 +107,7 @@ canvas {
   font-size: 12px;
   letter-spacing: 0.02em;
   color: #dcc49f;
-  opacity: 0.72;
+  opacity: 0.62;
   pointer-events: none;
   transition:
     opacity 180ms ease,
@@ -117,15 +117,15 @@ canvas {
 }
 
 #help.is-compact {
-  opacity: 0.28;
+  opacity: 0.24;
   transform: translateY(4px);
   background: rgba(28, 18, 10, 0.28);
   border-color: rgba(191, 154, 103, 0.1);
 }
 
 #help.modal-open {
-  opacity: 0.16;
-  transform: translateY(6px);
+  opacity: 0.1;
+  transform: translateY(8px);
   background: rgba(24, 15, 9, 0.22);
   border-color: rgba(191, 154, 103, 0.1);
 }
@@ -216,5 +216,6 @@ canvas {
 }
 
 #hud-core.modal-open {
-  opacity: 0.36;
+  opacity: 0.28;
+  transform: translateY(2px);
 }

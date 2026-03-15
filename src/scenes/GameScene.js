@@ -2529,6 +2529,7 @@ export class GameScene extends Phaser.Scene {
     if (typeof document !== "undefined") {
       document.getElementById("help")?.classList.toggle("modal-open", isModalOpen);
     }
+    this.domHudElement?.classList.toggle("modal-open", isModalOpen);
   }
 
   updatePlayerReadabilityAura() {
