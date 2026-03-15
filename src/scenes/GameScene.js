@@ -2447,8 +2447,8 @@ export class GameScene extends Phaser.Scene {
       <div class="hud-core-bar"><span class="hud-core-bar-fill hud-core-bar-fill--hp" data-key="hp-bar"></span></div>
       <div class="hud-core-row"><span class="hud-core-label">EXP</span><span class="hud-core-value" data-key="exp">LV 1 · 0%</span></div>
       <div class="hud-core-bar"><span class="hud-core-bar-fill hud-core-bar-fill--exp" data-key="exp-bar"></span></div>
-      <div class="hud-core-row"><span class="hud-core-label">TIME</span><span class="hud-core-value" data-key="time">00:00</span></div>
-      <div class="hud-core-row"><span class="hud-core-label">KILLS</span><span class="hud-core-value" data-key="kills">0</span></div>
+      <div class="hud-core-row hud-core-row--meta"><span class="hud-core-label">TIME</span><span class="hud-core-value" data-key="time">00:00</span></div>
+      <div class="hud-core-row hud-core-row--meta"><span class="hud-core-label">KILLS</span><span class="hud-core-value" data-key="kills">0</span></div>
     `;
     appRoot.appendChild(hud);
     this.domHudElement = hud;

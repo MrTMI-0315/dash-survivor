@@ -151,6 +151,7 @@ canvas {
   font-family: Arial, sans-serif;
   font-size: 13px;
   line-height: 1.25;
+  font-variant-numeric: tabular-nums;
   text-shadow:
     -1px 0 #1c130e,
     1px 0 #1c130e,
@@ -164,6 +165,7 @@ canvas {
   justify-content: space-between;
   gap: 14px;
   min-width: 166px;
+  min-height: 16px;
 }
 
 #hud-core .hud-core-row + .hud-core-row {
@@ -213,6 +215,11 @@ canvas {
 #hud-core .hud-core-row--hp .hud-core-value {
   font-size: 14px;
   opacity: 1;
+}
+
+#hud-core .hud-core-row--meta .hud-core-value {
+  color: #efe1be;
+  font-size: 12.5px;
 }
 
 #hud-core.modal-open {
