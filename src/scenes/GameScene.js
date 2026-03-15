@@ -1,9 +1,9 @@
 import { Player } from "../entities/Player.js";
 import { BossEnemy } from "../entities/BossEnemy.js";
-import { DirectorSystem, DIRECTOR_STATE } from "../Systems/DirectorSystem.js";
-import { WeaponSystem } from "../Systems/WeaponSystem.js";
-import { MetaProgressionSystem } from "../Systems/MetaProgressionSystem.js";
-import { ObjectPool } from "../Systems/ObjectPool.js";
+import { DirectorSystem, DIRECTOR_STATE } from "../systems/DirectorSystem.js";
+import { WeaponSystem } from "../systems/WeaponSystem.js";
+import { MetaProgressionSystem } from "../systems/MetaProgressionSystem.js";
+import { ObjectPool } from "../systems/ObjectPool.js";
 import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS, HUNTER_UNLOCK_TIME_SEC } from "../config/enemies.js";
 import { LEVEL_UP_UPGRADES } from "../config/weapons.js";
 import { DIRECTOR_BOSS_SPAWN } from "../config/director.js";
@@ -163,7 +163,7 @@ const EDGE_FOG_VIGNETTE_OPACITY = 0.35;
 const DECK_TILE_VARIANTS = Object.freeze([
   Object.freeze({
     key: "deck_a",
-    path: "assets/sprites/tiles/deck_plank_main.png",
+    path: "assets/sprites/environment/ship/deck_plank_main.png",
     weight: 50,
     tintEven: 0xe8d8c6,
     tintOdd: 0xd8c0a7,
@@ -173,7 +173,7 @@ const DECK_TILE_VARIANTS = Object.freeze([
   }),
   Object.freeze({
     key: "deck_b",
-    path: "assets/sprites/tiles/deck_plank_main.png",
+    path: "assets/sprites/environment/ship/deck_plank_main.png",
     weight: 20,
     tintEven: 0xe2ceb6,
     tintOdd: 0xd4b394,
@@ -183,7 +183,7 @@ const DECK_TILE_VARIANTS = Object.freeze([
   }),
   Object.freeze({
     key: "deck_c",
-    path: "assets/sprites/tiles/deck_plank_main.png",
+    path: "assets/sprites/environment/ship/deck_plank_main.png",
     weight: 20,
     tintEven: 0xd8c4ac,
     tintOdd: 0xc8ac8c,
@@ -193,7 +193,7 @@ const DECK_TILE_VARIANTS = Object.freeze([
   }),
   Object.freeze({
     key: "deck_d",
-    path: "assets/sprites/tiles/deck_plank_main.png",
+    path: "assets/sprites/environment/ship/deck_plank_main.png",
     weight: 10,
     tintEven: 0xcfb798,
     tintOdd: 0xc29f7e,
@@ -253,65 +253,65 @@ const RANDOM_DECK_OBSTACLE_MIN_PADDING = 16;
 const IMPORTED_PIXEL_ASSETS = Object.freeze({
   deckPlankMain: Object.freeze({
     key: "sprite_deck_plank_main",
-    path: "assets/sprites/tiles/deck_plank_main.png"
+    path: "assets/sprites/environment/ship/deck_plank_main.png"
   }),
   deckPlankTrim: Object.freeze({
     key: "sprite_deck_plank_trim",
-    path: "assets/sprites/tiles/deck_plank_trim.png"
+    path: "assets/sprites/environment/ship/deck_plank_trim.png"
   }),
   player: Object.freeze({
     key: "sprite_player_crew",
-    path: "assets/sprites/characters/player/player_crew.png"
+    path: "assets/sprites/player/player_crew.png"
   }),
   cannon: Object.freeze({
     key: "sprite_terrain_cannon",
-    path: "assets/sprites/props/terrain_cannon.png"
+    path: "assets/sprites/environment/ship/terrain_cannon.png"
   }),
   deckHullLarge: Object.freeze({
     key: "sprite_deck_hull_large",
-    path: "assets/sprites/props/deck_hull_large.png"
+    path: "assets/sprites/environment/ship/deck_hull_large.png"
   }),
   deckCannonLoose: Object.freeze({
     key: "sprite_deck_cannon_loose",
-    path: "assets/sprites/props/deck_cannon_loose.png"
+    path: "assets/sprites/environment/ship/deck_cannon_loose.png"
   }),
   deckCannonBall: Object.freeze({
     key: "sprite_deck_cannonball",
-    path: "assets/sprites/props/deck_cannonball.png"
+    path: "assets/sprites/environment/ship/deck_cannonball.png"
   }),
   uiPanelBrown: Object.freeze({
     key: "sprite_ui_panel_brown",
-    path: "assets/ui/ui_panel_brown.png"
+    path: "assets/sprites/ui/ui_panel_brown.png"
   }),
   uiPanelBrownInlay: Object.freeze({
     key: "sprite_ui_panel_brown_inlay",
-    path: "assets/ui/ui_panel_brown_inlay.png"
+    path: "assets/sprites/ui/ui_panel_brown_inlay.png"
   }),
   uiPanelTanInlay: Object.freeze({
     key: "sprite_ui_panel_tan_inlay",
-    path: "assets/ui/ui_panel_tan_inlay.png"
+    path: "assets/sprites/ui/ui_panel_tan_inlay.png"
   }),
   enemyChaserBody: Object.freeze({
     key: "sprite_enemy_chaser_body",
-    path: "assets/sprites/characters/enemies/chaser/parts/enemy_chaser_body.png"
+    path: "assets/sprites/enemies/chaser/parts/enemy_chaser_body.png"
   }),
   enemyChaserEye: Object.freeze({
     key: "sprite_enemy_chaser_eye",
-    path: "assets/sprites/characters/enemies/chaser/parts/enemy_chaser_eye.png"
+    path: "assets/sprites/enemies/chaser/parts/enemy_chaser_eye.png"
   }),
   enemyChaserMouth: Object.freeze({
     key: "sprite_enemy_chaser_mouth",
-    path: "assets/sprites/characters/enemies/chaser/parts/enemy_chaser_mouth.png"
+    path: "assets/sprites/enemies/chaser/parts/enemy_chaser_mouth.png"
   })
 });
 const BOSS_BULLET_MAX = 220;
 const BOSS_BULLET_LIFETIME_MS = 2800;
 const SFX_AUDIO_FILES = {
-  dash: "assets/audio/dash.wav",
-  enemy_hit: "assets/audio/enemy_hit.wav",
-  enemy_death: "assets/audio/enemy_die.wav",
-  level_up: "assets/audio/level_up.wav",
-  boss_warning: "assets/audio/boss_warning.wav"
+  dash: "assets/audio/sfx/dash.wav",
+  enemy_hit: "assets/audio/sfx/enemy_hit.wav",
+  enemy_death: "assets/audio/sfx/enemy_die.wav",
+  level_up: "assets/audio/sfx/level_up.wav",
+  boss_warning: "assets/audio/sfx/boss_warning.wav"
 };
 const SFX_KEY_BY_TYPE = {
   dash: "dash",
@@ -367,6 +367,28 @@ const START_WEAPON_OPTIONS = [
     defaultUnlocked: false
   }
 ];
+const WEAPON_ICON_ASSETS = Object.freeze({
+  dagger: Object.freeze({
+    key: "weapon_icon_dagger",
+    path: "assets/sprites/weapons/weapon_dagger_icon.png"
+  }),
+  fireball: Object.freeze({
+    key: "weapon_icon_fireball",
+    path: "assets/sprites/weapons/weapon_fireball_icon.png"
+  }),
+  lightning: Object.freeze({
+    key: "weapon_icon_lightning",
+    path: "assets/sprites/weapons/weapon_lightning_icon.png"
+  }),
+  meteor: Object.freeze({
+    key: "weapon_icon_meteor",
+    path: "assets/sprites/weapons/weapon_meteor_icon.png"
+  }),
+  orbit_blades: Object.freeze({
+    key: "weapon_icon_orbit_blades",
+    path: "assets/sprites/weapons/weapon_orbit_blades_icon.png"
+  })
+});
 
 const PIXEL_PLAYER_PATTERN = [
   "................",
@@ -647,7 +669,11 @@ export class GameScene extends Phaser.Scene {
     this.hudSecondaryLabelText = null;
     this.hudWeaponSlotFrames = [];
     this.hudWeaponSlotLabels = [];
+    this.hudWeaponSlotIcons = [];
+    this.hudWeaponLabel = null;
     this.hud = null;
+    this.hudObjects = [];
+    this.domHudElement = null;
     this.hpText = null;
     this.expText = null;
     this.timeText = null;
@@ -1000,6 +1026,7 @@ export class GameScene extends Phaser.Scene {
     this.debugDirectorText.setVisible(this.debugOverlayEnabled);
     this.createGameplayHUD();
     this.createHudAlertPool();
+    this.deactivateLegacyHudLayer();
     this.applyHudModalFocus(false);
 
     this.gameOverText = this.add
@@ -1042,6 +1069,7 @@ export class GameScene extends Phaser.Scene {
     this.gameOverRestartLabel.on("pointerdown", onRestartPointer);
 
     this.createTouchControls();
+    this.ensureDomHudOverlay();
     this.registerSceneShutdownCleanup();
     this.openWeaponSelection();
     this.maintainEnemyDensity();
@@ -1077,16 +1105,24 @@ export class GameScene extends Phaser.Scene {
       }
       this.load.image(key, path);
     });
+    Object.values(WEAPON_ICON_ASSETS).forEach(({ key, path }) => {
+      if (this.textures?.exists(key)) {
+        return;
+      }
+      this.load.image(key, path);
+    });
   }
 
   update(time, delta) {
     const isRunSummaryOpen = this.scene.isActive("RunSummaryScene");
     if (isRunSummaryOpen) {
+      this.setDomHudVisible(false);
       if (this.input?.enabled) {
         this.input.enabled = false;
       }
       return;
     }
+    this.setDomHudVisible(true);
     if (this.input && !this.input.enabled) {
       this.input.enabled = true;
     }
@@ -2270,6 +2306,7 @@ export class GameScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.cleanupTransientUiPools();
       this.teardownTouchControls();
+      this.teardownDomHudOverlay();
       this.clearEvolutionSlowMoTimer();
     });
   }
@@ -2393,6 +2430,65 @@ export class GameScene extends Phaser.Scene {
     this.updateHelpOverlayText();
   }
 
+  ensureDomHudOverlay() {
+    if (typeof document === "undefined") {
+      return;
+    }
+    if (this.domHudElement && document.body.contains(this.domHudElement)) {
+      return;
+    }
+    const appRoot = document.getElementById("app") ?? document.body;
+    const hud = document.createElement("div");
+    hud.id = "hud-core";
+    hud.className = "hud-core";
+    hud.setAttribute("aria-live", "polite");
+    hud.innerHTML = `
+      <div class="hud-core-row hud-core-row--hp"><span class="hud-core-label">HP</span><span class="hud-core-value" data-key="hp">-/-</span></div>
+      <div class="hud-core-row"><span class="hud-core-label">EXP</span><span class="hud-core-value" data-key="exp">LV 1 · 0%</span></div>
+      <div class="hud-core-row"><span class="hud-core-label">TIME</span><span class="hud-core-value" data-key="time">00:00</span></div>
+      <div class="hud-core-row"><span class="hud-core-label">KILLS</span><span class="hud-core-value" data-key="kills">0</span></div>
+    `;
+    appRoot.appendChild(hud);
+    this.domHudElement = hud;
+  }
+
+  setDomHudVisible(isVisible) {
+    if (!this.domHudElement) {
+      return;
+    }
+    this.domHudElement.style.display = isVisible ? "block" : "none";
+  }
+
+  teardownDomHudOverlay() {
+    if (this.domHudElement?.parentNode) {
+      this.domHudElement.parentNode.removeChild(this.domHudElement);
+    }
+    this.domHudElement = null;
+  }
+
+  updateDomHudOverlay(levelValue, xpPercent, elapsedMs) {
+    if (!this.domHudElement || !this.player) {
+      return;
+    }
+    const hpLine = this.domHudElement.querySelector('[data-key="hp"]');
+    const expLine = this.domHudElement.querySelector('[data-key="exp"]');
+    const timeLine = this.domHudElement.querySelector('[data-key="time"]');
+    const killsLine = this.domHudElement.querySelector('[data-key="kills"]');
+    if (hpLine) {
+      hpLine.textContent = `${this.player.hp}/${this.player.maxHp}`;
+    }
+    if (expLine) {
+      expLine.textContent = `LV ${levelValue} · ${xpPercent}%`;
+    }
+    if (timeLine) {
+      timeLine.textContent = this.formatRunTime(elapsedMs);
+    }
+    if (killsLine) {
+      killsLine.textContent = `${this.totalKills}`;
+    }
+    this.domHudElement.classList.toggle("modal-open", this.isLeveling || this.isWeaponSelecting);
+  }
+
   applyHudModalFocus(isModalOpen) {
     const hudAlpha = isModalOpen ? 0.34 : 1;
     const panelAlpha = isModalOpen ? 0.2 : 1;
@@ -2412,6 +2508,7 @@ export class GameScene extends Phaser.Scene {
     [...(this.hudWeaponSlotFrames ?? []), ...(this.hudWeaponSlotLabels ?? [])]
       .filter(Boolean)
       .forEach((obj) => obj.setAlpha(hudAlpha));
+    [...(this.hudObjects ?? [])].filter(Boolean).forEach((obj) => obj.setAlpha(hudAlpha));
     this.hud?.setAlpha(hudAlpha);
     this.dashCooldownRingGraphics?.setAlpha(isModalOpen ? 0.2 : 1);
     this.enemyHealthBarsGraphics?.setAlpha(isModalOpen ? 0.25 : 1);
@@ -3311,14 +3408,36 @@ export class GameScene extends Phaser.Scene {
     return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   }
 
-  getWeaponSlotLabel(weapon) {
-    const baseType = weapon?.baseType ?? weapon?.type ?? "";
-    if (baseType === "dagger") return "D";
-    if (baseType === "fireball") return "F";
-    if (baseType === "lightning") return "L";
-    if (baseType === "meteor") return "M";
-    if (baseType === "orbit_blades") return "O";
-    return "?";
+  getWeaponIconKey(weaponType) {
+    const iconAsset = WEAPON_ICON_ASSETS[weaponType];
+    if (iconAsset && this.textures.exists(iconAsset.key)) {
+      return iconAsset.key;
+    }
+    return "proj_dagger";
+  }
+
+  updateHudWeaponIcons() {
+    if (!Array.isArray(this.hudWeaponSlotIcons) || this.hudWeaponSlotIcons.length === 0) {
+      return;
+    }
+
+    const equippedWeapons = this.player?.weapons ?? [];
+    this.hudWeaponSlotIcons.forEach(({ frame, icon }, index) => {
+      const weapon = equippedWeapons[index];
+      if (!frame || !icon) {
+        return;
+      }
+      if (!weapon) {
+        frame.setAlpha(0.28);
+        icon.setTexture("proj_dagger");
+        icon.setAlpha(0.18);
+        return;
+      }
+      frame.setAlpha(0.9);
+      const weaponType = weapon.baseType ?? weapon.type;
+      icon.setTexture(this.getWeaponIconKey(weaponType));
+      icon.setAlpha(0.95);
+    });
   }
 
   loadSpawnPacingPresetKey() {
@@ -4150,7 +4269,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   playKillCounterPulse() {
-    if (!this.hudGoldText || !this.tweens) {
+    if (!this.killText || !this.tweens) {
       return;
     }
 
@@ -4159,16 +4278,16 @@ export class GameScene extends Phaser.Scene {
       this.killCounterPulseTween = null;
     }
 
-    this.hudGoldText.setScale(1);
+    this.killText.setScale(1);
     this.killCounterPulseTween = this.tweens.add({
-      targets: this.hudGoldText,
+      targets: this.killText,
       scaleX: 1.2,
       scaleY: 1.2,
       duration: 50,
       ease: "Sine.easeOut",
       yoyo: true,
       onComplete: () => {
-        this.hudGoldText?.setScale(1);
+        this.killText?.setScale(1);
         this.killCounterPulseTween = null;
       }
     });
@@ -4392,8 +4511,13 @@ export class GameScene extends Phaser.Scene {
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(RENDER_DEPTH.MENUS + 5);
+      const weaponIcon = this.add
+        .image(centerX - 314, y, this.getWeaponIconKey(option.weaponType))
+        .setDisplaySize(36, 36)
+        .setScrollFactor(0)
+        .setDepth(RENDER_DEPTH.MENUS + 6);
       const heading = this.add
-        .text(centerX - 286, y - 13, `[${index + 1}] ${option.label}`, {
+        .text(centerX - 268, y - 13, `[${index + 1}] ${option.label}`, {
           fontFamily: "Arial",
           fontSize: "24px",
           color: "#2e170d",
@@ -4404,7 +4528,7 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(RENDER_DEPTH.MENUS + 6);
       const detail = this.add
-        .text(centerX - 286, y + 15, "", {
+        .text(centerX - 268, y + 15, "", {
           fontFamily: "Arial",
           fontSize: "13px",
           color: "#6a4d36",
@@ -4445,10 +4569,11 @@ export class GameScene extends Phaser.Scene {
 
       box.on("pointerdown", choose);
       boxInlay.on("pointerdown", choose);
+      weaponIcon.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
       heading.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
       detail.setInteractive({ useHandCursor: true }).on("pointerdown", choose);
       refreshOption();
-        optionRows.push(box, boxInlay, heading, detail);
+        optionRows.push(box, boxInlay, weaponIcon, heading, detail);
         this.weaponSelectionActions.push(choose);
       });
 
@@ -4940,10 +5065,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   createGameplayHUD() {
-    if (this.hud) {
-      this.hud.destroy(true);
-      this.hud = null;
-    }
+    this.hudObjects.forEach((obj) => obj?.destroy?.());
+    this.hudObjects = [];
+    this.hud = null;
 
     const margin = 16;
     const lineSpacing = 18;
@@ -4955,26 +5079,58 @@ export class GameScene extends Phaser.Scene {
       strokeThickness: 3
     };
 
-    this.hud = this.add.container(0, 0).setScrollFactor(0).setDepth(RENDER_DEPTH.HUD);
-    this.hpText = this.add.text(margin, margin + lineSpacing * 0, "HP: 100/100", style).setOrigin(0, 0);
-    this.expText = this.add.text(margin, margin + lineSpacing * 1, "LV 1 | EXP 0%", style).setOrigin(0, 0);
+    this.hpText = this.add
+      .text(margin, margin + lineSpacing * 0, "HP: 100/100", style)
+      .setOrigin(0, 0)
+      .setDepth(RENDER_DEPTH.HUD);
+    this.expText = this.add
+      .text(margin, margin + lineSpacing * 1, "LV 1 | EXP 0%", style)
+      .setOrigin(0, 0)
+      .setDepth(RENDER_DEPTH.HUD);
     this.expBarBg = this.add
       .rectangle(margin, margin + 36, 120, 6, 0x2b1f16, 0.9)
       .setOrigin(0, 0)
+      .setDepth(RENDER_DEPTH.HUD)
       .setStrokeStyle(1, 0x7b6047, 0.8);
     this.expBarFill = this.add
       .rectangle(margin, margin + 36, 120, 6, 0x6fd7ff, 0.95)
-      .setOrigin(0, 0);
-    this.timeText = this.add.text(margin, margin + lineSpacing * 2, "TIME: 00:00", style).setOrigin(0, 0);
-    this.killText = this.add.text(margin, margin + lineSpacing * 3, "KILLS: 0", style).setOrigin(0, 0);
-    this.hud.add([this.hpText, this.expText, this.expBarBg, this.expBarFill, this.timeText, this.killText]);
+      .setOrigin(0, 0)
+      .setDepth(RENDER_DEPTH.HUD);
+    this.timeText = this.add
+      .text(margin, margin + lineSpacing * 2, "TIME: 00:00", style)
+      .setOrigin(0, 0)
+      .setDepth(RENDER_DEPTH.HUD);
+    this.killText = this.add
+      .text(margin, margin + lineSpacing * 3, "KILLS: 0", style)
+      .setOrigin(0, 0)
+      .setDepth(RENDER_DEPTH.HUD);
+    this.hudWeaponLabel = this.add
+      .text(margin + 134, margin + lineSpacing * 2, "WPN", {
+        fontFamily: "Arial",
+        fontSize: "12px",
+        color: "#d6c6a2",
+        stroke: "#1c130e",
+        strokeThickness: 2
+      })
+      .setOrigin(0, 0)
+      .setDepth(RENDER_DEPTH.HUD);
+    this.hudWeaponSlotIcons = [];
+    const slotCount = Math.max(1, this.player?.maxWeaponSlots ?? 3);
+    for (let i = 0; i < slotCount; i += 1) {
+      const slotX = margin + 170 + i * 36;
+      const slotY = margin + lineSpacing * 2 + 2;
+      const frame = this.add.rectangle(slotX, slotY, 28, 28, 0x1f1510, 0.86).setOrigin(0.5).setDepth(RENDER_DEPTH.HUD);
+      frame.setStrokeStyle(1, 0x7b6047, 0.9);
+      const icon = this.add
+        .image(slotX, slotY, "proj_dagger")
+        .setDisplaySize(18, 18)
+        .setAlpha(0.28)
+        .setDepth(RENDER_DEPTH.HUD);
+      this.hudWeaponSlotIcons.push({ frame, icon });
+    }
+    this.hudObjects = [this.hpText, this.expText, this.expBarBg, this.expBarFill, this.timeText, this.killText, this.hudWeaponLabel];
+    this.hudWeaponSlotIcons.forEach(({ frame, icon }) => this.hudObjects.push(frame, icon));
     this.layoutHUDToCamera();
-
-    // Keep legacy references wired for existing UI effects.
-    this.hudLevelText = this.hpText;
-    this.hudStatsText = this.expText;
-    this.hudTimerText = this.timeText;
-    this.hudGoldText = this.killText;
 
     // Hide legacy HUD decorations to keep minimal gameplay panel.
     [
@@ -4995,25 +5151,71 @@ export class GameScene extends Phaser.Scene {
     [...(this.hudWeaponSlotFrames ?? []), ...(this.hudWeaponSlotLabels ?? [])]
       .filter(Boolean)
       .forEach((obj) => obj.setVisible(false));
+    [
+      this.hudLevelText,
+      this.hudStatsText,
+      this.hudTimerText,
+      this.hudGoldText
+    ]
+      .filter(Boolean)
+      .forEach((obj) => obj.setVisible(false));
+  }
+
+  deactivateLegacyHudLayer() {
+    [
+      this.hudLevelText,
+      this.hudStatsText,
+      this.hudTimerText,
+      this.hudGoldText,
+      this.hudXpLabelText,
+      this.hudSecondaryText,
+      this.hudCoreLabelText,
+      this.hudSecondaryLabelText,
+      this.hudPanelBack,
+      this.hudSecondaryPanel,
+      this.hudXpFrame,
+      this.hudHeaderChip,
+      this.hudSecondaryChip
+    ]
+      .filter(Boolean)
+      .forEach((obj) => {
+        obj.setVisible(false);
+        obj.setActive?.(false);
+      });
+    this.hudBarsGraphics?.clear();
+    this.hudBarsGraphics?.setVisible(false);
+    [...(this.hudWeaponSlotFrames ?? []), ...(this.hudWeaponSlotLabels ?? [])]
+      .filter(Boolean)
+      .forEach((obj) => {
+        obj.setVisible(false);
+        obj.setActive?.(false);
+      });
   }
 
   layoutHUDToCamera() {
-    if (!this.hud || !this.hpText || !this.expText || !this.timeText || !this.killText || !this.expBarBg || !this.expBarFill) {
+    if (!this.hpText || !this.expText || !this.timeText || !this.killText || !this.expBarBg || !this.expBarFill) {
       return;
     }
-    const anchorX = 16;
-    const anchorY = 16;
-    this.hud.setPosition(anchorX, anchorY);
-    this.hpText.setPosition(0, 0);
-    this.expText.setPosition(0, 18);
-    this.expBarBg.setPosition(0, 36);
-    this.expBarFill.setPosition(0, 36);
-    this.timeText.setPosition(0, 52);
-    this.killText.setPosition(0, 70);
+    const cam = this.cameras?.main;
+    const anchorX = (cam?.scrollX ?? 0) + 16;
+    const anchorY = (cam?.scrollY ?? 0) + 16;
+    this.hpText.setPosition(anchorX + 0, anchorY + 0);
+    this.expText.setPosition(anchorX + 0, anchorY + 18);
+    this.expBarBg.setPosition(anchorX + 0, anchorY + 36);
+    this.expBarFill.setPosition(anchorX + 0, anchorY + 36);
+    this.timeText.setPosition(anchorX + 0, anchorY + 52);
+    this.killText.setPosition(anchorX + 0, anchorY + 70);
+    this.hudWeaponLabel?.setPosition(anchorX + 134, anchorY + 36);
+    this.hudWeaponSlotIcons.forEach(({ frame, icon }, index) => {
+      const slotX = anchorX + 170 + index * 36;
+      const slotY = anchorY + 38;
+      frame?.setPosition(slotX, slotY);
+      icon?.setPosition(slotX, slotY);
+    });
   }
 
   updateHUD() {
-    if (!this.player || !this.hpText || !this.expText || !this.timeText || !this.killText || !this.expBarFill) {
+    if (!this.player) {
       return;
     }
 
@@ -5024,18 +5226,65 @@ export class GameScene extends Phaser.Scene {
     const xpPercent = Math.round(xpRatio * 100);
     const elapsedMs = Math.max(0, Number.isFinite(this.playTime) ? this.playTime : this.runTimeMs);
     const elapsedSeconds = Math.floor(elapsedMs / 1000);
-    this.layoutHUDToCamera();
-
-    this.hpText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
-    this.expText.setText(`LV ${levelValue} | EXP ${xpPercent}%`);
-    this.expBarFill.displayWidth = 120 * xpRatio;
+    if (this.hpText && this.expText && this.timeText && this.killText && this.expBarFill) {
+      this.hudObjects.forEach((obj) => {
+        obj?.setVisible?.(true);
+        obj?.setActive?.(true);
+        obj?.setDepth?.(RENDER_DEPTH.HUD);
+      });
+      this.layoutHUDToCamera();
+      this.hpText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
+      this.expText.setText(`LV ${levelValue} | EXP ${xpPercent}%`);
+      this.expBarFill.displayWidth = 120 * xpRatio;
+      this.timeText.setText(`TIME: ${this.formatRunTime(elapsedMs)}`);
+      this.killText.setText(`KILLS: ${this.totalKills}`);
+      this.updateHudWeaponIcons();
+    }
     this.hudElapsedSeconds = elapsedSeconds;
-    this.timeText.setText(`TIME: ${this.formatRunTime(elapsedMs)}`);
-    this.killText.setText(`KILL COUNT: ${this.totalKills}`);
+    this.updateDomHudOverlay(levelValue, xpPercent, elapsedMs);
+    this.syncLegacyHudFallback(levelValue, xpPercent, elapsedMs);
   }
 
   updateHud() {
     this.updateHUD();
+  }
+
+  syncLegacyHudFallback(levelValue, xpPercent, elapsedMs) {
+    const fallbackAlpha = this.isLeveling || this.isWeaponSelecting ? 0.34 : 1;
+    const baseX = 16;
+    const baseY = 16;
+    if (this.hudLevelText) {
+      this.hudLevelText.setText(`HP: ${this.player.hp}/${this.player.maxHp}`);
+      this.hudLevelText.setPosition(baseX, baseY);
+      this.hudLevelText.setDepth(RENDER_DEPTH.HUD + 1);
+      this.hudLevelText.setVisible(true);
+      this.hudLevelText.setActive(true);
+      this.hudLevelText.setAlpha(fallbackAlpha);
+    }
+    if (this.hudStatsText) {
+      this.hudStatsText.setText(`LV ${levelValue} | EXP ${xpPercent}%`);
+      this.hudStatsText.setPosition(baseX, baseY + 28);
+      this.hudStatsText.setDepth(RENDER_DEPTH.HUD + 1);
+      this.hudStatsText.setVisible(true);
+      this.hudStatsText.setActive(true);
+      this.hudStatsText.setAlpha(fallbackAlpha);
+    }
+    if (this.hudTimerText) {
+      this.hudTimerText.setText(`TIME: ${this.formatRunTime(elapsedMs)}`);
+      this.hudTimerText.setPosition(baseX, baseY + 46);
+      this.hudTimerText.setDepth(RENDER_DEPTH.HUD + 1);
+      this.hudTimerText.setVisible(true);
+      this.hudTimerText.setActive(true);
+      this.hudTimerText.setAlpha(fallbackAlpha);
+    }
+    if (this.hudGoldText) {
+      this.hudGoldText.setText(`KILLS: ${this.totalKills}`);
+      this.hudGoldText.setPosition(baseX, baseY + 64);
+      this.hudGoldText.setDepth(RENDER_DEPTH.HUD + 1);
+      this.hudGoldText.setVisible(true);
+      this.hudGoldText.setActive(true);
+      this.hudGoldText.setAlpha(fallbackAlpha);
+    }
   }
 
   updateEnemyHealthBars() {

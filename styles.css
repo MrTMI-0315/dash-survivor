@@ -129,3 +129,59 @@ canvas {
   background: rgba(24, 15, 9, 0.22);
   border-color: rgba(191, 154, 103, 0.1);
 }
+
+#hud-core {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  z-index: 42;
+  min-width: 190px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: rgba(16, 10, 7, 0.58);
+  border: 1px solid rgba(191, 154, 103, 0.32);
+  box-shadow: 0 0 0 1px rgba(93, 64, 40, 0.24) inset;
+  pointer-events: none;
+  color: #f7f3de;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  line-height: 1.25;
+  text-shadow:
+    -1px 0 #1c130e,
+    1px 0 #1c130e,
+    0 -1px #1c130e,
+    0 1px #1c130e;
+}
+
+#hud-core .hud-core-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-width: 166px;
+}
+
+#hud-core .hud-core-row + .hud-core-row {
+  margin-top: 5px;
+}
+
+#hud-core .hud-core-label {
+  opacity: 0.72;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+}
+
+#hud-core .hud-core-value {
+  font-size: 13px;
+  letter-spacing: 0.01em;
+}
+
+#hud-core .hud-core-row--hp .hud-core-label,
+#hud-core .hud-core-row--hp .hud-core-value {
+  font-size: 14px;
+  opacity: 1;
+}
+
+#hud-core.modal-open {
+  opacity: 0.36;
+}
