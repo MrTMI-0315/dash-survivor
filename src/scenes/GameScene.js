@@ -2670,20 +2670,20 @@ export class GameScene extends Phaser.Scene {
         Object.assign(centerBars.style, {
           display: "flex",
           flexDirection: "column",
-          gap: "8px"
+          gap: "10px"
         });
       }
       dock.querySelectorAll(".hud-bar-row").forEach((row) => {
         Object.assign(row.style, {
           display: "grid",
-          gridTemplateColumns: "34px minmax(0, 1fr) 72px",
+          gridTemplateColumns: "40px minmax(0, 1fr) 82px",
           alignItems: "center",
-          gap: "10px"
+          gap: "12px"
         });
       });
       dock.querySelectorAll(".hud-bar-label").forEach((label) => {
         Object.assign(label.style, {
-          fontSize: "10px",
+          fontSize: "11px",
           fontWeight: "700",
           letterSpacing: "0.08em",
           color: "rgba(232, 206, 168, 0.74)"
@@ -2692,11 +2692,26 @@ export class GameScene extends Phaser.Scene {
       dock.querySelectorAll(".hud-bar-track").forEach((track) => {
         Object.assign(track.style, {
           position: "relative",
-          height: "10px",
+          height: "15px",
           borderRadius: "999px",
           overflow: "hidden",
-          background: "rgba(22, 10, 4, 0.86)",
-          border: "1px solid rgba(170, 120, 69, 0.36)"
+          background: "linear-gradient(180deg, rgba(18, 8, 3, 0.94) 0%, rgba(36, 17, 8, 0.9) 100%)",
+          border: "1px solid rgba(189, 139, 85, 0.48)",
+          boxShadow: "inset 0 1px 0 rgba(255, 231, 194, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(24, 11, 5, 0.3)"
+        });
+      });
+      dock.querySelectorAll(".hud-bar-row--hp .hud-bar-track").forEach((track) => {
+        Object.assign(track.style, {
+          borderColor: "rgba(195, 108, 88, 0.52)",
+          boxShadow:
+            "inset 0 1px 0 rgba(255, 226, 208, 0.1), inset 0 -1px 0 rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(55, 18, 11, 0.28)"
+        });
+      });
+      dock.querySelectorAll(".hud-bar-row--exp .hud-bar-track").forEach((track) => {
+        Object.assign(track.style, {
+          borderColor: "rgba(76, 170, 197, 0.5)",
+          boxShadow:
+            "inset 0 1px 0 rgba(215, 245, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.34), 0 0 0 1px rgba(10, 33, 42, 0.26)"
         });
       });
       dock.querySelectorAll(".hud-bar-fill--hp").forEach((fill) => {
@@ -2704,7 +2719,8 @@ export class GameScene extends Phaser.Scene {
           display: "block",
           height: "100%",
           borderRadius: "999px",
-          background: "linear-gradient(90deg, rgba(216, 91, 78, 0.94) 0%, rgba(241, 123, 95, 1) 100%)"
+          background: "linear-gradient(90deg, rgba(182, 63, 58, 0.98) 0%, rgba(229, 103, 86, 1) 58%, rgba(255, 150, 118, 1) 100%)",
+          boxShadow: "0 0 10px rgba(244, 113, 95, 0.34), inset 0 1px 0 rgba(255, 228, 218, 0.18)"
         });
       });
       dock.querySelectorAll(".hud-bar-fill--exp").forEach((fill) => {
@@ -2712,15 +2728,17 @@ export class GameScene extends Phaser.Scene {
           display: "block",
           height: "100%",
           borderRadius: "999px",
-          background: "linear-gradient(90deg, rgba(42, 158, 198, 0.94) 0%, rgba(88, 217, 255, 1) 100%)"
+          background: "linear-gradient(90deg, rgba(18, 120, 170, 0.98) 0%, rgba(53, 186, 226, 1) 56%, rgba(131, 237, 255, 1) 100%)",
+          boxShadow: "0 0 10px rgba(83, 213, 255, 0.3), inset 0 1px 0 rgba(219, 249, 255, 0.16)"
         });
       });
       dock.querySelectorAll(".hud-bar-value").forEach((value) => {
         Object.assign(value.style, {
-          fontSize: "16px",
+          fontSize: "17px",
           fontWeight: "700",
           textAlign: "right",
-          color: "#fff3d7"
+          color: "#fff3d7",
+          textShadow: "0 1px 0 rgba(28, 12, 5, 0.92)"
         });
       });
     }
