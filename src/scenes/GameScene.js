@@ -2454,20 +2454,6 @@ export class GameScene extends Phaser.Scene {
       <div class="hud-loadout" data-key="hud-loadout" aria-label="Equipped weapons">
         <div class="hud-loadout-row" data-key="hud-weapon-row"></div>
       </div>
-      <div class="hud-counters" data-key="hud-counters" aria-label="Run counters">
-        <div class="hud-counter" data-key="counter-level">
-          <span class="hud-counter-label">LV</span>
-          <span class="hud-counter-value" data-key="level">1</span>
-        </div>
-        <div class="hud-counter" data-key="counter-coins">
-          <span class="hud-counter-label">COINS</span>
-          <span class="hud-counter-value" data-key="coins">0</span>
-        </div>
-        <div class="hud-counter" data-key="counter-kills">
-          <span class="hud-counter-label">KILLS</span>
-          <span class="hud-counter-value" data-key="kills">0</span>
-        </div>
-      </div>
       <div class="hud-top">
         <div class="hud-run-strip" data-key="run-strip-track" aria-hidden="true">
           <span class="hud-run-strip-fill" data-key="run-strip-fill"></span>
@@ -2479,18 +2465,32 @@ export class GameScene extends Phaser.Scene {
         </div>
       </div>
       <div class="hud-bottom">
-        <div class="hud-center">
-          <div class="hud-center-bars">
-            <div class="hud-bar-row hud-bar-row--hp">
-              <span class="hud-bar-label">HP</span>
-              <span class="hud-bar-track"><span class="hud-bar-fill hud-bar-fill--hp" data-key="hp-bar"></span></span>
-              <span class="hud-bar-value" data-key="hp">0/0</span>
+        <div class="hud-dock" data-key="hud-dock">
+          <div class="hud-dock-side hud-dock-side--left">
+            <span class="hud-dock-label">COINS</span>
+            <span class="hud-dock-value" data-key="coins">0</span>
+          </div>
+          <div class="hud-center">
+            <div class="hud-level-badge">
+              <span class="hud-level-label">LV</span>
+              <span class="hud-level-value" data-key="level">1</span>
             </div>
-            <div class="hud-bar-row hud-bar-row--exp">
-              <span class="hud-bar-label">EXP</span>
-              <span class="hud-bar-track"><span class="hud-bar-fill hud-bar-fill--exp" data-key="exp-bar"></span></span>
-              <span class="hud-bar-value" data-key="exp">0%</span>
+            <div class="hud-center-bars">
+              <div class="hud-bar-row hud-bar-row--hp">
+                <span class="hud-bar-label">HP</span>
+                <span class="hud-bar-track"><span class="hud-bar-fill hud-bar-fill--hp" data-key="hp-bar"></span></span>
+                <span class="hud-bar-value" data-key="hp">0/0</span>
+              </div>
+              <div class="hud-bar-row hud-bar-row--exp">
+                <span class="hud-bar-label">EXP</span>
+                <span class="hud-bar-track"><span class="hud-bar-fill hud-bar-fill--exp" data-key="exp-bar"></span></span>
+                <span class="hud-bar-value" data-key="exp">0%</span>
+              </div>
             </div>
+          </div>
+          <div class="hud-dock-side hud-dock-side--right">
+            <span class="hud-dock-label">KILLS</span>
+            <span class="hud-dock-value" data-key="kills">0</span>
           </div>
         </div>
       </div>
@@ -2503,7 +2503,7 @@ export class GameScene extends Phaser.Scene {
       timeText: hud.querySelector('[data-key="time"]'),
       loadout: hud.querySelector('[data-key="hud-loadout"]'),
       weaponRow: hud.querySelector('[data-key="hud-weapon-row"]'),
-      counters: hud.querySelector('[data-key="hud-counters"]'),
+      dock: hud.querySelector('[data-key="hud-dock"]'),
       runStripTrack: hud.querySelector('[data-key="run-strip-track"]'),
       runStripFill: hud.querySelector('[data-key="run-strip-fill"]'),
       killsText: hud.querySelector('[data-key="kills"]'),
@@ -2514,7 +2514,7 @@ export class GameScene extends Phaser.Scene {
     };
     const loadout = this.domHudRefs.loadout;
     const weaponRow = this.domHudRefs.weaponRow;
-    const counters = this.domHudRefs.counters;
+    const dock = this.domHudRefs.dock;
     const hudTop = hud.querySelector(".hud-top");
     const runStripTrack = this.domHudRefs.runStripTrack;
     const runStripFill = this.domHudRefs.runStripFill;
@@ -2568,48 +2568,159 @@ export class GameScene extends Phaser.Scene {
         this.domHudWeaponSlots.push({ slot, icon });
       }
     }
-    if (counters) {
-      Object.assign(counters.style, {
-        position: "absolute",
-        right: "18px",
-        top: "18px",
-        display: "flex",
-        alignItems: "stretch",
-        gap: "8px",
-        pointerEvents: "none",
-        zIndex: "3"
+    if (dock) {
+      Object.assign(dock.style, {
+        position: "relative",
+        width: "min(74vw, 760px)",
+        display: "grid",
+        gridTemplateColumns: "112px minmax(260px, 1fr) 112px",
+        alignItems: "center",
+        gap: "14px",
+        padding: "12px 16px",
+        borderRadius: "22px",
+        background: "linear-gradient(180deg, rgba(45, 22, 10, 0.95) 0%, rgba(26, 12, 5, 0.96) 100%)",
+        border: "1px solid rgba(191, 136, 79, 0.62)",
+        boxShadow: "0 10px 30px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 223, 179, 0.12)"
       });
-      counters.querySelectorAll(".hud-counter").forEach((counter) => {
-        Object.assign(counter.style, {
-          minWidth: "72px",
-          padding: "8px 10px 9px",
-          borderRadius: "12px",
+      dock.querySelectorAll(".hud-dock-side").forEach((side) => {
+        Object.assign(side.style, {
+          minHeight: "64px",
+          padding: "8px 12px",
+          borderRadius: "16px",
           display: "flex",
           flexDirection: "column",
-          alignItems: "flex-end",
           justifyContent: "center",
-          background: "linear-gradient(180deg, rgba(39, 19, 9, 0.92) 0%, rgba(24, 11, 5, 0.94) 100%)",
-          border: "1px solid rgba(184, 131, 77, 0.52)",
-          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 220, 173, 0.08)"
+          background: "linear-gradient(180deg, rgba(58, 29, 14, 0.88) 0%, rgba(35, 16, 7, 0.9) 100%)",
+          border: "1px solid rgba(170, 120, 69, 0.48)",
+          boxShadow: "inset 0 1px 0 rgba(255, 223, 179, 0.08)"
         });
       });
-      counters.querySelectorAll(".hud-counter-label").forEach((label) => {
+      dock.querySelectorAll(".hud-dock-side--left").forEach((side) => {
+        side.style.alignItems = "flex-start";
+      });
+      dock.querySelectorAll(".hud-dock-side--right").forEach((side) => {
+        side.style.alignItems = "flex-end";
+      });
+      dock.querySelectorAll(".hud-dock-label").forEach((label) => {
         Object.assign(label.style, {
           fontSize: "9px",
           fontWeight: "700",
           letterSpacing: "0.12em",
-          color: "rgba(230, 205, 171, 0.72)",
+          color: "rgba(232, 206, 168, 0.72)",
           textShadow: "0 1px 0 rgba(25, 11, 5, 0.9)"
         });
       });
-      counters.querySelectorAll(".hud-counter-value").forEach((value) => {
+      dock.querySelectorAll(".hud-dock-value").forEach((value) => {
         Object.assign(value.style, {
-          marginTop: "3px",
-          fontSize: "24px",
+          marginTop: "4px",
+          fontSize: "28px",
           fontWeight: "700",
           lineHeight: "1",
-          color: "#fff5dd",
-          textShadow: "0 1px 0 rgba(31, 12, 5, 0.92), 0 0 8px rgba(255, 207, 148, 0.14)"
+          color: "#fff3d7",
+          textShadow: "0 1px 0 rgba(31, 12, 5, 0.92), 0 0 10px rgba(255, 207, 148, 0.16)"
+        });
+      });
+      const dockCenter = dock.querySelector(".hud-center");
+      if (dockCenter) {
+        Object.assign(dockCenter.style, {
+          minHeight: "64px",
+          padding: "0 6px",
+          display: "grid",
+          gridTemplateColumns: "70px minmax(0, 1fr)",
+          alignItems: "center",
+          gap: "12px"
+        });
+      }
+      const levelBadge = dock.querySelector(".hud-level-badge");
+      if (levelBadge) {
+        Object.assign(levelBadge.style, {
+          width: "62px",
+          height: "62px",
+          borderRadius: "999px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(180deg, rgba(79, 47, 20, 0.96) 0%, rgba(52, 27, 11, 0.98) 100%)",
+          border: "1px solid rgba(207, 152, 88, 0.78)",
+          boxShadow: "0 4px 14px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 223, 179, 0.12)"
+        });
+      }
+      const levelLabel = dock.querySelector(".hud-level-label");
+      if (levelLabel) {
+        Object.assign(levelLabel.style, {
+          fontSize: "9px",
+          fontWeight: "700",
+          letterSpacing: "0.12em",
+          color: "rgba(234, 209, 175, 0.72)"
+        });
+      }
+      const levelValue = dock.querySelector(".hud-level-value");
+      if (levelValue) {
+        Object.assign(levelValue.style, {
+          marginTop: "2px",
+          fontSize: "28px",
+          fontWeight: "700",
+          lineHeight: "1",
+          color: "#fff3d7"
+        });
+      }
+      const centerBars = dock.querySelector(".hud-center-bars");
+      if (centerBars) {
+        Object.assign(centerBars.style, {
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px"
+        });
+      }
+      dock.querySelectorAll(".hud-bar-row").forEach((row) => {
+        Object.assign(row.style, {
+          display: "grid",
+          gridTemplateColumns: "34px minmax(0, 1fr) 72px",
+          alignItems: "center",
+          gap: "10px"
+        });
+      });
+      dock.querySelectorAll(".hud-bar-label").forEach((label) => {
+        Object.assign(label.style, {
+          fontSize: "10px",
+          fontWeight: "700",
+          letterSpacing: "0.08em",
+          color: "rgba(232, 206, 168, 0.74)"
+        });
+      });
+      dock.querySelectorAll(".hud-bar-track").forEach((track) => {
+        Object.assign(track.style, {
+          position: "relative",
+          height: "10px",
+          borderRadius: "999px",
+          overflow: "hidden",
+          background: "rgba(22, 10, 4, 0.86)",
+          border: "1px solid rgba(170, 120, 69, 0.36)"
+        });
+      });
+      dock.querySelectorAll(".hud-bar-fill--hp").forEach((fill) => {
+        Object.assign(fill.style, {
+          display: "block",
+          height: "100%",
+          borderRadius: "999px",
+          background: "linear-gradient(90deg, rgba(216, 91, 78, 0.94) 0%, rgba(241, 123, 95, 1) 100%)"
+        });
+      });
+      dock.querySelectorAll(".hud-bar-fill--exp").forEach((fill) => {
+        Object.assign(fill.style, {
+          display: "block",
+          height: "100%",
+          borderRadius: "999px",
+          background: "linear-gradient(90deg, rgba(42, 158, 198, 0.94) 0%, rgba(88, 217, 255, 1) 100%)"
+        });
+      });
+      dock.querySelectorAll(".hud-bar-value").forEach((value) => {
+        Object.assign(value.style, {
+          fontSize: "16px",
+          fontWeight: "700",
+          textAlign: "right",
+          color: "#fff3d7"
         });
       });
     }
@@ -2688,7 +2799,7 @@ export class GameScene extends Phaser.Scene {
     const hpBar = this.domHudRefs.hpBar;
     const expBar = this.domHudRefs.expBar;
     const loadout = this.domHudRefs.loadout;
-    const counters = this.domHudRefs.counters;
+    const dock = this.domHudRefs.dock;
     const runStripTrack = this.domHudRefs.runStripTrack;
     const runStripFill = this.domHudRefs.runStripFill;
     const formatInt = (value) => Math.max(0, Math.floor(Number(value) || 0)).toLocaleString("en-US");
@@ -2723,8 +2834,8 @@ export class GameScene extends Phaser.Scene {
     if (loadout) {
       loadout.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.42" : "1";
     }
-    if (counters) {
-      counters.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.42" : "1";
+    if (dock) {
+      dock.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.42" : "1";
     }
     if (runStripTrack) {
       runStripTrack.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.38" : "1";
