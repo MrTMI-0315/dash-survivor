@@ -67,6 +67,19 @@ const LADDER_SPAWN_POINTS = Object.freeze({
   ])
 });
 const XP_MAGNET_RADIUS_PER_LEVEL = 6;
+const XP_ORB_BASE_SCALE = 1.16;
+const XP_ORB_HIGH_VALUE_SCALE = 1.24;
+const XP_ORB_SPECIAL_SCALE = 1.32;
+const XP_ORB_BASE_ALPHA = 0.9;
+const XP_ORB_HIGH_VALUE_ALPHA = 0.97;
+const XP_ORB_SPECIAL_ALPHA = 1;
+const XP_ORB_MAGNET_DIRECT_PULL_RADIUS = 148;
+const XP_ORB_MAGNET_DIRECT_PULL_FACTOR = 0.085;
+const XP_ORB_MAGNET_MIN_PULL = 280;
+const XP_ORB_MAGNET_MAX_PULL = 640;
+const XP_ORB_MAGNET_SCALE_BOOST = 0.14;
+const XP_ORB_PULSE_AMPLITUDE = 0.035;
+const XP_ORB_PULSE_SPEED_MS = 190;
 const DECK_TILE_SIZE = 32;
 const DECK_SURFACE_INSET = 34;
 const DECK_RAIL_INSET = 12;
@@ -4474,12 +4487,21 @@ export class GameScene extends Phaser.Scene {
     if (!orb) {
       return;
     }
+    const isSpecialPickup = config.pickupType === "elite_upgrade" || config.pickupType === "mini_boss_gold";
+    const isHighValue = value >= 20;
+    const baseScale =
+      config.scale ??
+      (isSpecialPickup ? XP_ORB_SPECIAL_SCALE : isHighValue ? XP_ORB_HIGH_VALUE_SCALE : XP_ORB_BASE_SCALE);
+    const baseAlpha = isSpecialPickup ? XP_ORB_SPECIAL_ALPHA : isHighValue ? XP_ORB_HIGH_VALUE_ALPHA : XP_ORB_BASE_ALPHA;
     const radius = config.radius ?? (config.pickupType === "elite_upgrade" ? 8 : 6);
     orb.setCircle?.(radius, 0, 0);
     orb.setDepth(config.pickupType === "elite_upgrade" ? 7 : 5);
-    orb.setScale(config.pickupType === "elite_upgrade" ? 1.18 : 1.1);
-    orb.setAlpha(config.pickupType === "elite_upgrade" ? 1 : 0.96);
+    orb.setScale(baseScale);
+    orb.setAlpha(baseAlpha);
     orb.xpValue = value;
+    orb.setData("baseScale", baseScale);
+    orb.setData("baseAlpha", baseAlpha);
+    orb.setData("magnetScaleBoost", isSpecialPickup ? XP_ORB_MAGNET_SCALE_BOOST + 0.05 : XP_ORB_MAGNET_SCALE_BOOST);
     if (config.pickupType) {
       orb.setData("pickupType", config.pickupType);
     } else {
@@ -5133,6 +5155,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    const nowMs = this.time.now;
     this.xpOrbs.getChildren().forEach((orb) => {
       if (!orb.active || !orb.body) {
         return;
@@ -5141,19 +5164,29 @@ export class GameScene extends Phaser.Scene {
       const dx = this.player.x - orb.x;
       const dy = this.player.y - orb.y;
       const distance = Math.hypot(dx, dy);
+      const baseScale = Number(orb.getData("baseScale")) || XP_ORB_BASE_SCALE;
+      const baseAlpha = Number(orb.getData("baseAlpha")) || XP_ORB_BASE_ALPHA;
+      const pulse = 1 + Math.sin((nowMs + orb.x * 0.3 + orb.y * 0.17) / XP_ORB_PULSE_SPEED_MS) * XP_ORB_PULSE_AMPLITUDE;
       if (distance > pickupRadius) {
         orb.body.setVelocity(0, 0);
+        orb.setScale(baseScale * pulse);
+        orb.setAlpha(baseAlpha);
         return;
       }
 
-      if (distance <= 120) {
-        orb.x += dx * 0.05;
-        orb.y += dy * 0.05;
+      const attractRatio = 1 - Phaser.Math.Clamp(distance / pickupRadius, 0, 1);
+      const magnetScaleBoost = Number(orb.getData("magnetScaleBoost")) || XP_ORB_MAGNET_SCALE_BOOST;
+      orb.setScale((baseScale + attractRatio * magnetScaleBoost) * pulse);
+      orb.setAlpha(Math.min(1, baseAlpha + attractRatio * 0.08));
+
+      if (distance <= XP_ORB_MAGNET_DIRECT_PULL_RADIUS) {
+        orb.x += dx * XP_ORB_MAGNET_DIRECT_PULL_FACTOR;
+        orb.y += dy * XP_ORB_MAGNET_DIRECT_PULL_FACTOR;
       }
 
       const nx = distance > 0.0001 ? dx / distance : 0;
       const ny = distance > 0.0001 ? dy / distance : 0;
-      const pullStrength = Phaser.Math.Linear(220, 480, 1 - Phaser.Math.Clamp(distance / pickupRadius, 0, 1));
+      const pullStrength = Phaser.Math.Linear(XP_ORB_MAGNET_MIN_PULL, XP_ORB_MAGNET_MAX_PULL, attractRatio);
       orb.body.setVelocity(nx * pullStrength, ny * pullStrength);
     });
   }
