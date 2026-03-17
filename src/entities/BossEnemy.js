@@ -7,7 +7,7 @@ const BOSS_VARIANTS = {
     damage: 44,
     xpValue: 600,
     radius: 34,
-    scale: 2.6,
+    scale: 3.05,
     tint: 0x6d34ff,
     shockwaveIntervalMs: 2500,
     shockwaveRadius: 190,
@@ -25,7 +25,7 @@ const BOSS_VARIANTS = {
     damage: 22,
     xpValue: 220,
     radius: 24,
-    scale: 1.8,
+    scale: 2.28,
     tint: 0xffffff,
     shockwaveIntervalMs: 3200,
     shockwaveRadius: 155,
@@ -39,6 +39,20 @@ const BOSS_VARIANTS = {
   }
 };
 const MINI_BOSS_TEXTURE_KEY = "char_enemy_miniboss_davy_south";
+
+function resolveDavyTextureKey(scene) {
+  const candidates = [
+    "char_enemy_miniboss_davy_south",
+    "char_enemy_miniboss_davy_south_west",
+    "char_enemy_miniboss_davy_south_east",
+    "char_enemy_miniboss_davy_west",
+    "char_enemy_miniboss_davy_east",
+    "char_enemy_miniboss_davy_north_west",
+    "char_enemy_miniboss_davy_north_east",
+    "char_enemy_miniboss_davy_north"
+  ];
+  return candidates.find((key) => scene?.textures?.exists(key)) ?? null;
+}
 
 export class BossEnemy extends Enemy {
   constructor(scene, x, y, options = {}) {
@@ -77,14 +91,25 @@ export class BossEnemy extends Enemy {
     this.setData("isBoss", true);
     this.setData("bossVariant", this.variant);
 
-    if (this.variant === "mini" && scene?.textures?.exists(MINI_BOSS_TEXTURE_KEY)) {
+    const davyTextureKey = resolveDavyTextureKey(scene);
+    if (davyTextureKey) {
+      this.setTexture(davyTextureKey);
+      this.setData("bossTextureKey", davyTextureKey);
+    } else if (this.variant === "mini" && scene?.textures?.exists(MINI_BOSS_TEXTURE_KEY)) {
+      // TODO: remove this branch once all build variants guarantee davy texture preload.
       this.setTexture(MINI_BOSS_TEXTURE_KEY);
+      this.setData("bossTextureKey", MINI_BOSS_TEXTURE_KEY);
     }
   }
 
   updateBossPattern(target, nowMs) {
     if (!this.active || !target || !target.active) {
       return;
+    }
+
+    const fixedTextureKey = this.getData("bossTextureKey");
+    if (fixedTextureKey && this.texture?.key !== fixedTextureKey && this.scene?.textures?.exists(fixedTextureKey)) {
+      this.setTexture(fixedTextureKey);
     }
 
     if (nowMs >= this.nextShockwaveAtMs) {

@@ -37,8 +37,8 @@ function getPlayerTextureKey(scene, direction = "south") {
   return "player_triangle";
 }
 const PLAYER_RENDER_DEPTH = 20;
-const PLAYER_PIRATE_SCALE = 1.58;
-const PLAYER_CREW_SCALE = 2.0;
+const PLAYER_PIRATE_SCALE = 1.78;
+const PLAYER_CREW_SCALE = 2.24;
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {

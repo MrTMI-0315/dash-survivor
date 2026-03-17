@@ -1,4 +1,4 @@
-import { ENEMY_ARCHETYPE_CONFIGS, ELITE_TYPE_CONFIGS } from "../config/enemies.js";
+import { ENEMY_ARCHETYPE_CONFIGS, ELITE_TYPE_CONFIGS, ENEMY_VISUAL_SCALE } from "../config/enemies.js";
 
 const ENCIRCLE_ANGLE_MIN_DEG = -30;
 const ENCIRCLE_ANGLE_MAX_DEG = 30;
@@ -327,7 +327,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.baseSpeed = this.speed;
     this.xpValue = Math.round(this.xpValue * 2.2);
 
-    this.setScale(this.scaleX * 1.14, this.scaleY * 1.14);
+    this.setScale(this.scaleX * ENEMY_VISUAL_SCALE.eliteMultiplier, this.scaleY * ENEMY_VISUAL_SCALE.eliteMultiplier);
     this.baseTint = eliteConfig.tint;
     this.setTint(this.baseTint);
   }
