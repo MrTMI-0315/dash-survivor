@@ -2452,6 +2452,10 @@ export class GameScene extends Phaser.Scene {
     hud.setAttribute("aria-live", "polite");
     hud.innerHTML = `
       <div class="hud-top">
+        <div class="hud-run-strip" data-key="run-strip-track" aria-hidden="true">
+          <span class="hud-run-strip-fill" data-key="run-strip-fill"></span>
+          <span class="hud-run-strip-marker">BOSS</span>
+        </div>
         <div class="hud-chip hud-chip--time">
           <span class="hud-chip-label">TIME</span>
           <span class="hud-chip-value" data-key="time">00:00</span>
@@ -2492,12 +2496,62 @@ export class GameScene extends Phaser.Scene {
       hpText: hud.querySelector('[data-key="hp"]'),
       expText: hud.querySelector('[data-key="exp"]'),
       timeText: hud.querySelector('[data-key="time"]'),
+      runStripTrack: hud.querySelector('[data-key="run-strip-track"]'),
+      runStripFill: hud.querySelector('[data-key="run-strip-fill"]'),
       killsText: hud.querySelector('[data-key="kills"]'),
       coinsText: hud.querySelector('[data-key="coins"]'),
       levelText: hud.querySelector('[data-key="level"]'),
       hpBar: hud.querySelector('[data-key="hp-bar"]'),
       expBar: hud.querySelector('[data-key="exp-bar"]')
     };
+    const hudTop = hud.querySelector(".hud-top");
+    const runStripTrack = this.domHudRefs.runStripTrack;
+    const runStripFill = this.domHudRefs.runStripFill;
+    const runStripMarker = hud.querySelector(".hud-run-strip-marker");
+    if (hudTop) {
+      Object.assign(hudTop.style, {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "6px"
+      });
+    }
+    if (runStripTrack) {
+      Object.assign(runStripTrack.style, {
+        position: "relative",
+        width: "min(46vw, 420px)",
+        minWidth: "180px",
+        height: "8px",
+        borderRadius: "999px",
+        overflow: "hidden",
+        background: "rgba(29, 14, 7, 0.88)",
+        border: "1px solid rgba(198, 141, 82, 0.55)",
+        boxShadow: "0 0 0 1px rgba(38, 20, 9, 0.4), inset 0 1px 0 rgba(255, 220, 173, 0.14)"
+      });
+    }
+    if (runStripFill) {
+      Object.assign(runStripFill.style, {
+        display: "block",
+        width: "0%",
+        height: "100%",
+        borderRadius: "999px",
+        background: "linear-gradient(90deg, rgba(210, 141, 73, 0.78) 0%, rgba(234, 181, 89, 0.96) 100%)",
+        boxShadow: "0 0 10px rgba(255, 178, 84, 0.22)",
+        transition: "width 180ms ease-out, background 180ms ease-out, box-shadow 180ms ease-out"
+      });
+    }
+    if (runStripMarker) {
+      Object.assign(runStripMarker.style, {
+        position: "absolute",
+        right: "8px",
+        top: "-14px",
+        fontSize: "9px",
+        fontWeight: "700",
+        letterSpacing: "0.12em",
+        color: "rgba(255, 223, 177, 0.72)",
+        textShadow: "0 1px 0 rgba(26, 12, 5, 0.9)"
+      });
+    }
   }
 
   setDomHudVisible(isVisible) {
@@ -2527,8 +2581,13 @@ export class GameScene extends Phaser.Scene {
     const levelLine = this.domHudRefs.levelText;
     const hpBar = this.domHudRefs.hpBar;
     const expBar = this.domHudRefs.expBar;
+    const runStripTrack = this.domHudRefs.runStripTrack;
+    const runStripFill = this.domHudRefs.runStripFill;
     const formatInt = (value) => Math.max(0, Math.floor(Number(value) || 0)).toLocaleString("en-US");
     const hpRatio = this.player.maxHp > 0 ? Phaser.Math.Clamp(this.player.hp / this.player.maxHp, 0, 1) : 0;
+    const bossCycleMs = Math.max(1, DIRECTOR_BOSS_SPAWN.intervalMs || 180000);
+    const bossCycleProgress = Phaser.Math.Clamp((elapsedMs % bossCycleMs) / bossCycleMs, 0, 1);
+    const directorState = this.director?.getState?.() ?? DIRECTOR_STATE.BUILD;
     if (hpLine) {
       hpLine.textContent = `${this.player.hp}/${this.player.maxHp}`;
     }
@@ -2552,6 +2611,22 @@ export class GameScene extends Phaser.Scene {
     }
     if (expBar) {
       expBar.style.width = `${Math.round(Phaser.Math.Clamp(xpRatio, 0, 1) * 100)}%`;
+    }
+    if (runStripTrack) {
+      runStripTrack.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.38" : "1";
+    }
+    if (runStripFill) {
+      runStripFill.style.width = `${Math.round(bossCycleProgress * 100)}%`;
+      if (directorState === DIRECTOR_STATE.PEAK) {
+        runStripFill.style.background = "linear-gradient(90deg, rgba(206, 82, 49, 0.92) 0%, rgba(255, 128, 82, 1) 100%)";
+        runStripFill.style.boxShadow = "0 0 12px rgba(255, 108, 72, 0.34)";
+      } else if (directorState === DIRECTOR_STATE.RELIEF) {
+        runStripFill.style.background = "linear-gradient(90deg, rgba(148, 124, 92, 0.72) 0%, rgba(198, 171, 132, 0.9) 100%)";
+        runStripFill.style.boxShadow = "0 0 8px rgba(198, 167, 129, 0.18)";
+      } else {
+        runStripFill.style.background = "linear-gradient(90deg, rgba(210, 141, 73, 0.78) 0%, rgba(234, 181, 89, 0.96) 100%)";
+        runStripFill.style.boxShadow = "0 0 10px rgba(255, 178, 84, 0.22)";
+      }
     }
     this.domHudElement.classList.toggle("modal-open", this.isLeveling || this.isWeaponSelecting);
   }
