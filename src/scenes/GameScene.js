@@ -2435,6 +2435,10 @@ export class GameScene extends Phaser.Scene {
 
     this.helpOverlayCompact = shouldCompact;
     helpElement.classList.toggle("is-compact", shouldCompact);
+    helpElement.style.fontSize = shouldCompact ? "11px" : "";
+    helpElement.style.letterSpacing = shouldCompact ? "0.04em" : "";
+    helpElement.style.opacity = shouldCompact ? "0.18" : "";
+    helpElement.style.padding = shouldCompact ? "5px 9px" : "";
     this.updateHelpOverlayText();
   }
 
@@ -2603,21 +2607,21 @@ export class GameScene extends Phaser.Scene {
       });
       dock.querySelectorAll(".hud-dock-label").forEach((label) => {
         Object.assign(label.style, {
-          fontSize: "9px",
+          fontSize: "8px",
           fontWeight: "700",
-          letterSpacing: "0.12em",
-          color: "rgba(232, 206, 168, 0.72)",
-          textShadow: "0 1px 0 rgba(25, 11, 5, 0.9)"
+          letterSpacing: "0.16em",
+          color: "rgba(226, 198, 161, 0.54)",
+          textShadow: "0 1px 0 rgba(25, 11, 5, 0.82)"
         });
       });
       dock.querySelectorAll(".hud-dock-value").forEach((value) => {
         Object.assign(value.style, {
-          marginTop: "4px",
-          fontSize: "28px",
+          marginTop: "3px",
+          fontSize: "34px",
           fontWeight: "700",
-          lineHeight: "1",
+          lineHeight: "0.92",
           color: "#fff3d7",
-          textShadow: "0 1px 0 rgba(31, 12, 5, 0.92), 0 0 10px rgba(255, 207, 148, 0.16)"
+          textShadow: "0 1px 0 rgba(31, 12, 5, 0.96), 0 0 12px rgba(255, 207, 148, 0.18)"
         });
       });
       const dockCenter = dock.querySelector(".hud-center");
@@ -2649,20 +2653,21 @@ export class GameScene extends Phaser.Scene {
       const levelLabel = dock.querySelector(".hud-level-label");
       if (levelLabel) {
         Object.assign(levelLabel.style, {
-          fontSize: "9px",
+          fontSize: "8px",
           fontWeight: "700",
-          letterSpacing: "0.12em",
-          color: "rgba(234, 209, 175, 0.72)"
+          letterSpacing: "0.16em",
+          color: "rgba(234, 209, 175, 0.54)"
         });
       }
       const levelValue = dock.querySelector(".hud-level-value");
       if (levelValue) {
         Object.assign(levelValue.style, {
-          marginTop: "2px",
-          fontSize: "28px",
+          marginTop: "1px",
+          fontSize: "34px",
           fontWeight: "700",
-          lineHeight: "1",
-          color: "#fff3d7"
+          lineHeight: "0.92",
+          color: "#fff3d7",
+          textShadow: "0 1px 0 rgba(31, 12, 5, 0.96), 0 0 10px rgba(255, 207, 148, 0.18)"
         });
       }
       const centerBars = dock.querySelector(".hud-center-bars");
