@@ -169,6 +169,13 @@ const HUD_COMBO_STYLE = Object.freeze({
   stroke: "#2d1f08",
   strokeThickness: 6
 });
+const WARNING_BANNER_STYLE = Object.freeze({
+  fontFamily: "Arial",
+  fontSize: "28px",
+  color: "#fff0c6",
+  stroke: "#281206",
+  strokeThickness: 6
+});
 const DAMAGE_NUMBER_MAX_ACTIVE = 12;
 const DAMAGE_NUMBER_MAX_ACTIVE_PRIORITY = 18;
 const DAMAGE_NUMBER_NORMAL_LIFETIME_MS = 420;
@@ -719,6 +726,7 @@ export class GameScene extends Phaser.Scene {
     this.offscreenIndicatorGraphics = null;
     this.damageNumberPool = [];
     this.hudAlertPool = [];
+    this.activeWarningBanner = null;
     this.offscreenIndicatorPool = [];
     this.killCombo = 0;
     this.lastKillAtMs = Number.NEGATIVE_INFINITY;
@@ -3591,7 +3599,11 @@ export class GameScene extends Phaser.Scene {
     this.enemies.add(boss);
 
     this.cameras.main.shake(210, 0.0048);
-    this.showHudAlert("BOSS INCOMING");
+    this.playSfx("boss_warning");
+    this.showWarningBanner("BOSS INCOMING", {
+      tone: "boss",
+      durationMs: 1500
+    });
   }
 
   spawnMiniBossEnemy(preferredLane = null) {
@@ -3607,7 +3619,120 @@ export class GameScene extends Phaser.Scene {
     this.enemies.add(miniBoss);
 
     this.cameras.main.shake(160, 0.0036);
-    this.showHudAlert("MINI BOSS");
+    this.playSfx("boss_warning");
+    this.showWarningBanner("MINI BOSS", {
+      tone: "mini",
+      durationMs: 1180
+    });
+  }
+
+  clearWarningBanner() {
+    const banner = this.activeWarningBanner;
+    if (!banner) {
+      return;
+    }
+
+    const tween = banner.getData?.("bannerTween");
+    if (tween) {
+      tween.stop();
+    }
+    const hideEvent = banner.getData?.("bannerHideEvent");
+    if (hideEvent) {
+      hideEvent.remove(false);
+    }
+
+    banner.destroy();
+    this.activeWarningBanner = null;
+  }
+
+  showWarningBanner(message, options = {}) {
+    if (!this.add || !this.tweens) {
+      return;
+    }
+
+    this.clearWarningBanner();
+
+    const tone = options.tone ?? "boss";
+    const durationMs = Math.max(850, Number(options.durationMs) || 1400);
+    const centerX = Math.round((this.scale?.width ?? 1280) * 0.5);
+    const centerY = Math.round(Math.max(116, (this.scale?.height ?? 720) * 0.16));
+    const palette =
+      tone === "mini"
+        ? {
+            border: 0xe7b76a,
+            glow: 0xffcf7f,
+            fill: 0x3c2415,
+            inner: 0x1b120d
+          }
+        : tone === "approach"
+          ? {
+              border: 0xffd5a1,
+              glow: 0xffe8c4,
+              fill: 0x4a1a13,
+              inner: 0x23110f
+            }
+          : {
+              border: 0xffb36b,
+              glow: 0xffd6a0,
+              fill: 0x531510,
+              inner: 0x24100d
+            };
+
+    const label = this.add
+      .text(0, 0, message, WARNING_BANNER_STYLE)
+      .setOrigin(0.5)
+      .setShadow(0, 2, "#140804", 4, true, true);
+
+    const padX = 28;
+    const padY = 12;
+    const width = Math.ceil(label.width + padX * 2);
+    const height = Math.ceil(label.height + padY * 2);
+
+    const outer = this.add
+      .rectangle(0, 0, width, height, palette.fill, 0.9)
+      .setStrokeStyle(2, palette.border, 0.98);
+    const inner = this.add
+      .rectangle(0, 0, width - 10, height - 10, palette.inner, 0.88)
+      .setStrokeStyle(1, palette.glow, 0.42);
+    const accentTop = this.add.rectangle(0, -height * 0.5 + 4, width - 18, 3, palette.glow, 0.75);
+    const accentBottom = this.add.rectangle(0, height * 0.5 - 4, width - 18, 3, palette.border, 0.62);
+
+    const container = this.add
+      .container(centerX, centerY, [outer, inner, accentTop, accentBottom, label])
+      .setScrollFactor(0)
+      .setDepth(RENDER_DEPTH.HUD + 8)
+      .setAlpha(0)
+      .setScale(0.92);
+
+    this.activeWarningBanner = container;
+
+    this.tweens.add({
+      targets: container,
+      alpha: 1,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 130,
+      ease: "Back.Out"
+    });
+
+    const hideEvent = this.time.delayedCall(durationMs, () => {
+      const hideTween = this.tweens.add({
+        targets: container,
+        alpha: 0,
+        y: centerY - 12,
+        duration: 180,
+        ease: "Quad.easeIn",
+        onComplete: () => {
+          if (this.activeWarningBanner === container) {
+            this.activeWarningBanner = null;
+          }
+          container.destroy();
+        }
+      });
+      container.setData("bannerTween", hideTween);
+    });
+
+    container.setData("bannerHideEvent", hideEvent);
   }
 
   createHudAlertPool() {
@@ -3708,7 +3833,10 @@ export class GameScene extends Phaser.Scene {
 
     this.bossApproachWarnedCycleIndex = nextBossCycleIndex;
     this.playSfx("boss_warning");
-    this.showHudAlert("BOSS APPROACHING", 1500);
+    this.showWarningBanner("BOSS APPROACHING", {
+      tone: "approach",
+      durationMs: 1500
+    });
   }
 
   lerpColor(fromHex, toHex, t) {
