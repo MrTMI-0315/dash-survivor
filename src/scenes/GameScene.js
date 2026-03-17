@@ -156,6 +156,14 @@ const HUD_COMBO_STYLE = Object.freeze({
   stroke: "#2d1f08",
   strokeThickness: 6
 });
+const DAMAGE_NUMBER_MAX_ACTIVE = 12;
+const DAMAGE_NUMBER_MAX_ACTIVE_PRIORITY = 18;
+const DAMAGE_NUMBER_NORMAL_LIFETIME_MS = 420;
+const DAMAGE_NUMBER_ELITE_LIFETIME_MS = 520;
+const DAMAGE_NUMBER_BOSS_LIFETIME_MS = 620;
+const DAMAGE_NUMBER_NORMAL_RISE_PX = 16;
+const DAMAGE_NUMBER_ELITE_RISE_PX = 20;
+const DAMAGE_NUMBER_BOSS_RISE_PX = 24;
 const GAMEPLAY_CAMERA_ZOOM = 1.72;
 const GAMEPLAY_CAMERA_FOLLOW_LERP_X = 0.1;
 const GAMEPLAY_CAMERA_FOLLOW_LERP_Y = 0.1;
@@ -3745,9 +3753,30 @@ export class GameScene extends Phaser.Scene {
 
     const isBoss = Boolean(enemy?.getData?.("isBoss")) || enemy?.type === "boss";
     const isElite = Boolean(enemy?.isElite);
+    const isPriority = isBoss || isElite || safeAmount >= 40;
     const textColor = isBoss ? "#ff3b3b" : isElite ? "#ffb347" : "#ff4444";
+    const lifetimeMs = isBoss
+      ? DAMAGE_NUMBER_BOSS_LIFETIME_MS
+      : isElite
+        ? DAMAGE_NUMBER_ELITE_LIFETIME_MS
+        : DAMAGE_NUMBER_NORMAL_LIFETIME_MS;
+    const risePx = isBoss
+      ? DAMAGE_NUMBER_BOSS_RISE_PX
+      : isElite
+        ? DAMAGE_NUMBER_ELITE_RISE_PX
+        : DAMAGE_NUMBER_NORMAL_RISE_PX;
+    const fontSize = isBoss ? 16 : isElite ? 15 : isPriority ? 14 : 13;
+    const activeEntries = this.damageNumberPool.filter((entry) => entry.active);
+    const activeCap = isPriority ? DAMAGE_NUMBER_MAX_ACTIVE_PRIORITY : DAMAGE_NUMBER_MAX_ACTIVE;
+
+    if (!isPriority && activeEntries.length >= activeCap) {
+      return;
+    }
 
     let text = this.damageNumberPool.find((entry) => !entry.active);
+    if (!text && isPriority) {
+      text = activeEntries.find((entry) => !entry.getData("damagePriority")) ?? activeEntries[0];
+    }
     if (!text) {
       text = this.add
         .text(x, y, "", {
@@ -3773,22 +3802,28 @@ export class GameScene extends Phaser.Scene {
       prevPopTween.stop();
     }
 
+    const baseYOffset = isBoss ? 30 : isElite ? 20 : 12;
+    const spawnX = x + Phaser.Math.Between(-8, 8);
+    const spawnY = y - baseYOffset + Phaser.Math.Between(-2, 2);
+
     text.setText(`${safeAmount}`);
     text.setStyle({
-      fontSize: isBoss ? "16px" : isElite ? "15px" : "14px",
+      fontSize: `${fontSize}px`,
       color: textColor
     });
-    text.setPosition(x, y);
-    text.setAlpha(1);
+    text.setPosition(spawnX, spawnY);
+    text.setAlpha(isPriority ? 0.98 : 0.86);
     text.setScale(1);
     text.setVisible(true);
     text.setActive(true);
+    text.setData("damagePriority", isPriority);
+    text.setData("damageSpawnAt", this.time.now);
 
     const popTween = this.tweens.add({
       targets: text,
-      scaleX: 1.2,
-      scaleY: 1.2,
-      duration: 60,
+      scaleX: isPriority ? 1.18 : 1.1,
+      scaleY: isPriority ? 1.18 : 1.1,
+      duration: isPriority ? 70 : 50,
       yoyo: true,
       ease: "Quad.easeOut",
       onComplete: () => {
@@ -3799,13 +3834,15 @@ export class GameScene extends Phaser.Scene {
 
     const tween = this.tweens.add({
       targets: text,
-      y: y - 20,
+      y: spawnY - risePx,
       alpha: 0,
-      duration: 600,
+      duration: lifetimeMs,
       ease: "Cubic.easeOut",
       onComplete: () => {
         text.setVisible(false);
         text.setActive(false);
+        text.setData("damagePriority", false);
+        text.setData("damageSpawnAt", 0);
         text.setData("damageTween", null);
         text.setData("damagePopTween", null);
       }
