@@ -156,7 +156,9 @@ const HUD_COMBO_STYLE = Object.freeze({
   stroke: "#2d1f08",
   strokeThickness: 6
 });
-const GAMEPLAY_CAMERA_ZOOM = 1.5;
+const GAMEPLAY_CAMERA_ZOOM = 1.72;
+const GAMEPLAY_CAMERA_FOLLOW_LERP_X = 0.1;
+const GAMEPLAY_CAMERA_FOLLOW_LERP_Y = 0.1;
 const DECK_BRIGHTNESS_MULTIPLIER = 0.9;
 const DECK_HIGHLIGHT_OPACITY = 0.6;
 const EDGE_FOG_VIGNETTE_OPACITY = 0.35;
@@ -841,7 +843,12 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     this.cameras.main.setZoom(GAMEPLAY_CAMERA_ZOOM);
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    this.cameras.main.startFollow(
+      this.player,
+      true,
+      GAMEPLAY_CAMERA_FOLLOW_LERP_X,
+      GAMEPLAY_CAMERA_FOLLOW_LERP_Y
+    );
 
     this.hudLevelText = this.add
       .text(20, 24, "", {
@@ -3563,7 +3570,12 @@ export class GameScene extends Phaser.Scene {
     const camera = this.cameras.main;
     this.cameraFollowEnabled = !this.cameraFollowEnabled;
     if (this.cameraFollowEnabled) {
-      camera.startFollow(this.player, true, 0.08, 0.08);
+      camera.startFollow(
+        this.player,
+        true,
+        GAMEPLAY_CAMERA_FOLLOW_LERP_X,
+        GAMEPLAY_CAMERA_FOLLOW_LERP_Y
+      );
     } else {
       camera.stopFollow();
     }
