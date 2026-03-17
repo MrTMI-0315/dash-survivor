@@ -5894,25 +5894,39 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.lowHealthVignetteGraphics.clear();
+    if (this.isGameOver || this.isLeveling || this.isWeaponSelecting) {
+      return;
+    }
     const hpRatio = Phaser.Math.Clamp(this.player.getHpRatio(), 0, 1);
-    if (hpRatio > 0.55) {
+    if (hpRatio > 0.5) {
       return;
     }
 
-    const baseIntensity = hpRatio <= 0.2 ? 0.28 : hpRatio <= 0.35 ? 0.18 : 0.1;
-    const pulse = (Math.sin((this.time?.now ?? 0) / 150) + 1) * 0.5;
-    const modalDampen = this.isLeveling || this.isWeaponSelecting ? 0.65 : 1;
-    const alpha = (baseIntensity + pulse * 0.08) * modalDampen;
+    const baseIntensity = hpRatio <= 0.2 ? 0.34 : hpRatio <= 0.35 ? 0.22 : 0.12;
+    const pulseSpeed = hpRatio <= 0.2 ? 105 : hpRatio <= 0.35 ? 130 : 165;
+    const pulse = (Math.sin((this.time?.now ?? 0) / pulseSpeed) + 1) * 0.5;
+    const alpha = baseIntensity + pulse * (hpRatio <= 0.2 ? 0.12 : 0.08);
     const width = this.scale?.width ?? 1280;
     const height = this.scale?.height ?? 720;
-    const edge = Math.max(26, Math.round(Math.min(width, height) * 0.08));
+    const edge = Math.max(34, Math.round(Math.min(width, height) * 0.11));
+    const innerEdge = Math.max(18, Math.round(edge * 0.58));
+    const borderAlpha = hpRatio <= 0.2 ? alpha * 0.9 : alpha * 0.7;
+    const outerFillAlpha = hpRatio <= 0.2 ? alpha * 0.78 : alpha * 0.64;
+    const innerFillAlpha = hpRatio <= 0.2 ? alpha * 0.32 : alpha * 0.22;
 
-    this.lowHealthVignetteGraphics.fillStyle(0x7d1010, alpha * 0.6);
+    this.lowHealthVignetteGraphics.fillStyle(0x6e0c0c, outerFillAlpha);
     this.lowHealthVignetteGraphics.fillRect(0, 0, width, edge);
     this.lowHealthVignetteGraphics.fillRect(0, height - edge, width, edge);
     this.lowHealthVignetteGraphics.fillRect(0, 0, edge, height);
     this.lowHealthVignetteGraphics.fillRect(width - edge, 0, edge, height);
-    this.lowHealthVignetteGraphics.lineStyle(2, 0xff4d4d, alpha * 0.75);
+    this.lowHealthVignetteGraphics.fillStyle(0xa31616, innerFillAlpha);
+    this.lowHealthVignetteGraphics.fillRect(0, 0, width, innerEdge);
+    this.lowHealthVignetteGraphics.fillRect(0, height - innerEdge, width, innerEdge);
+    this.lowHealthVignetteGraphics.fillRect(0, 0, innerEdge, height);
+    this.lowHealthVignetteGraphics.fillRect(width - innerEdge, 0, innerEdge, height);
+    this.lowHealthVignetteGraphics.lineStyle(2, 0xff5a5a, borderAlpha);
     this.lowHealthVignetteGraphics.strokeRect(1, 1, width - 2, height - 2);
+    this.lowHealthVignetteGraphics.lineStyle(1, 0xffb0a0, borderAlpha * 0.32);
+    this.lowHealthVignetteGraphics.strokeRect(innerEdge * 0.3, innerEdge * 0.3, width - innerEdge * 0.6, height - innerEdge * 0.6);
   }
 }
