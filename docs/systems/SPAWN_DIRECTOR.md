@@ -4,7 +4,7 @@
 - Spawn Director is the pacing layer that controls combat pressure over time.
 - Current implementation uses a state machine + density target + burst events (not a budget-spending model).
 - Design target run pacing is 7–10 minutes; runtime currently ends on player death.
-- Source of truth: `src/Systems/DirectorSystem.js`, `src/config/director.js`, `src/config/progression.js`, `src/scenes/GameScene.js`.
+- Source of truth: `src/systems/DirectorSystem.js`, `src/config/director.js`, `src/config/progression.js`, `src/scenes/GameScene.js`.
 
 ## Systems
 

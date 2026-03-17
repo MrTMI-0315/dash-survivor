@@ -4,11 +4,11 @@ const MENU_ATLAS_KEY = "ui_atlas";
 const MENU_ATLAS_IMAGE = "assets/atlas/ui_atlas.png";
 const MENU_ATLAS_DATA = "assets/atlas/ui_atlas.json";
 const SHARED_AUDIO_FILES = {
-  dash: "assets/audio/dash.wav",
-  enemy_hit: "assets/audio/enemy_hit.wav",
-  enemy_death: "assets/audio/enemy_die.wav",
-  level_up: "assets/audio/level_up.wav",
-  boss_warning: "assets/audio/boss_warning.wav"
+  dash: "assets/audio/sfx/dash.wav",
+  enemy_hit: "assets/audio/sfx/enemy_hit.wav",
+  enemy_death: "assets/audio/sfx/enemy_die.wav",
+  level_up: "assets/audio/sfx/level_up.wav",
+  boss_warning: "assets/audio/sfx/boss_warning.wav"
 };
 
 export class MainMenuScene extends Phaser.Scene {

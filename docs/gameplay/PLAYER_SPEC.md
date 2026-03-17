@@ -4,7 +4,7 @@
 - Player is the survivor avatar in a top-down ship-deck arena.
 - Core feel target is responsive movement + dash timing under sustained enemy pressure.
 - Current runtime uses direct physics velocity control, dash gauge charging, overlap-based contact damage, and level-up pause flow.
-- Source of truth: `src/entities/Player.js`, `src/scenes/GameScene.js`, `src/Systems/WeaponSystem.js`, `src/Systems/MetaProgressionSystem.js`.
+- Source of truth: `src/entities/Player.js`, `src/scenes/GameScene.js`, `src/systems/WeaponSystem.js`, `src/systems/MetaProgressionSystem.js`.
 
 ## Systems
 

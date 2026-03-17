@@ -5,7 +5,7 @@
 - Design target run length is 7–10 minutes.
 - Current code loop is death-based (no hard run-end timer yet).
 - UI priority: fast combat readability with minimal screen obstruction.
-- Source of truth: `src/scenes/GameScene.js`, `src/entities/Player.js`, `src/Systems/WeaponSystem.js`, `src/Systems/DirectorSystem.js`, `src/Systems/MetaProgressionSystem.js`.
+- Source of truth: `src/scenes/GameScene.js`, `src/entities/Player.js`, `src/systems/WeaponSystem.js`, `src/systems/DirectorSystem.js`, `src/systems/MetaProgressionSystem.js`.
 
 ## Systems
 

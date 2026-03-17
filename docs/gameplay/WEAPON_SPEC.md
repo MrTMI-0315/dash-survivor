@@ -2,9 +2,9 @@
 
 ## Context
 - Weapons are automatic combat systems; player focus is movement, dash timing, and positioning.
-- Current weapon implementation is data-driven via `src/config/weapons.js` and runtime logic in `src/Systems/WeaponSystem.js`.
+- Current weapon implementation is data-driven via `src/config/weapons.js` and runtime logic in `src/systems/WeaponSystem.js`.
 - Run pressure is handled by enemy density/director; weapon system supplies sustained DPS and crowd-control tools.
-- Source of truth: `src/config/weapons.js`, `src/Systems/WeaponSystem.js`, `src/entities/Player.js`, `src/scenes/GameScene.js`.
+- Source of truth: `src/config/weapons.js`, `src/systems/WeaponSystem.js`, `src/entities/Player.js`, `src/scenes/GameScene.js`.
 
 ## Systems
 

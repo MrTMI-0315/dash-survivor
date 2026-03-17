@@ -5,7 +5,7 @@
 - Design goal: continuous pressure with readable archetype differences and escalating threat.
 - Target run pacing is 7–10 minutes, with pressure spikes from elite/boss events.
 - Current implementation uses pooled enemies, director-driven pressure, and elite modifiers.
-- Source of truth: `src/config/enemies.js`, `src/entities/Enemy.js`, `src/entities/BossEnemy.js`, `src/scenes/GameScene.js`, `src/Systems/DirectorSystem.js`, `src/Systems/ObjectPool.js`.
+- Source of truth: `src/config/enemies.js`, `src/entities/Enemy.js`, `src/entities/BossEnemy.js`, `src/scenes/GameScene.js`, `src/systems/DirectorSystem.js`, `src/systems/ObjectPool.js`.
 
 ## Systems
 

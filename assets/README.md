@@ -3,13 +3,15 @@
 This project currently uses `assets/` as the runtime asset source of truth.
 
 ## Live runtime paths
-- Character sprites: `assets/sprites/characters/*`
-- Tile sprites: `assets/sprites/tiles/*`
-- Prop sprites: `assets/sprites/props/*`
-- UI sprites: `assets/ui/*`
-- Weapon icons: `assets/weapons/*`
-- Audio: `assets/audio/*`
+- Player sprites: `assets/sprites/player/*`
+- Enemy sprites: `assets/sprites/enemies/*`
+- Weapon sprites/icons: `assets/sprites/weapons/*`
+- Ship environment sprites: `assets/sprites/environment/ship/*`
+- UI sprites: `assets/sprites/ui/*`
+- Audio SFX: `assets/audio/sfx/*`
+- Audio music: `assets/audio/music/*`
 - Atlas: `assets/atlas/*`
+- Vendor/raw source packs: `assets/vendor/*`
 
 ## Build behavior
 - `scripts/build.mjs` copies `assets/` into `dist/assets/`.
@@ -18,3 +20,4 @@ This project currently uses `assets/` as the runtime asset source of truth.
 ## Notes
 - `assets/` is the only runtime asset source-of-truth.
 - Keep all production assets under this directory so build output remains deterministic.
+- Keep third-party raw/source packs under `assets/vendor/` and promote only runtime-selected files into role-based folders.

@@ -4,7 +4,7 @@
 - The gameplay map represents a finite pirate-ship deck arena concept.
 - Design target: 7–10 minute survival run while sea monsters board from ship edges.
 - Current code uses a finite world with camera follow and edge-based spawning.
-- Source of truth: `src/scenes/GameScene.js`, `src/config/progression.js`, `src/Systems/DirectorSystem.js`.
+- Source of truth: `src/scenes/GameScene.js`, `src/config/progression.js`, `src/systems/DirectorSystem.js`.
 
 ## Systems
 

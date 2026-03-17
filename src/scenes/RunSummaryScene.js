@@ -15,11 +15,11 @@ export class RunSummaryScene extends Phaser.Scene {
     const camera = this.cameras.main;
     const centerX = camera.width * 0.5;
     const centerY = camera.height * 0.5;
-    const cardWidth = 400;
-    const cardHeight = 440;
+    const cardWidth = 440;
+    const cardHeight = 460;
     const panelPadding = 32;
     const titleMarginBottom = 24;
-    const statLineSpacing = 12;
+    const statLineSpacing = 14;
     const buttonGap = 18;
     const primaryButtonWidth = 260;
     const primaryButtonHeight = 56;
@@ -29,6 +29,7 @@ export class RunSummaryScene extends Phaser.Scene {
     const stats = {
       timeSurvivedMs: data.timeSurvivedMs ?? 0,
       enemiesKilled: data.enemiesKilled ?? 0,
+      maxCombo: data.maxCombo ?? 0,
       levelReached: data.levelReached ?? 1,
       coinsEarned: data.coinsEarned ?? 0,
       totalCoins: this.resolveTotalCoins(data.totalCoins)
@@ -52,63 +53,58 @@ export class RunSummaryScene extends Phaser.Scene {
       .setStrokeStyle(2, 0xb8e0ff, 0.95)
       .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 1);
 
-    const panelTop = centerY - cardHeight * 0.5;
-    const panelLeft = centerX - cardWidth * 0.5;
-    const titleY = panelTop + panelPadding;
+    const panelContainer = this.add.container(centerX, centerY).setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2);
+    const panelTop = -cardHeight * 0.5;
+    const panelBottom = cardHeight * 0.5;
+
     const titleText = this.add
-      .text(centerX, titleY, "RUN SUMMARY", {
+      .text(0, panelTop + panelPadding, "RUN SUMMARY", {
         fontFamily: "Arial",
         fontSize: "34px",
         color: "#ffffff",
         stroke: "#0b1220",
         strokeThickness: 5
       })
-      .setOrigin(0.5, 0)
-      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2);
+      .setOrigin(0.5, 0);
 
     const lines = [
       `Time Survived: ${this.formatTime(stats.timeSurvivedMs)}`,
       `Enemies Killed: ${stats.enemiesKilled}`,
+      `Max Combo: x${stats.maxCombo}`,
       `Max Level: ${stats.levelReached}`,
-      `Coins Earned: +${stats.coinsEarned}`
+      `Coins Earned: +${stats.coinsEarned}`,
+      `Coin Bank: ${stats.totalCoins}`
     ];
 
-    const titleBottomY = titleY + titleText.height;
+    const titleBottomY = titleText.y + titleText.height;
     const statsTopY = titleBottomY + titleMarginBottom;
-    const statsContainerHeight = 132;
+    const statsContainerHeight = 192;
     const statsCenterY = statsTopY + statsContainerHeight * 0.5;
-    this.add
-      .rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0x152947, 0.92)
-      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 1);
-    this.add
-      .rectangle(centerX, statsCenterY, 312, statsContainerHeight, 0, 0)
-      .setStrokeStyle(2, 0x7bc3ff, 1)
-      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 1);
+    const statsBg = this.add.rectangle(0, statsCenterY, 336, statsContainerHeight, 0x152947, 0.92);
+    statsBg.setStrokeStyle(2, 0x7bc3ff, 1);
     const statsText = this.add
-      .text(centerX, statsCenterY, lines.join("\n"), {
+      .text(0, statsCenterY, lines.join("\n"), {
         fontFamily: "Arial",
-        fontSize: "22px",
+        fontSize: "21px",
         color: "#f3f7ff",
         align: "center",
         lineSpacing: statLineSpacing
       })
-      .setOrigin(0.5)
-      .setDepth(UI_LAYER_ORDER.RUN_SUMMARY + 2);
-    statsText.setY(statsCenterY - statsText.height * 0.5 + 2);
+      .setOrigin(0.5, 0.5);
 
-    const panelBottom = panelTop + cardHeight;
     const buttonStackHeight = primaryButtonHeight + secondaryButtonHeight + buttonGap;
     const buttonsContainerTop = panelBottom - panelPadding - buttonStackHeight;
     const retryY = buttonsContainerTop + primaryButtonHeight * 0.5;
     const menuY = retryY + primaryButtonHeight * 0.5 + buttonGap + secondaryButtonHeight * 0.5;
+    panelContainer.add([titleText, statsBg, statsText]);
 
-    this.createActionButton(centerX, retryY, "RESTART", () => {
+    this.createActionButton(centerX, centerY + retryY, "RESTART", () => {
       this.scene.stop("RunSummaryScene");
       this.scene.stop("GameScene");
       this.scene.start("GameScene");
     }, { variant: "primary", width: primaryButtonWidth, height: primaryButtonHeight });
 
-    this.createActionButton(centerX, menuY, "MAIN MENU", () => {
+    this.createActionButton(centerX, centerY + menuY, "MAIN MENU", () => {
       this.scene.stop("RunSummaryScene");
       const hasMainMenuScene = Boolean(this.scene.manager?.keys?.MainMenuScene);
       if (hasMainMenuScene) {

@@ -5,7 +5,7 @@
 - Current runtime is survival-until-death (no enforced run-end timer).
 - Design target can be 7–10 minutes, but this is currently a balance target, not a hard stop condition.
 - Core moment-to-moment loop is movement + dash timing + auto-weapon pressure + spawn escalation.
-- Source of truth: `src/scenes/GameScene.js`, `src/Systems/DirectorSystem.js`, `src/Systems/WeaponSystem.js`, `src/Systems/ObjectPool.js`, `src/config/*`.
+- Source of truth: `src/scenes/GameScene.js`, `src/systems/DirectorSystem.js`, `src/systems/WeaponSystem.js`, `src/systems/ObjectPool.js`, `src/config/*`.
 
 ## Systems
 

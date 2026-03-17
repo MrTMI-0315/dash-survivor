@@ -3,10 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "serve:dist": "node scripts/serve-dist.mjs",
+    "preview": "npm run serve:dist",
+    "pw:test": "playwright test",
+    "pw:test:headed": "playwright test --project=chromium --headed",
+    "pw:test:debug": "PWDEBUG=1 playwright test --project=chromium",
+    "pw:test:smoke": "playwright test tests/smoke.spec.js --project=chromium"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "esbuild": "^0.25.0"
   }
 }
-
