@@ -2454,6 +2454,20 @@ export class GameScene extends Phaser.Scene {
       <div class="hud-loadout" data-key="hud-loadout" aria-label="Equipped weapons">
         <div class="hud-loadout-row" data-key="hud-weapon-row"></div>
       </div>
+      <div class="hud-counters" data-key="hud-counters" aria-label="Run counters">
+        <div class="hud-counter" data-key="counter-level">
+          <span class="hud-counter-label">LV</span>
+          <span class="hud-counter-value" data-key="level">1</span>
+        </div>
+        <div class="hud-counter" data-key="counter-coins">
+          <span class="hud-counter-label">COINS</span>
+          <span class="hud-counter-value" data-key="coins">0</span>
+        </div>
+        <div class="hud-counter" data-key="counter-kills">
+          <span class="hud-counter-label">KILLS</span>
+          <span class="hud-counter-value" data-key="kills">0</span>
+        </div>
+      </div>
       <div class="hud-top">
         <div class="hud-run-strip" data-key="run-strip-track" aria-hidden="true">
           <span class="hud-run-strip-fill" data-key="run-strip-fill"></span>
@@ -2465,15 +2479,7 @@ export class GameScene extends Phaser.Scene {
         </div>
       </div>
       <div class="hud-bottom">
-        <div class="hud-corner hud-corner--left">
-          <span class="hud-corner-label">COINS</span>
-          <span class="hud-corner-value" data-key="coins">0</span>
-        </div>
         <div class="hud-center">
-          <div class="hud-level-badge">
-            <span class="hud-level-label">LV</span>
-            <span class="hud-level-value" data-key="level">1</span>
-          </div>
           <div class="hud-center-bars">
             <div class="hud-bar-row hud-bar-row--hp">
               <span class="hud-bar-label">HP</span>
@@ -2487,10 +2493,6 @@ export class GameScene extends Phaser.Scene {
             </div>
           </div>
         </div>
-        <div class="hud-corner hud-corner--right">
-          <span class="hud-corner-label">KILLS</span>
-          <span class="hud-corner-value" data-key="kills">0</span>
-        </div>
       </div>
     `;
     appRoot.appendChild(hud);
@@ -2501,6 +2503,7 @@ export class GameScene extends Phaser.Scene {
       timeText: hud.querySelector('[data-key="time"]'),
       loadout: hud.querySelector('[data-key="hud-loadout"]'),
       weaponRow: hud.querySelector('[data-key="hud-weapon-row"]'),
+      counters: hud.querySelector('[data-key="hud-counters"]'),
       runStripTrack: hud.querySelector('[data-key="run-strip-track"]'),
       runStripFill: hud.querySelector('[data-key="run-strip-fill"]'),
       killsText: hud.querySelector('[data-key="kills"]'),
@@ -2511,6 +2514,7 @@ export class GameScene extends Phaser.Scene {
     };
     const loadout = this.domHudRefs.loadout;
     const weaponRow = this.domHudRefs.weaponRow;
+    const counters = this.domHudRefs.counters;
     const hudTop = hud.querySelector(".hud-top");
     const runStripTrack = this.domHudRefs.runStripTrack;
     const runStripFill = this.domHudRefs.runStripFill;
@@ -2563,6 +2567,51 @@ export class GameScene extends Phaser.Scene {
         weaponRow.appendChild(slot);
         this.domHudWeaponSlots.push({ slot, icon });
       }
+    }
+    if (counters) {
+      Object.assign(counters.style, {
+        position: "absolute",
+        right: "18px",
+        top: "18px",
+        display: "flex",
+        alignItems: "stretch",
+        gap: "8px",
+        pointerEvents: "none",
+        zIndex: "3"
+      });
+      counters.querySelectorAll(".hud-counter").forEach((counter) => {
+        Object.assign(counter.style, {
+          minWidth: "72px",
+          padding: "8px 10px 9px",
+          borderRadius: "12px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-end",
+          justifyContent: "center",
+          background: "linear-gradient(180deg, rgba(39, 19, 9, 0.92) 0%, rgba(24, 11, 5, 0.94) 100%)",
+          border: "1px solid rgba(184, 131, 77, 0.52)",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 220, 173, 0.08)"
+        });
+      });
+      counters.querySelectorAll(".hud-counter-label").forEach((label) => {
+        Object.assign(label.style, {
+          fontSize: "9px",
+          fontWeight: "700",
+          letterSpacing: "0.12em",
+          color: "rgba(230, 205, 171, 0.72)",
+          textShadow: "0 1px 0 rgba(25, 11, 5, 0.9)"
+        });
+      });
+      counters.querySelectorAll(".hud-counter-value").forEach((value) => {
+        Object.assign(value.style, {
+          marginTop: "3px",
+          fontSize: "24px",
+          fontWeight: "700",
+          lineHeight: "1",
+          color: "#fff5dd",
+          textShadow: "0 1px 0 rgba(31, 12, 5, 0.92), 0 0 8px rgba(255, 207, 148, 0.14)"
+        });
+      });
     }
     if (hudTop) {
       Object.assign(hudTop.style, {
@@ -2639,6 +2688,7 @@ export class GameScene extends Phaser.Scene {
     const hpBar = this.domHudRefs.hpBar;
     const expBar = this.domHudRefs.expBar;
     const loadout = this.domHudRefs.loadout;
+    const counters = this.domHudRefs.counters;
     const runStripTrack = this.domHudRefs.runStripTrack;
     const runStripFill = this.domHudRefs.runStripFill;
     const formatInt = (value) => Math.max(0, Math.floor(Number(value) || 0)).toLocaleString("en-US");
@@ -2672,6 +2722,9 @@ export class GameScene extends Phaser.Scene {
     }
     if (loadout) {
       loadout.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.42" : "1";
+    }
+    if (counters) {
+      counters.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.42" : "1";
     }
     if (runStripTrack) {
       runStripTrack.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.38" : "1";
