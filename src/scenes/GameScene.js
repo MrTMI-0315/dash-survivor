@@ -2451,6 +2451,9 @@ export class GameScene extends Phaser.Scene {
     hud.className = "hud-core";
     hud.setAttribute("aria-live", "polite");
     hud.innerHTML = `
+      <div class="hud-loadout" data-key="hud-loadout" aria-label="Equipped weapons">
+        <div class="hud-loadout-row" data-key="hud-weapon-row"></div>
+      </div>
       <div class="hud-top">
         <div class="hud-run-strip" data-key="run-strip-track" aria-hidden="true">
           <span class="hud-run-strip-fill" data-key="run-strip-fill"></span>
@@ -2496,6 +2499,8 @@ export class GameScene extends Phaser.Scene {
       hpText: hud.querySelector('[data-key="hp"]'),
       expText: hud.querySelector('[data-key="exp"]'),
       timeText: hud.querySelector('[data-key="time"]'),
+      loadout: hud.querySelector('[data-key="hud-loadout"]'),
+      weaponRow: hud.querySelector('[data-key="hud-weapon-row"]'),
       runStripTrack: hud.querySelector('[data-key="run-strip-track"]'),
       runStripFill: hud.querySelector('[data-key="run-strip-fill"]'),
       killsText: hud.querySelector('[data-key="kills"]'),
@@ -2504,10 +2509,61 @@ export class GameScene extends Phaser.Scene {
       hpBar: hud.querySelector('[data-key="hp-bar"]'),
       expBar: hud.querySelector('[data-key="exp-bar"]')
     };
+    const loadout = this.domHudRefs.loadout;
+    const weaponRow = this.domHudRefs.weaponRow;
     const hudTop = hud.querySelector(".hud-top");
     const runStripTrack = this.domHudRefs.runStripTrack;
     const runStripFill = this.domHudRefs.runStripFill;
     const runStripMarker = hud.querySelector(".hud-run-strip-marker");
+    const weaponSlotCount = Math.max(1, this.player?.maxWeaponSlots ?? 3);
+    this.domHudWeaponSlots = [];
+    if (loadout) {
+      Object.assign(loadout.style, {
+        position: "absolute",
+        left: "18px",
+        top: "18px",
+        display: "flex",
+        alignItems: "center",
+        pointerEvents: "none",
+        zIndex: "3"
+      });
+    }
+    if (weaponRow) {
+      Object.assign(weaponRow.style, {
+        display: "flex",
+        alignItems: "center",
+        gap: "8px"
+      });
+      for (let i = 0; i < weaponSlotCount; i += 1) {
+        const slot = document.createElement("div");
+        slot.className = "hud-weapon-slot";
+        Object.assign(slot.style, {
+          width: "42px",
+          height: "42px",
+          borderRadius: "12px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "linear-gradient(180deg, rgba(41, 20, 10, 0.92) 0%, rgba(25, 12, 5, 0.95) 100%)",
+          border: "1px solid rgba(184, 131, 77, 0.52)",
+          boxShadow: "0 2px 10px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 220, 173, 0.1)"
+        });
+        const icon = document.createElement("img");
+        icon.alt = "";
+        icon.decoding = "async";
+        icon.src = this.getWeaponIconPath("dagger");
+        Object.assign(icon.style, {
+          width: "24px",
+          height: "24px",
+          imageRendering: "pixelated",
+          opacity: "0.16",
+          filter: "drop-shadow(0 1px 1px rgba(0,0,0,0.45)) grayscale(0.7)"
+        });
+        slot.appendChild(icon);
+        weaponRow.appendChild(slot);
+        this.domHudWeaponSlots.push({ slot, icon });
+      }
+    }
     if (hudTop) {
       Object.assign(hudTop.style, {
         display: "flex",
@@ -2567,6 +2623,7 @@ export class GameScene extends Phaser.Scene {
     }
     this.domHudElement = null;
     this.domHudRefs = null;
+    this.domHudWeaponSlots = [];
   }
 
   updateDomHudOverlay(levelValue, xpPercent, elapsedMs, xpRatio) {
@@ -2581,6 +2638,7 @@ export class GameScene extends Phaser.Scene {
     const levelLine = this.domHudRefs.levelText;
     const hpBar = this.domHudRefs.hpBar;
     const expBar = this.domHudRefs.expBar;
+    const loadout = this.domHudRefs.loadout;
     const runStripTrack = this.domHudRefs.runStripTrack;
     const runStripFill = this.domHudRefs.runStripFill;
     const formatInt = (value) => Math.max(0, Math.floor(Number(value) || 0)).toLocaleString("en-US");
@@ -2612,6 +2670,9 @@ export class GameScene extends Phaser.Scene {
     if (expBar) {
       expBar.style.width = `${Math.round(Phaser.Math.Clamp(xpRatio, 0, 1) * 100)}%`;
     }
+    if (loadout) {
+      loadout.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.42" : "1";
+    }
     if (runStripTrack) {
       runStripTrack.style.opacity = this.isLeveling || this.isWeaponSelecting ? "0.38" : "1";
     }
@@ -2627,6 +2688,31 @@ export class GameScene extends Phaser.Scene {
         runStripFill.style.background = "linear-gradient(90deg, rgba(210, 141, 73, 0.78) 0%, rgba(234, 181, 89, 0.96) 100%)";
         runStripFill.style.boxShadow = "0 0 10px rgba(255, 178, 84, 0.22)";
       }
+    }
+    const equippedWeapons = this.player?.weapons ?? [];
+    if (Array.isArray(this.domHudWeaponSlots)) {
+      this.domHudWeaponSlots.forEach(({ slot, icon }, index) => {
+        const weapon = equippedWeapons[index];
+        if (!slot || !icon) {
+          return;
+        }
+        if (!weapon) {
+          slot.style.opacity = "0.72";
+          slot.style.borderColor = "rgba(184, 131, 77, 0.28)";
+          slot.style.background = "linear-gradient(180deg, rgba(32, 17, 9, 0.74) 0%, rgba(22, 11, 5, 0.78) 100%)";
+          icon.src = this.getWeaponIconPath("dagger");
+          icon.style.opacity = "0.16";
+          icon.style.filter = "drop-shadow(0 1px 1px rgba(0,0,0,0.45)) grayscale(0.7)";
+          return;
+        }
+        const weaponType = weapon.type ?? weapon.baseType ?? "dagger";
+        slot.style.opacity = "1";
+        slot.style.borderColor = "rgba(216, 168, 104, 0.72)";
+        slot.style.background = "linear-gradient(180deg, rgba(58, 29, 14, 0.94) 0%, rgba(33, 15, 7, 0.96) 100%)";
+        icon.src = this.getWeaponIconPath(weaponType);
+        icon.style.opacity = "1";
+        icon.style.filter = "drop-shadow(0 1px 1px rgba(0,0,0,0.52))";
+      });
     }
     this.domHudElement.classList.toggle("modal-open", this.isLeveling || this.isWeaponSelecting);
   }
@@ -3557,6 +3643,10 @@ export class GameScene extends Phaser.Scene {
       return iconAsset.key;
     }
     return "proj_dagger";
+  }
+
+  getWeaponIconPath(weaponType) {
+    return WEAPON_ICON_ASSETS[weaponType]?.path ?? WEAPON_ICON_ASSETS.dagger.path;
   }
 
   updateHudWeaponIcons() {
