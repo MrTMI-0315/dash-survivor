@@ -180,6 +180,12 @@ const DAMAGE_NUMBER_BOSS_RISE_PX = 24;
 const GAMEPLAY_CAMERA_ZOOM = 1.72;
 const GAMEPLAY_CAMERA_FOLLOW_LERP_X = 0.1;
 const GAMEPLAY_CAMERA_FOLLOW_LERP_Y = 0.1;
+const PLAYER_HURT_FEEDBACK_COOLDOWN_MS = 120;
+const PLAYER_HURT_SHAKE_DURATION_MS = 55;
+const PLAYER_HURT_SHAKE_INTENSITY = 0.0014;
+const PLAYER_HURT_PULSE_DURATION_MS = 115;
+const PLAYER_HURT_PULSE_RADIUS = 22;
+const PLAYER_HURT_PULSE_ALPHA = 0.22;
 const DECK_BRIGHTNESS_MULTIPLIER = 0.9;
 const DECK_HIGHLIGHT_OPACITY = 0.6;
 const EDGE_FOG_VIGNETTE_OPACITY = 0.35;
@@ -718,6 +724,7 @@ export class GameScene extends Phaser.Scene {
     this.lastKillAtMs = Number.NEGATIVE_INFINITY;
     this.maxKillCombo = 0;
     this.totalKills = 0;
+    this.lastPlayerHurtFeedbackAt = Number.NEGATIVE_INFINITY;
     this.killCounterPulseTween = null;
     this.xpDisplayRatio = 0;
     this.expBarScaleY = 1;
@@ -4291,7 +4298,7 @@ export class GameScene extends Phaser.Scene {
     if (!damaged) {
       return;
     }
-    this.cameras.main.shake(80, 0.003);
+    this.triggerPlayerHurtFeedback(player);
 
     if (!player.isDead()) {
       return;
@@ -4315,11 +4322,40 @@ export class GameScene extends Phaser.Scene {
     if (!damaged) {
       return;
     }
-    this.cameras.main.shake(80, 0.003);
+    this.triggerPlayerHurtFeedback(player);
 
     if (player.isDead()) {
       this.triggerGameOver();
     }
+  }
+
+  triggerPlayerHurtFeedback(player) {
+    if (!player?.active || this.isGameOver || this.isLeveling || this.isWeaponSelecting) {
+      return;
+    }
+
+    const now = this.time?.now ?? 0;
+    if (now - this.lastPlayerHurtFeedbackAt < PLAYER_HURT_FEEDBACK_COOLDOWN_MS) {
+      return;
+    }
+    this.lastPlayerHurtFeedbackAt = now;
+
+    this.cameras.main.shake(PLAYER_HURT_SHAKE_DURATION_MS, PLAYER_HURT_SHAKE_INTENSITY);
+
+    const pulse = this.add
+      .circle(player.x, player.y, PLAYER_HURT_PULSE_RADIUS, 0xff7a7a, PLAYER_HURT_PULSE_ALPHA)
+      .setDepth(RENDER_DEPTH.PLAYER - 1)
+      .setBlendMode(Phaser.BlendModes.SCREEN)
+      .setScale(0.7);
+
+    this.tweens.add({
+      targets: pulse,
+      scale: 1.95,
+      alpha: 0,
+      duration: PLAYER_HURT_PULSE_DURATION_MS,
+      ease: "Quad.easeOut",
+      onComplete: () => pulse.destroy()
+    });
   }
 
   showBossRadialWarning(boss, durationMs = 1000) {

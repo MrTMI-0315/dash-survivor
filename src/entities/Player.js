@@ -51,7 +51,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.hp = this.maxHp;
     this.speed = 200;
     this.damageCooldownMs = 400;
+    this.hurtFlashDurationMs = 80;
     this.nextDamageAt = 0;
+    this.lastHurtAt = -Infinity;
     this.lastMoveDir = new Phaser.Math.Vector2(1, 0);
     this.facingDirection = "south";
 
@@ -201,9 +203,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     this.hp = Math.max(0, this.hp - amount);
     this.nextDamageAt = now + this.damageCooldownMs;
+    this.lastHurtAt = now;
 
     this.setTint(0xff9e9e);
-    this.scene.time.delayedCall(100, () => {
+    this.scene.time.delayedCall(this.hurtFlashDurationMs, () => {
       if (this.active) {
         this.clearTint();
       }
@@ -218,6 +221,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   isDead() {
     return this.hp <= 0;
+  }
+
+  getLastHurtAt() {
+    return this.lastHurtAt;
   }
 
   addPassive(passiveKey) {
