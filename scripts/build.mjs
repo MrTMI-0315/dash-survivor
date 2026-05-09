@@ -1,12 +1,13 @@
 import { build } from "esbuild";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { brotliCompressSync, constants, gzipSync } from "node:zlib";
 
 const ROOT = process.cwd();
 const DIST_DIR = path.join(ROOT, "dist");
 const DIST_ASSETS_DIR = path.join(DIST_DIR, "assets");
 const BUILD_MAX_BYTES = 10 * 1024 * 1024;
+const EXCLUDED_DIRS = new Set(["vendor", "raw"]);
+const EXCLUDED_EXTENSIONS = new Set([".md"]);
 
 async function ensureCleanDist() {
   await fs.rm(DIST_DIR, { recursive: true, force: true });
@@ -17,6 +18,16 @@ async function copyRecursive(srcDir, destDir) {
   await fs.mkdir(destDir, { recursive: true });
   const entries = await fs.readdir(srcDir, { withFileTypes: true });
   for (const entry of entries) {
+    if (entry.name.startsWith(".")) {
+      continue;
+    }
+    if (entry.isDirectory() && EXCLUDED_DIRS.has(entry.name)) {
+      continue;
+    }
+    if (entry.isFile() && EXCLUDED_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+      continue;
+    }
+
     const srcPath = path.join(srcDir, entry.name);
     const destPath = path.join(destDir, entry.name);
     if (entry.isDirectory()) {
@@ -46,18 +57,6 @@ async function bundleMinifiedJs() {
   });
 }
 
-async function compressFile(filePath) {
-  const content = await fs.readFile(filePath);
-  const gz = gzipSync(content, { level: 9 });
-  const br = brotliCompressSync(content, {
-    params: {
-      [constants.BROTLI_PARAM_QUALITY]: 11
-    }
-  });
-  await fs.writeFile(`${filePath}.gz`, gz);
-  await fs.writeFile(`${filePath}.br`, br);
-}
-
 async function walkFiles(dir) {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const files = [];
@@ -72,25 +71,10 @@ async function walkFiles(dir) {
   return files;
 }
 
-async function compressBuildFiles() {
-  const files = await walkFiles(DIST_DIR);
-  const targetExtensions = new Set([".js", ".css", ".html", ".json", ".png", ".wav"]);
-  for (const filePath of files) {
-    const ext = path.extname(filePath).toLowerCase();
-    if (!targetExtensions.has(ext)) {
-      continue;
-    }
-    await compressFile(filePath);
-  }
-}
-
 async function getDirectorySizeBytes(dir) {
   const files = await walkFiles(dir);
   let total = 0;
   for (const filePath of files) {
-    if (filePath.endsWith(".gz") || filePath.endsWith(".br")) {
-      continue;
-    }
     const stat = await fs.stat(filePath);
     total += stat.size;
   }
@@ -107,7 +91,6 @@ async function run() {
   await writeOptimizedIndex();
   await fs.copyFile(path.join(ROOT, "styles.css"), path.join(DIST_DIR, "styles.css"));
   await copyRecursive(path.join(ROOT, "assets"), path.join(DIST_DIR, "assets"));
-  await compressBuildFiles();
 
   const rawSizeBytes = await getDirectorySizeBytes(DIST_DIR);
   console.log(`[build] Raw size: ${formatMb(rawSizeBytes)} (${rawSizeBytes} bytes)`);
@@ -121,4 +104,3 @@ run().catch((error) => {
   console.error(error);
   process.exit(1);
 });
-

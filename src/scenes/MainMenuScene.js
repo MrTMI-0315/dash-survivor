@@ -1,3 +1,5 @@
+import { PokiAdapter } from "../platform/PokiAdapter.js";
+
 const COIN_STORAGE_KEY = "dashsurvivor_coins";
 const BEST_TIME_STORAGE_KEY = "dashsurvivor_best_time_ms";
 const MENU_ATLAS_KEY = "ui_atlas";
@@ -70,15 +72,25 @@ export class MainMenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.createButton(centerX, 352, "START RUN", () => {
-      this.scene.start("GameScene");
-    });
+    this.createButton(centerX, 352, "START RUN", () => this.startGameWithBreak());
 
     this.createButton(centerX, 432, "UPGRADES", () => {
       this.scene.start("UpgradeScene");
     });
 
     this.hideLoadingScreen();
+  }
+
+  async startGameWithBreak() {
+    if (this.input) {
+      this.input.enabled = false;
+    }
+    await PokiAdapter.commercialBreak(() => this.sound?.pauseAll?.());
+    this.sound?.resumeAll?.();
+    if (this.input) {
+      this.input.enabled = true;
+    }
+    this.scene.start("GameScene");
   }
 
   createButton(x, y, label, onClick) {
@@ -184,5 +196,6 @@ export class MainMenuScene extends Phaser.Scene {
     window.setTimeout(() => {
       loadingScreen.style.display = "none";
     }, 260);
+    PokiAdapter.gameLoadingFinished();
   }
 }

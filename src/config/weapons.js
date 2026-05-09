@@ -100,6 +100,18 @@ export const LEVEL_UP_UPGRADES = [
     value: 1
   },
   {
+    id: "ember_core",
+    label: "Ember Core",
+    description: "Fireball can evolve at Lv.5",
+    passiveKey: "ember_core"
+  },
+  {
+    id: "blade_sigil",
+    label: "Blade Sigil",
+    description: "Dagger can evolve at Lv.5",
+    passiveKey: "blade_sigil"
+  },
+  {
     id: "movement_speed",
     label: "Movement Speed",
     description: "Move speed +20",

@@ -4,6 +4,7 @@ import { DirectorSystem, DIRECTOR_STATE } from "../systems/DirectorSystem.js";
 import { WeaponSystem } from "../systems/WeaponSystem.js";
 import { MetaProgressionSystem } from "../systems/MetaProgressionSystem.js";
 import { ObjectPool } from "../systems/ObjectPool.js";
+import { PokiAdapter } from "../platform/PokiAdapter.js";
 import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS, HUNTER_UNLOCK_TIME_SEC } from "../config/enemies.js";
 import { LEVEL_UP_UPGRADES } from "../config/weapons.js";
 import { DIRECTOR_BOSS_SPAWN } from "../config/director.js";
@@ -118,6 +119,40 @@ const PARTICLE_TEXTURE_KEY = "hit_particle";
 const PARTICLE_FALLBACK_TEXTURE_KEY = "__WHITE";
 const PARTICLE_GENERATED_FALLBACK_TEXTURE_KEY = "particle_fallback";
 const BOSS_WARNING_LEAD_MS = 5000;
+const OPENING_RAID_SCRIPT = Object.freeze([
+  Object.freeze({
+    delayMs: 350,
+    alert: "MOVE. COLLECT XP. SURVIVE.",
+    durationMs: 1800
+  }),
+  Object.freeze({
+    delayMs: 900,
+    banner: "BOARDERS AHEAD",
+    lane: SPAWN_LANES.BOW,
+    count: 3,
+    enemyType: "chaser"
+  }),
+  Object.freeze({
+    delayMs: 6500,
+    banner: "STARBOARD PUSH",
+    lane: SPAWN_LANES.STARBOARD,
+    count: 3,
+    enemyType: "chaser"
+  }),
+  Object.freeze({
+    delayMs: 13500,
+    banner: "PORT SIDE RAID",
+    lane: SPAWN_LANES.PORT,
+    count: 4,
+    enemyType: "chaser"
+  })
+]);
+const OPENING_RAID_EDGE_LABELS = Object.freeze({
+  [SPAWN_LANES.BOW]: "BOW",
+  [SPAWN_LANES.STERN]: "STERN",
+  [SPAWN_LANES.PORT]: "PORT",
+  [SPAWN_LANES.STARBOARD]: "STARBOARD"
+});
 const META_COINS_STORAGE_KEY = "dashsurvivor_coins";
 const META_STORAGE_KEY = "dashsurvivor_meta_v1";
 const BEST_TIME_STORAGE_KEY = "dashsurvivor_best_time_ms";
@@ -378,6 +413,7 @@ const START_WEAPON_OPTIONS = [
     id: "dash_blade",
     label: "Dash Blade",
     weaponType: "dagger",
+    summary: "Fast close-range cuts. Evolves with Blade Sigil.",
     unlockCost: 0,
     defaultUnlocked: true
   },
@@ -385,6 +421,7 @@ const START_WEAPON_OPTIONS = [
     id: "pulse_dash",
     label: "Pulse Dash",
     weaponType: "fireball",
+    summary: "Explosive shots. Evolves with Ember Core.",
     unlockCost: 90,
     defaultUnlocked: false
   },
@@ -392,6 +429,7 @@ const START_WEAPON_OPTIONS = [
     id: "orbit_blade",
     label: "Orbit Blade",
     weaponType: "orbit_blades",
+    summary: "Defensive blades circle the crew.",
     unlockCost: 180,
     defaultUnlocked: false
   },
@@ -399,6 +437,7 @@ const START_WEAPON_OPTIONS = [
     id: "shockwave",
     label: "Shockwave",
     weaponType: "lightning",
+    summary: "Lightning chains through packed enemies.",
     unlockCost: 140,
     defaultUnlocked: false
   }
@@ -759,6 +798,8 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionActions = [];
     this.weaponUnlocks = {};
     this.selectedStartWeaponId = null;
+    this.openingRaidStarted = false;
+    this.openingRaidHandles = [];
     this.bossProjectiles = null;
     this.performanceDamageEvents = [];
     this.performanceKillEvents = [];
@@ -814,6 +855,8 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionActions = [];
     this.weaponUnlocks = this.loadWeaponUnlocks();
     this.selectedStartWeaponId = null;
+    this.clearOpeningRaidSchedule();
+    this.openingRaidStarted = false;
     this.debugOverlayEnabled = false;
     this.cameraFollowEnabled = true;
     this.spawnPacingPresetKey = this.loadSpawnPacingPresetKey();
@@ -1247,13 +1290,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (Phaser.Input.Keyboard.JustDown(this.keys.dash) || this.consumeTouchDash()) {
-      this.player.tryDash();
+      const didDash = this.player.tryDash();
+      if (didDash) {
+        this.showDashImpulse();
+      }
     }
 
     this.player.updateDash(delta);
     this.updateBossProjectiles(time);
     this.emitDashTrail(delta);
     this.player.moveFromInput(this.keys, this.getTouchMoveInput());
+    this.player.updateMotionVisual(time);
     this.updatePlayerReadabilityAura();
     this.pullXpOrbsToPlayer();
     this.weaponSystem.update(time, delta);
@@ -2142,8 +2189,85 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.initializeSeaWaves();
+    this.drawDeckGameplayLandmarks(deckLeft, deckTop, deckRight, deckBottom);
     this.drawDeckRails();
     this.drawDeckDecor(deckLeft, deckTop, deckRight, deckBottom);
+  }
+
+  drawDeckGameplayLandmarks(deckLeft, deckTop, deckRight, deckBottom) {
+    const graphics = this.add.graphics();
+    graphics.setDepth(0.35);
+
+    const centerX = WORLD_WIDTH * 0.5;
+    const centerY = WORLD_HEIGHT * 0.5;
+    const deckWidth = deckRight - deckLeft;
+    const deckHeight = deckBottom - deckTop;
+
+    graphics.fillStyle(0x2f2118, 0.16);
+    graphics.fillRect(centerX - 20, deckTop + 118, 40, deckHeight - 236);
+    graphics.fillStyle(0xd8b57d, 0.12);
+    graphics.fillRect(centerX - 3, deckTop + 142, 6, deckHeight - 284);
+    graphics.lineStyle(2, 0xf2c882, 0.16);
+    graphics.strokeCircle(centerX, centerY, SAFE_RADIUS * 0.48);
+    graphics.lineStyle(1, 0xf2c882, 0.11);
+    graphics.strokeCircle(centerX, centerY, SAFE_RADIUS * 0.68);
+    graphics.lineBetween(centerX - 72, centerY, centerX + 72, centerY);
+    graphics.lineBetween(centerX, centerY - 72, centerX, centerY + 72);
+
+    const chevronColor = 0xffc36f;
+    const drawChevron = (x, y, rotation = 0, alpha = 0.22) => {
+      const points = [
+        new Phaser.Geom.Point(-18, -11),
+        new Phaser.Geom.Point(18, 0),
+        new Phaser.Geom.Point(-18, 11)
+      ].map((point) => {
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        return new Phaser.Geom.Point(x + point.x * cos - point.y * sin, y + point.x * sin + point.y * cos);
+      });
+      graphics.fillStyle(chevronColor, alpha);
+      graphics.fillPoints(points, true);
+    };
+
+    for (let x = deckLeft + 260; x <= deckRight - 260; x += 260) {
+      drawChevron(x, deckTop + 54, Math.PI * 0.5, 0.18);
+      drawChevron(x, deckBottom - 54, -Math.PI * 0.5, 0.18);
+    }
+    for (let y = deckTop + 220; y <= deckBottom - 220; y += 220) {
+      drawChevron(deckLeft + 54, y, 0, 0.18);
+      drawChevron(deckRight - 54, y, Math.PI, 0.18);
+    }
+
+    const ladderPads = [
+      ...LADDER_SPAWN_POINTS[SPAWN_LANES.PORT].map((point) => ({ ...point, side: -1 })),
+      ...LADDER_SPAWN_POINTS[SPAWN_LANES.STARBOARD].map((point) => ({ ...point, side: 1 }))
+    ];
+    ladderPads.forEach((point) => {
+      const padX = point.side < 0 ? deckLeft + 34 : deckRight - 34;
+      graphics.fillStyle(0x26374d, 0.24);
+      graphics.fillRoundedRect(padX - 18, point.y - 42, 36, 84, 6);
+      graphics.lineStyle(2, 0x90c7ff, 0.18);
+      graphics.strokeRoundedRect(padX - 18, point.y - 42, 36, 84, 6);
+      graphics.lineStyle(3, 0x141f2d, 0.28);
+      graphics.lineBetween(padX - 8, point.y - 30, padX - 8, point.y + 30);
+      graphics.lineBetween(padX + 8, point.y - 30, padX + 8, point.y + 30);
+    });
+
+    graphics.lineStyle(3, 0xff8f70, 0.22);
+    graphics.strokeRoundedRect(HATCH_BREACH_POINT.x - 84, HATCH_BREACH_POINT.y - 48, 168, 96, 10);
+    graphics.lineStyle(1, 0xffd6a0, 0.18);
+    graphics.strokeCircle(HATCH_BREACH_POINT.x, HATCH_BREACH_POINT.y, 76);
+
+    graphics.lineStyle(2, 0x1e120b, 0.18);
+    for (let i = 0; i < 9; i += 1) {
+      const crackX = deckLeft + 220 + ((i * 257) % Math.max(1, deckWidth - 440));
+      const crackY = deckTop + 180 + ((i * 173) % Math.max(1, deckHeight - 360));
+      graphics.beginPath();
+      graphics.moveTo(crackX, crackY);
+      graphics.lineTo(crackX + 18, crackY + (i % 2 === 0 ? 9 : -7));
+      graphics.lineTo(crackX + 34, crackY + (i % 3 === 0 ? 0 : 14));
+      graphics.strokePath();
+    }
   }
 
   drawDeckDecor(deckLeft, deckTop, deckRight, deckBottom) {
@@ -2348,6 +2472,8 @@ export class GameScene extends Phaser.Scene {
 
   registerSceneShutdownCleanup() {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      PokiAdapter.gameplayStop();
+      this.clearOpeningRaidSchedule();
       this.cleanupTransientUiPools();
       this.teardownTouchControls();
       this.teardownDomHudOverlay();
@@ -3339,6 +3465,111 @@ export class GameScene extends Phaser.Scene {
     return this.director.getEnemySpeedMultiplier();
   }
 
+  startOpeningRaid() {
+    if (this.openingRaidStarted || !this.time) {
+      return;
+    }
+
+    this.openingRaidStarted = true;
+    this.clearOpeningRaidSchedule();
+    OPENING_RAID_SCRIPT.forEach((step) => {
+      const handle = this.time.delayedCall(Math.max(0, step.delayMs), () => {
+        this.runOpeningRaidStep(step);
+      });
+      this.openingRaidHandles.push(handle);
+    });
+  }
+
+  clearOpeningRaidSchedule() {
+    if (!Array.isArray(this.openingRaidHandles)) {
+      this.openingRaidHandles = [];
+      return;
+    }
+
+    this.openingRaidHandles.forEach((handle) => handle?.remove?.(false));
+    this.openingRaidHandles = [];
+  }
+
+  runOpeningRaidStep(step) {
+    if (this.isGameOver || this.isLeveling || this.isWeaponSelecting) {
+      return;
+    }
+
+    if (step.alert) {
+      this.showHudAlert(step.alert, step.durationMs ?? 1400);
+    }
+    if (step.banner) {
+      this.playSfx("boss_warning");
+      this.showWarningBanner(step.banner, {
+        tone: "approach",
+        durationMs: step.durationMs ?? 1350
+      });
+    }
+    if (step.lane) {
+      this.showOpeningRaidEdgePulse(step.lane);
+    }
+
+    const spawnCount = Math.max(0, Math.floor(Number(step.count) || 0));
+    for (let i = 0; i < spawnCount; i += 1) {
+      this.spawnEnemyFromEdge(step.lane, step.enemyType);
+    }
+  }
+
+  showOpeningRaidEdgePulse(lane) {
+    if (!this.add || !this.tweens) {
+      return;
+    }
+
+    const width = this.scale?.width ?? 1280;
+    const height = this.scale?.height ?? 720;
+    const isHorizontal = lane === SPAWN_LANES.BOW || lane === SPAWN_LANES.STERN;
+    const bandWidth = isHorizontal ? width : 84;
+    const bandHeight = isHorizontal ? 84 : height;
+    const x = lane === SPAWN_LANES.PORT ? 42 : lane === SPAWN_LANES.STARBOARD ? width - 42 : width * 0.5;
+    const y = lane === SPAWN_LANES.BOW ? 42 : lane === SPAWN_LANES.STERN ? height - 42 : height * 0.5;
+    const labelText = `${OPENING_RAID_EDGE_LABELS[lane] ?? "RAID"} INBOUND`;
+
+    const band = this.add.rectangle(0, 0, bandWidth, bandHeight, 0xffb36b, 0.18);
+    const line = this.add.rectangle(0, 0, isHorizontal ? bandWidth : 5, isHorizontal ? 5 : bandHeight, 0xffd6a0, 0.85);
+    const label = this.add
+      .text(0, 0, labelText, {
+        fontFamily: "Arial",
+        fontSize: "20px",
+        color: "#ffe8c4",
+        stroke: "#281206",
+        strokeThickness: 4
+      })
+      .setOrigin(0.5);
+
+    if (lane === SPAWN_LANES.PORT) {
+      label.setRotation(-Math.PI * 0.5);
+      line.setX(bandWidth * 0.5 - 3);
+    } else if (lane === SPAWN_LANES.STARBOARD) {
+      label.setRotation(Math.PI * 0.5);
+      line.setX(-bandWidth * 0.5 + 3);
+    } else if (lane === SPAWN_LANES.BOW) {
+      line.setY(bandHeight * 0.5 - 3);
+    } else {
+      line.setY(-bandHeight * 0.5 + 3);
+    }
+
+    const pulse = this.add
+      .container(x, y, [band, line, label])
+      .setScrollFactor(0)
+      .setDepth(RENDER_DEPTH.HUD + 7)
+      .setAlpha(0);
+
+    this.tweens.add({
+      targets: pulse,
+      alpha: { from: 0, to: 1 },
+      duration: 120,
+      yoyo: true,
+      hold: 620,
+      ease: "Quad.easeOut",
+      onComplete: () => pulse.destroy()
+    });
+  }
+
   maintainEnemyDensity() {
     if (this.isGameOver || this.isLeveling || this.isWeaponSelecting) {
       return;
@@ -3365,7 +3596,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnEnemyFromEdge(preferredLane = null) {
+  spawnEnemyFromEdge(preferredLane = null, forcedType = null) {
     if (this.isGameOver || this.isLeveling || this.isWeaponSelecting) {
       return;
     }
@@ -3373,7 +3604,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const type = this.pickEnemyArchetype();
+    const type = forcedType && ENEMY_ARCHETYPE_CONFIGS[forcedType] ? forcedType : this.pickEnemyArchetype();
     const hpMultiplier = this.director.getEnemyHpMultiplier();
     const baseHp = ENEMY_ARCHETYPE_CONFIGS[type]?.hp ?? ENEMY_ARCHETYPE_CONFIGS.chaser.hp;
     const scaledHp = Math.max(1, Math.round(baseHp * hpMultiplier));
@@ -3813,6 +4044,21 @@ export class GameScene extends Phaser.Scene {
       this.releaseHudAlertText(text);
     });
     text.setData("alertHideEvent", hideEvent);
+  }
+
+  showDashImpulse() {
+    this.cameras?.main?.shake?.(60, 0.0012);
+    if (!this.player?.active || !this.tweens) {
+      return;
+    }
+
+    this.tweens.add({
+      targets: this.player,
+      alpha: 0.72,
+      duration: 45,
+      yoyo: true,
+      ease: "Quad.easeOut"
+    });
   }
 
   updateBossApproachWarning() {
@@ -4985,6 +5231,7 @@ export class GameScene extends Phaser.Scene {
 
     this.pendingLevelUps -= 1;
     this.isLeveling = true;
+    PokiAdapter.gameplayStop();
     this.levelUpOptionActions = [];
     this.physics.pause();
     this.director?.pause?.();
@@ -4995,8 +5242,8 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const centerX = cam.width * 0.5;
     const centerY = cam.height * 0.5;
-    const panelWidth = 320;
-    const panelHeight = 180;
+    const panelWidth = 430;
+    const panelHeight = 238;
     const overlay = this.add
       .rectangle(centerX, centerY, cam.width, cam.height, 0x000000, 0.6)
       .setScrollFactor(0)
@@ -5023,25 +5270,39 @@ export class GameScene extends Phaser.Scene {
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 3);
 
-    const choices = Phaser.Utils.Array.Shuffle([...LEVEL_UP_UPGRADES]).slice(0, 3);
+    const availableUpgrades = LEVEL_UP_UPGRADES.filter((upgrade) => {
+      return !upgrade.passiveKey || !this.player.hasPassive(upgrade.passiveKey);
+    });
+    const choices = Phaser.Utils.Array.Shuffle(availableUpgrades).slice(0, 3);
     const optionObjects = [];
 
     choices.forEach((upgrade, index) => {
-      const y = centerY - 18 + index * 42;
+      const y = centerY - 38 + index * 58;
       const box = this.add
-        .rectangle(centerX, y, 280, 34, 0x4a2f1d, 0.98)
+        .rectangle(centerX, y, 380, 48, 0x4a2f1d, 0.98)
         .setStrokeStyle(1, 0xb48855, 0.92)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(RENDER_DEPTH.MENUS + 3);
 
       const label = this.add
-        .text(centerX, y, `[${index + 1}] ${upgrade.label}`, {
+        .text(centerX, y - 9, `[${index + 1}] ${upgrade.label}`, {
           fontFamily: "Arial",
           fontSize: "16px",
           color: "#f7e8cc",
           stroke: "#2a170f",
           strokeThickness: 3
+        })
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setDepth(RENDER_DEPTH.MENUS + 3);
+      const detail = this.add
+        .text(centerX, y + 12, upgrade.description ?? "", {
+          fontFamily: "Arial",
+          fontSize: "12px",
+          color: "#d8bf95",
+          stroke: "#2a170f",
+          strokeThickness: 2
         })
         .setOrigin(0.5)
         .setScrollFactor(0)
@@ -5053,9 +5314,10 @@ export class GameScene extends Phaser.Scene {
       };
       box.on("pointerdown", chooseUpgrade);
       label.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
+      detail.setInteractive({ useHandCursor: true }).on("pointerdown", chooseUpgrade);
       this.levelUpOptionActions.push(chooseUpgrade);
 
-      optionObjects.push(box, label);
+      optionObjects.push(box, label, detail);
     });
 
     this.levelUpUi = [overlay, panel, panelInset, title, ...optionObjects];
@@ -5079,6 +5341,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.isWeaponSelecting = true;
+    PokiAdapter.gameplayStop();
     this.weaponSelectionActions = [];
     this.physics.pause();
     this.player.body?.setVelocity(0, 0);
@@ -5181,7 +5444,8 @@ export class GameScene extends Phaser.Scene {
           fontSize: "13px",
           color: "#6a4d36",
           stroke: "#f7e8cc",
-          strokeThickness: 1
+          strokeThickness: 1,
+          wordWrap: { width: 510, useAdvancedWrap: true }
         })
         .setOrigin(0, 0.5)
         .setScrollFactor(0)
@@ -5189,11 +5453,12 @@ export class GameScene extends Phaser.Scene {
 
       const refreshOption = () => {
         const unlocked = Boolean(this.weaponUnlocks[option.id]);
+        const summary = option.summary ?? "Tap to select.";
         if (unlocked) {
-          detail.setText(`Unlocked · Tap to select`);
+          detail.setText(`Unlocked · ${summary}`);
           detail.setColor("#56714b");
         } else {
-          detail.setText(`Locked · Unlock Cost ${option.unlockCost} coins`);
+          detail.setText(`Locked ${option.unlockCost} coins · ${summary}`);
           detail.setColor("#8b5d37");
         }
       };
@@ -5267,6 +5532,8 @@ export class GameScene extends Phaser.Scene {
 
     if (!this.isGameOver && !this.isLeveling) {
       this.physics.resume();
+      PokiAdapter.gameplayStart();
+      this.startOpeningRaid();
     }
   }
 
@@ -5281,6 +5548,8 @@ export class GameScene extends Phaser.Scene {
     }
     if (!this.isGameOver && !this.isLeveling) {
       this.physics.resume();
+      PokiAdapter.gameplayStart();
+      this.startOpeningRaid();
     }
   }
 
@@ -5289,6 +5558,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (upgrade.passiveKey) {
+      const acquired = this.player.addPassive(upgrade.passiveKey);
+      if (acquired) {
+        this.weaponSystem.onPassiveAcquired();
+        this.showHudAlert(`${upgrade.label.toUpperCase()} READY`, 1100);
+      }
+      return;
+    }
     if (upgrade.id === "weapon_damage") {
       this.weaponSystem.addGlobalDamagePercent(upgrade.value);
       return;
@@ -5368,6 +5645,11 @@ export class GameScene extends Phaser.Scene {
 
     if (this.pendingLevelUps > 0) {
       this.openLevelUpChoices();
+      return;
+    }
+
+    if (!this.isGameOver && !this.isWeaponSelecting) {
+      PokiAdapter.gameplayStart();
     }
   }
 
@@ -5414,6 +5696,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.isGameOver = true;
+    PokiAdapter.gameplayStop();
     this.physics.pause();
     this.input.enabled = false;
     this.player.body?.setVelocity(0, 0);

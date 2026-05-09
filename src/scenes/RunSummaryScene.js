@@ -1,3 +1,5 @@
+import { PokiAdapter } from "../platform/PokiAdapter.js";
+
 const UI_LAYER_ORDER = Object.freeze({
   GAME_WORLD: 0,
   COMBAT_UI: 40,
@@ -98,7 +100,9 @@ export class RunSummaryScene extends Phaser.Scene {
     const menuY = retryY + primaryButtonHeight * 0.5 + buttonGap + secondaryButtonHeight * 0.5;
     panelContainer.add([titleText, statsBg, statsText]);
 
-    this.createActionButton(centerX, centerY + retryY, "RESTART", () => {
+    this.createActionButton(centerX, centerY + retryY, "RESTART", async () => {
+      await PokiAdapter.commercialBreak(() => this.sound?.pauseAll?.());
+      this.sound?.resumeAll?.();
       this.scene.stop("RunSummaryScene");
       this.scene.stop("GameScene");
       this.scene.start("GameScene");

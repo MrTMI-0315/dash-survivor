@@ -24,6 +24,10 @@ const HIT_VISUAL_PUSH_PX = 4;
 const HIT_SPARK_PARTICLE_COUNT = 4;
 const HIT_KNOCKBACK_STRENGTH = 40;
 const ENEMY_RENDER_DEPTH = 10;
+const ENEMY_STEP_BOB_SPEED = 0.015;
+const ENEMY_STEP_STRETCH = 0.035;
+const ENEMY_LEAN_MAX = 0.045;
+const ENEMY_VISUAL_RECOVER_RATE = 0.22;
 
 function getArchetypeConfig(type) {
   return ENEMY_ARCHETYPE_CONFIGS[type] ?? ENEMY_ARCHETYPE_CONFIGS.chaser;
@@ -105,6 +109,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.nextPoisonTickAtMs = 0;
     this.flashToken = (this.flashToken ?? 0) + 1;
     this.facingDirection = "south";
+    this.visualBaseScaleX = 1;
+    this.visualBaseScaleY = 1;
     this.encircleAngleOffsetRad = Phaser.Math.DegToRad(
       Phaser.Math.Between(ENCIRCLE_ANGLE_MIN_DEG, ENCIRCLE_ANGLE_MAX_DEG)
     );
@@ -112,6 +118,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.baseTint = config.tint ?? archetype.tint;
     this.setTexture(getEnemyTextureKey(this.type, this.scene, this.facingDirection));
     this.setScale(config.scale ?? archetype.scale);
+    this.visualBaseScaleX = this.scaleX;
+    this.visualBaseScaleY = this.scaleY;
+    this.setRotation(0);
     this.setDepth(ENEMY_RENDER_DEPTH);
     this.setCircle(config.radius ?? archetype.radius, 0, 0);
     const spawnX = config.x ?? this.x;
@@ -154,6 +163,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (distance === 0) {
       this.body.setVelocity(this.knockbackVx, this.knockbackVy);
       this.updateFacingFromVelocity(this.knockbackVx, this.knockbackVy);
+      this.updateMotionVisual(this.knockbackVx, this.knockbackVy, nowMs);
       return;
     }
 
@@ -196,6 +206,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const velocityY = this.dashVy + this.knockbackVy;
         this.body.setVelocity(velocityX, velocityY);
         this.updateFacingFromVelocity(velocityX, velocityY);
+        this.updateMotionVisual(velocityX, velocityY, nowMs, 1.3);
         return;
       }
     }
@@ -209,6 +220,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     const velocityY = chaseVy + this.knockbackVy;
     this.body.setVelocity(velocityX, velocityY);
     this.updateFacingFromVelocity(velocityX, velocityY);
+    this.updateMotionVisual(velocityX, velocityY, nowMs);
   }
 
   updateFacingFromVelocity(vx, vy) {
@@ -221,6 +233,31 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (textureKey && this.texture?.key !== textureKey) {
       this.setTexture(textureKey);
     }
+  }
+
+  updateMotionVisual(vx, vy, nowMs = 0, intensityMultiplier = 1) {
+    if (this.type === "boss") {
+      return;
+    }
+
+    const baseScaleX = this.visualBaseScaleX || this.scaleX || 1;
+    const baseScaleY = this.visualBaseScaleY || this.scaleY || 1;
+    const speed = Math.hypot(vx, vy);
+    if (speed < 3) {
+      this.setScale(
+        Phaser.Math.Linear(this.scaleX, baseScaleX, ENEMY_VISUAL_RECOVER_RATE),
+        Phaser.Math.Linear(this.scaleY, baseScaleY, ENEMY_VISUAL_RECOVER_RATE)
+      );
+      this.setRotation(Phaser.Math.Linear(this.rotation, 0, ENEMY_VISUAL_RECOVER_RATE));
+      return;
+    }
+
+    const speedRatio = Phaser.Math.Clamp(speed / Math.max(1, this.baseSpeed * 1.8), 0, 1) * intensityMultiplier;
+    const phase = nowMs * ENEMY_STEP_BOB_SPEED + this.x * 0.02 + this.y * 0.013;
+    const bob = Math.sin(phase) * Phaser.Math.Clamp(speedRatio, 0, 1.2);
+    const lean = Phaser.Math.Clamp(vx / Math.max(1, speed), -1, 1) * ENEMY_LEAN_MAX * Phaser.Math.Clamp(speedRatio, 0, 1.2);
+    this.setScale(baseScaleX * (1 + Math.abs(bob) * ENEMY_STEP_STRETCH), baseScaleY * (1 - bob * ENEMY_STEP_STRETCH * 0.6));
+    this.setRotation(Phaser.Math.Linear(this.rotation, lean, 0.28));
   }
 
   takeDamage(amount) {
@@ -269,7 +306,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     if (this.scene?.time?.delayedCall) {
       this.scene.time.delayedCall(HIT_FLASH_DURATION_MS, () => {
         if (this.active && this.flashToken === flashToken) {
-          this.clearTint();
+          this.setTint(this.baseTint);
         }
       });
     }
@@ -328,6 +365,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.xpValue = Math.round(this.xpValue * 2.2);
 
     this.setScale(this.scaleX * ENEMY_VISUAL_SCALE.eliteMultiplier, this.scaleY * ENEMY_VISUAL_SCALE.eliteMultiplier);
+    this.visualBaseScaleX = this.scaleX;
+    this.visualBaseScaleY = this.scaleY;
     this.baseTint = eliteConfig.tint;
     this.setTint(this.baseTint);
   }

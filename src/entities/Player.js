@@ -39,6 +39,12 @@ function getPlayerTextureKey(scene, direction = "south") {
 const PLAYER_RENDER_DEPTH = 20;
 const PLAYER_PIRATE_SCALE = 1.78;
 const PLAYER_CREW_SCALE = 2.24;
+const PLAYER_WALK_BOB_SPEED = 0.018;
+const PLAYER_WALK_STRETCH = 0.025;
+const PLAYER_IDLE_RECOVER_RATE = 0.18;
+const PLAYER_MOVE_LEAN_MAX = 0.055;
+const PLAYER_DASH_STRETCH_X = 1.12;
+const PLAYER_DASH_STRETCH_Y = 0.88;
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y) {
@@ -56,6 +62,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.lastHurtAt = -Infinity;
     this.lastMoveDir = new Phaser.Math.Vector2(1, 0);
     this.facingDirection = "south";
+    this.visualBaseScale = PLAYER_PIRATE_SCALE;
 
     this.dashGaugeMax = 100;
     this.dashGauge = 0;
@@ -78,8 +85,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setDepth(PLAYER_RENDER_DEPTH);
     if (this.texture?.key?.startsWith("char_player_pirate_")) {
       this.setScale(PLAYER_PIRATE_SCALE);
+      this.visualBaseScale = PLAYER_PIRATE_SCALE;
     } else if (this.texture?.key === "sprite_player_crew") {
       this.setScale(PLAYER_CREW_SCALE);
+      this.visualBaseScale = PLAYER_CREW_SCALE;
     }
   }
 
@@ -133,6 +142,39 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.lastMoveDir.copy(direction);
     this.updateFacingFromVector(direction.x, direction.y);
     this.body.setVelocity(direction.x * this.speed * magnitude, direction.y * this.speed * magnitude);
+  }
+
+  updateMotionVisual(time = 0) {
+    if (!this.body) {
+      return;
+    }
+
+    const velocityX = this.body.velocity.x;
+    const velocityY = this.body.velocity.y;
+    const speed = Math.hypot(velocityX, velocityY);
+    const baseScale = this.visualBaseScale || this.scaleX || PLAYER_PIRATE_SCALE;
+
+    if (this.isDashing()) {
+      const dashLean = Phaser.Math.Clamp(velocityX / Math.max(1, this.speed * this.dashSpeedMultiplier), -1, 1);
+      this.setScale(baseScale * PLAYER_DASH_STRETCH_X, baseScale * PLAYER_DASH_STRETCH_Y);
+      this.setRotation(dashLean * PLAYER_MOVE_LEAN_MAX * 1.4);
+      return;
+    }
+
+    if (speed < 3) {
+      this.setScale(
+        Phaser.Math.Linear(this.scaleX, baseScale, PLAYER_IDLE_RECOVER_RATE),
+        Phaser.Math.Linear(this.scaleY, baseScale, PLAYER_IDLE_RECOVER_RATE)
+      );
+      this.setRotation(Phaser.Math.Linear(this.rotation, 0, PLAYER_IDLE_RECOVER_RATE));
+      return;
+    }
+
+    const speedRatio = Phaser.Math.Clamp(speed / Math.max(1, this.speed), 0, 1);
+    const bob = Math.sin(time * PLAYER_WALK_BOB_SPEED) * speedRatio;
+    const lean = Phaser.Math.Clamp(velocityX / Math.max(1, speed), -1, 1) * PLAYER_MOVE_LEAN_MAX * speedRatio;
+    this.setScale(baseScale * (1 + PLAYER_WALK_STRETCH * Math.abs(bob)), baseScale * (1 - PLAYER_WALK_STRETCH * bob * 0.7));
+    this.setRotation(Phaser.Math.Linear(this.rotation, lean, 0.32));
   }
 
   updateDash(delta) {

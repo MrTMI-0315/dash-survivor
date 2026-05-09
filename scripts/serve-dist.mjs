@@ -4,7 +4,7 @@ import http from "node:http";
 import path from "node:path";
 
 const DIST_DIR = path.resolve(process.cwd(), "dist");
-const HOST = process.env.HOST ?? "127.0.0.1";
+const HOST = process.env.HOST ?? "localhost";
 const PORT = Number(process.env.PORT ?? 4173);
 
 const MIME_TYPES = new Map([
