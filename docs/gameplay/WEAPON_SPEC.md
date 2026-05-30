@@ -17,7 +17,7 @@
 | Projectile lifecycle | Implemented | Projectile pooling acquire/release + max distance cleanup | `spawnProjectile()`, `updateProjectiles()`, `releaseProjectile()` |
 | Damage application | Implemented | Enemy-only damage + knockback + death hook | `applyDamage()` |
 | Multi-weapon concurrency | Implemented | Independent weapon states in `player.weapons[]` | `WeaponSystem.update()` |
-| Evolution rules | Partial | Rules exist and runtime supports evolve | `WEAPON_EVOLUTION_RULES`, `checkEvolution()` |
+| Evolution rules | Partial | Rules exist, passive cards are exposed, and runtime supports evolve once requirements are met | `WEAPON_EVOLUTION_RULES`, `LEVEL_UP_UPGRADES`, `checkEvolution()` |
 
 ### Weapon Slots / Loadout
 | Item | Current Value | Notes |
@@ -52,7 +52,8 @@
 - Evolution (partial in live loop):
   - `fireball -> meteor` requires `level >= 5` + passive `ember_core`
   - `dagger -> orbit_blades` requires `level >= 5` + passive `blade_sigil`
-  - passives acquisition path is not exposed in current level-up upgrade list, so evolution trigger path is currently constrained.
+  - `ember_core` and `blade_sigil` are exposed as passive level-up cards in `LEVEL_UP_UPGRADES`.
+  - Remaining gap: no focused e2e or test-assisted run yet proves both evolutions trigger during a normal first-session path.
 
 ## Implementation Targets
 - Weapon state fields required per weapon instance:
@@ -69,7 +70,8 @@
 - [x] Cooldowns and targeting are weapon-local.
 - [x] Lightning chain and explosion behaviors are functional.
 - [x] Global upgrade multipliers apply immediately.
-- [ ] Expose passive acquisition flow for evolution requirements.
+- [x] Expose passive acquisition flow for evolution requirements.
+- [ ] Add test-assisted coverage proving `fireball -> meteor` and `dagger -> orbit_blades` can trigger.
 
 ## Validation Checklist
 - [ ] `dagger/fireball` auto-fire starts immediately at run start.
@@ -94,6 +96,6 @@
   - Check passive flags on `player.passives` and `checkEvolution()` preconditions.
 
 ## Next Iteration Hooks
-- Add passive upgrade cards that grant `ember_core` / `blade_sigil`.
+- Add test-assisted evolution coverage for `ember_core` / `blade_sigil` paths.
 - Add new base weapon types (ship theme) without changing `WeaponSystem` core contract.
 - Add weapon rarity tiers in config if balancing pass requires drop-weighted upgrades.
