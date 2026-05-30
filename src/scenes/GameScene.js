@@ -1,6 +1,7 @@
 import { Player } from "../entities/Player.js";
 import { BossEnemy } from "../entities/BossEnemy.js";
 import { DirectorSystem, DIRECTOR_STATE } from "../systems/DirectorSystem.js";
+import { RunController } from "../systems/RunController.js";
 import { WeaponSystem } from "../systems/WeaponSystem.js";
 import { MetaProgressionSystem } from "../systems/MetaProgressionSystem.js";
 import { ObjectPool } from "../systems/ObjectPool.js";
@@ -963,6 +964,7 @@ export class GameScene extends Phaser.Scene {
     this.shipDeckPolygon = null;
     this.shipDeckMaskGraphics = null;
     this.devAntiJamEnabled = false;
+    this.runController = null;
   }
 
   create() {
@@ -997,6 +999,7 @@ export class GameScene extends Phaser.Scene {
     this.lastRunMetaCurrency = 0;
     this.metaSettled = false;
     this.director = new DirectorSystem();
+    this.runController = new RunController(this, { comboResetWindowMs: COMBO_RESET_WINDOW_MS });
     this.dashTrailTickMs = 0;
     this.sfxLastPlayedAt = {};
     this.clearEvolutionSlowMoTimer();
@@ -1371,137 +1374,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    const isRunSummaryOpen = this.scene.isActive("RunSummaryScene");
-    if (isRunSummaryOpen) {
-      this.setDomHudVisible(false);
-      if (this.input?.enabled) {
-        this.input.enabled = false;
-      }
-      return;
+    if (!this.runController) {
+      this.runController = new RunController(this, { comboResetWindowMs: COMBO_RESET_WINDOW_MS });
     }
-    this.setDomHudVisible(true);
-    if (this.input && !this.input.enabled) {
-      this.input.enabled = true;
-    }
-
-    this.updateHelpOverlayPresentation();
-    this.updateSeaWaves(time);
-    this.handlePlaytestHotkeys();
-    this.updateEdgeFogOverlay();
-
-    if (this.isGameOver) {
-      this.updateBossProjectiles(time);
-      this.updateEnemyHealthBars();
-      this.updateLowHealthVignette();
-      this.updateDashCooldownRing();
-      this.updateOffscreenEnemyIndicators();
-      this.updateDebugDirectorOverlay();
-      this.handleGameOverInput();
-      return;
-    }
-
-    if (this.isLeveling) {
-      this.handleLevelUpInput();
-      this.updateBossProjectiles(time);
-      this.player.body?.setVelocity(0, 0);
-      this.updateEnemyHealthBars();
-      this.updateLowHealthVignette();
-      this.updateDashCooldownRing();
-      this.updateOffscreenEnemyIndicators();
-      this.updateDebugDirectorOverlay();
-      this.updateHUD();
-      return;
-    }
-
-    if (this.isWeaponSelecting) {
-      const hasSelectionUi = Array.isArray(this.weaponSelectionUi) && this.weaponSelectionUi.some((obj) => obj?.active !== false);
-      if (!hasSelectionUi) {
-        this.forceCloseWeaponSelectionWithFallback();
-      }
-      if (!this.isWeaponSelecting) {
-        // Fallback may have resumed gameplay in this frame.
-      } else {
-      this.handleWeaponSelectionInput();
-      this.updateBossProjectiles(time);
-      this.player.body?.setVelocity(0, 0);
-      this.updateEnemyHealthBars();
-      this.updateLowHealthVignette();
-      this.updateDashCooldownRing();
-      this.updateOffscreenEnemyIndicators();
-      this.updateDebugDirectorOverlay();
-      this.updateHUD();
-      return;
-      }
-    }
-
-    const stateChanged = this.director.update(delta);
-    if (stateChanged && this.director.getState() === DIRECTOR_STATE.PEAK) {
-      this.cameras.main.shake(180, 0.0028);
-    }
-
-    this.runTimeMs += delta;
-    this.playTime += delta;
-    if ((this.time?.now ?? 0) - this.lastKillAtMs > COMBO_RESET_WINDOW_MS) {
-      this.killCombo = 0;
-    }
-    this.updateBossApproachWarning();
-    this.spawnAccumulatorMs += delta;
-    this.processDirectorBossSpawns();
-    this.processDirectorMiniBossSpawns();
-    this.processDirectorSpawnBursts();
-    this.processDirectorLadderSpawns();
-    this.processDirectorHatchBreaches();
-
-    const spawnRateMultiplier = this.getEffectiveSpawnRateMultiplier();
-    const effectiveSpawnIntervalMs = this.baseSpawnCheckIntervalMs / Math.max(0.2, spawnRateMultiplier);
-    while (this.spawnAccumulatorMs >= effectiveSpawnIntervalMs) {
-      this.spawnAccumulatorMs -= effectiveSpawnIntervalMs;
-      this.maintainEnemyDensity();
-    }
-
-    if (Phaser.Input.Keyboard.JustDown(this.keys.dash) || this.consumeKeyboardDash() || this.consumeTouchDash()) {
-      this.tryPerformPlayerDash();
-    }
-
-    this.player.updateDash(delta);
-    this.updateBossProjectiles(time);
-    this.emitDashTrail(delta);
-    this.player.moveFromInput(this.keys, this.getTouchMoveInput());
-    this.constrainActorToShipDeck(this.player, 18);
-    this.player.updateMotionVisual(time);
-    this.updatePlayerReadabilityAura();
-    this.pullXpOrbsToPlayer();
-    this.weaponSystem.update(time, delta);
-    this.performAutoAttack(time);
-
-    const speedMultiplier = this.getEffectiveEnemySpeedMultiplier();
-    const damageMultiplier = this.director.getEnemyDamageMultiplier();
-    this.enemies.getChildren().forEach((enemy) => {
-      if (!enemy.active) {
-        return;
-      }
-      enemy.speed = enemy.baseSpeed * speedMultiplier;
-      enemy.damage = Math.max(1, Math.round(enemy.baseDamage * damageMultiplier));
-      enemy.chase(this.player, delta, time);
-      enemy.tryApplyPoisonAura(this.player, time);
-      if (enemy.updateBossPattern) {
-        enemy.updateBossPattern(this.player, time);
-      }
-      this.applyEnemyAntiJam(enemy, time);
-      this.constrainActorToShipDeck(enemy, enemy.getData("isBoss") ? 42 : 18);
-    });
-
-    if (this.player.isDead()) {
-      this.triggerGameOver();
-      return;
-    }
-
-    this.updateEnemyHealthBars();
-    this.updateLowHealthVignette();
-    this.updateDashCooldownRing();
-    this.updateOffscreenEnemyIndicators();
-    this.updateDebugDirectorOverlay();
-    this.updateHUD();
+    this.runController.update(time, delta);
   }
 
   createTextures() {
