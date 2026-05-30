@@ -17,16 +17,16 @@ export class RunSummaryScene extends Phaser.Scene {
     const camera = this.cameras.main;
     const centerX = camera.width * 0.5;
     const centerY = camera.height * 0.5;
-    const cardWidth = 440;
-    const cardHeight = 460;
-    const panelPadding = 32;
-    const titleMarginBottom = 24;
-    const statLineSpacing = 14;
-    const buttonGap = 18;
-    const primaryButtonWidth = 260;
-    const primaryButtonHeight = 56;
-    const secondaryButtonWidth = 220;
-    const secondaryButtonHeight = 48;
+    const cardWidth = 420;
+    const cardHeight = 420;
+    const panelPadding = 28;
+    const titleMarginBottom = 18;
+    const statLineSpacing = 10;
+    const buttonGap = 14;
+    const primaryButtonWidth = 238;
+    const primaryButtonHeight = 48;
+    const secondaryButtonWidth = 210;
+    const secondaryButtonHeight = 42;
 
     const stats = {
       timeSurvivedMs: data.timeSurvivedMs ?? 0,
@@ -62,7 +62,7 @@ export class RunSummaryScene extends Phaser.Scene {
     const titleText = this.add
       .text(0, panelTop + panelPadding, "RUN SUMMARY", {
         fontFamily: "Arial",
-        fontSize: "34px",
+        fontSize: "30px",
         color: "#ffffff",
         stroke: "#0b1220",
         strokeThickness: 5
@@ -80,14 +80,14 @@ export class RunSummaryScene extends Phaser.Scene {
 
     const titleBottomY = titleText.y + titleText.height;
     const statsTopY = titleBottomY + titleMarginBottom;
-    const statsContainerHeight = 192;
+    const statsContainerHeight = 164;
     const statsCenterY = statsTopY + statsContainerHeight * 0.5;
     const statsBg = this.add.rectangle(0, statsCenterY, 336, statsContainerHeight, 0x152947, 0.92);
     statsBg.setStrokeStyle(2, 0x7bc3ff, 1);
     const statsText = this.add
       .text(0, statsCenterY, lines.join("\n"), {
         fontFamily: "Arial",
-        fontSize: "21px",
+        fontSize: "18px",
         color: "#f3f7ff",
         align: "center",
         lineSpacing: statLineSpacing
@@ -145,7 +145,7 @@ export class RunSummaryScene extends Phaser.Scene {
     const text = this.add
       .text(x, y, label, {
         fontFamily: "Arial",
-        fontSize: variant === "primary" ? "26px" : "22px",
+        fontSize: variant === "primary" ? "22px" : "19px",
         color: "#ffffff",
         stroke: "#0e1a2a",
         strokeThickness: 5

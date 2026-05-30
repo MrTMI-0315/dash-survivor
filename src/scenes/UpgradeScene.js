@@ -55,21 +55,47 @@ export class UpgradeScene extends Phaser.Scene {
   create() {
     const camera = this.cameras.main;
     const centerX = camera.width * 0.5;
+    const centerY = camera.height * 0.5;
+    const margin = Phaser.Math.Clamp(camera.width * 0.045, 34, 58);
+    const panelWidth = Math.min(1040, camera.width - margin * 2);
+    const panelHeight = Math.min(610, camera.height - 54);
+    const panelTop = centerY - panelHeight * 0.5;
+    const contentWidth = Math.min(900, panelWidth - 84);
+    const contentLeft = centerX - contentWidth * 0.5;
+    const headerY = panelTop + 142;
+    const rowTop = headerY + 58;
+    const rowGap = Math.max(72, (panelHeight - 320) / UPGRADE_DEFINITIONS.length);
+    const statusY = panelTop + panelHeight - 92;
+    const startY = panelTop + panelHeight - 38;
+    const layout = {
+      centerX,
+      contentWidth,
+      contentLeft,
+      rowWidth: contentWidth,
+      rowHeight: 58,
+      rowTop,
+      rowGap,
+      labelX: contentLeft + 28,
+      levelX: contentLeft + contentWidth * 0.38,
+      costX: contentLeft + contentWidth * 0.52,
+      effectX: contentLeft + contentWidth * 0.66,
+      buttonX: contentLeft + contentWidth - 62
+    };
 
     this.coins = this.loadCoins();
     this.upgrades = this.loadUpgrades();
 
-    this.add.rectangle(centerX, camera.height * 0.5, camera.width, camera.height, 0x071120, 1);
+    this.add.rectangle(centerX, centerY, camera.width, camera.height, 0x071120, 1);
     for (let y = 0; y < camera.height; y += 32) {
       const color = Math.floor(y / 32) % 2 === 0 ? 0x0d1a31 : 0x11213d;
       this.add.rectangle(centerX, y + 16, camera.width, 30, color, 1).setOrigin(0.5);
     }
-    this.add.rectangle(centerX, camera.height * 0.5, camera.width - 72, camera.height - 80, 0x0b1830, 0.92).setStrokeStyle(4, 0x5ca7ff, 1);
-    this.add.rectangle(centerX, camera.height * 0.5, camera.width - 86, camera.height - 94, 0, 0).setStrokeStyle(2, 0xb8e0ff, 0.92);
+    this.add.rectangle(centerX, centerY, panelWidth, panelHeight, 0x0b1830, 0.92).setStrokeStyle(4, 0x5ca7ff, 1);
+    this.add.rectangle(centerX, centerY, panelWidth - 14, panelHeight - 14, 0, 0).setStrokeStyle(2, 0xb8e0ff, 0.92);
     this.add
-      .text(centerX, 72, "UPGRADE SHOP", {
+      .text(centerX, panelTop + 46, "UPGRADE SHOP", {
         fontFamily: "Arial",
-        fontSize: "38px",
+        fontSize: "32px",
         color: "#ffffff",
         stroke: "#0b1220",
         strokeThickness: 6
@@ -77,55 +103,65 @@ export class UpgradeScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.coinsText = this.add
-      .text(centerX, 118, "", {
+      .text(centerX, panelTop + 90, "", {
         fontFamily: "Arial",
-        fontSize: "24px",
+        fontSize: "22px",
         color: "#ffe08a",
         stroke: "#2a1a06",
         strokeThickness: 4
       })
       .setOrigin(0.5);
 
-    const headerY = 176;
-    this.add.rectangle(centerX, headerY + 6, 930, 44, 0x152947, 0.95).setStrokeStyle(2, 0x7bc3ff, 1);
-    this.add.text(220, headerY, "Upgrade", { fontFamily: "Arial", fontSize: "22px", color: "#cfe9ff" });
-    this.add.text(530, headerY, "Level", { fontFamily: "Arial", fontSize: "22px", color: "#cfe9ff" });
-    this.add.text(650, headerY, "Cost", { fontFamily: "Arial", fontSize: "22px", color: "#cfe9ff" });
-    this.add.text(850, headerY, "Effect", { fontFamily: "Arial", fontSize: "22px", color: "#cfe9ff" });
+    this.add.rectangle(centerX, headerY + 6, contentWidth, 42, 0x152947, 0.95).setStrokeStyle(2, 0x7bc3ff, 1);
+    this.add.text(layout.labelX, headerY, "Upgrade", { fontFamily: "Arial", fontSize: "19px", color: "#cfe9ff" });
+    this.add.text(layout.levelX, headerY, "Level", { fontFamily: "Arial", fontSize: "19px", color: "#cfe9ff" });
+    this.add.text(layout.costX, headerY, "Cost", { fontFamily: "Arial", fontSize: "19px", color: "#cfe9ff" });
+    this.add.text(layout.effectX, headerY, "Effect", { fontFamily: "Arial", fontSize: "19px", color: "#cfe9ff" });
 
     UPGRADE_DEFINITIONS.forEach((definition, index) => {
-      this.createUpgradeRow(definition, index);
+      this.createUpgradeRow(definition, index, layout);
     });
 
     this.statusText = this.add
-      .text(centerX, 552, "", {
+      .text(centerX, statusY, "", {
         fontFamily: "Arial",
-        fontSize: "20px",
+        fontSize: "18px",
         color: "#cde5ff",
         stroke: "#0e1a2a",
         strokeThickness: 4
       })
       .setOrigin(0.5);
 
-    this.createButton(centerX, 628, "START RUN", () => {
+    this.createButton(centerX, startY, "START RUN", () => {
       this.scene.start("GameScene");
-    });
+    }, 220, 46, 21);
 
     this.refreshCoinsText();
   }
 
-  createUpgradeRow(definition, index) {
-    const y = 230 + index * 92;
-    this.add.rectangle(652, y + 14, 930, 58, 0x13233d, 0.9).setStrokeStyle(2, 0x345c87, 0.95);
-    const levelText = this.add.text(530, y, "", { fontFamily: "Arial", fontSize: "24px", color: "#f2f8ff" });
-    const costText = this.add.text(650, y, "", { fontFamily: "Arial", fontSize: "24px", color: "#ffe08a" });
-    const effectText = this.add.text(850, y, definition.effectLabel, { fontFamily: "Arial", fontSize: "24px", color: "#9ff0b6" });
+  createUpgradeRow(definition, index, layout) {
+    const y = layout.rowTop + index * layout.rowGap;
+    this.add
+      .rectangle(layout.centerX, y + 15, layout.rowWidth, layout.rowHeight, 0x13233d, 0.9)
+      .setStrokeStyle(2, 0x345c87, 0.95);
+    const levelText = this.add.text(layout.levelX, y, "", { fontFamily: "Arial", fontSize: "20px", color: "#f2f8ff" });
+    const costText = this.add.text(layout.costX, y, "", { fontFamily: "Arial", fontSize: "20px", color: "#ffe08a" });
+    const effectText = this.add.text(layout.effectX, y, definition.effectLabel, {
+      fontFamily: "Arial",
+      fontSize: "20px",
+      color: "#9ff0b6"
+    });
 
-    this.add.text(220, y, definition.label, { fontFamily: "Arial", fontSize: "24px", color: "#f2f8ff" });
+    this.add.text(layout.labelX, y, definition.label, {
+      fontFamily: "Arial",
+      fontSize: "20px",
+      color: "#f2f8ff",
+      wordWrap: { width: Math.max(190, layout.contentWidth * 0.3) }
+    });
 
-    const buyButton = this.createButton(1080, y + 14, "BUY", () => {
+    const buyButton = this.createButton(layout.buttonX, y + 14, "BUY", () => {
       this.purchaseUpgrade(definition, levelText, costText);
-    }, 130, 42);
+    }, 116, 40, 18);
 
     buyButton.setDepth(3);
     levelText.setDepth(3);
@@ -175,7 +211,7 @@ export class UpgradeScene extends Phaser.Scene {
     return definition.baseCost + level * definition.costStep;
   }
 
-  createButton(x, y, label, onClick, width = 240, height = 50) {
+  createButton(x, y, label, onClick, width = 240, height = 50, fontSize = 24) {
     const shadow = this.add
       .rectangle(x, y + 4, width + 12, height + 8, 0x0b1423, 0.95)
       .setOrigin(0.5);
@@ -188,7 +224,7 @@ export class UpgradeScene extends Phaser.Scene {
     const text = this.add
       .text(x, y, label, {
         fontFamily: "Arial",
-        fontSize: "24px",
+        fontSize: `${fontSize}px`,
         color: "#ffffff",
         stroke: "#0e1a2a",
         strokeThickness: 5

@@ -117,7 +117,7 @@ export class WeaponSystem {
   }
 
   getProjectileVisualColor(type) {
-    return PROJECTILE_GLOW_TINT;
+    return PROJECTILE_TINT_BY_WEAPON[type] ?? PROJECTILE_GLOW_TINT;
   }
 
   getProjectileVisualProfile(type) {

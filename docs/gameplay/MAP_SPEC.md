@@ -14,13 +14,25 @@
 |---|---|---|---|
 | World bounds | Implemented | Finite world `2400 x 1350` | `WORLD_WIDTH`, `WORLD_HEIGHT` |
 | Boundary collision | Implemented | Player/enemy cannot leave world bounds | `setCollideWorldBounds(true)` |
-| Camera mode | Implemented | Camera follows player (not fixed full-deck view) | `cameras.main.startFollow()` |
-| Arena rendering | Implemented | Procedural floor + grid lines | `drawArena()` |
+| Camera mode | Implemented | Start-run overview reveals the source-derived ship silhouette, then camera follows player | `startRunCameraIntro()`, `cameras.main.startFollow()` |
+| Arena rendering | Implemented | Authored deck tile sprites with procedural overlays and optional ocean tile backdrop | `drawArena()` |
+
+### Redesign V2 Source Coordinate Contract
+Runtime map geometry treats `assets/generated/redesign_v2/source/v2_environment_source.png` as the visual source of truth.
+
+| Source Region | Runtime Region | Scale | Code Hook |
+|---|---|---|---|
+| `1536 x 704` ship-map region | `2400 x 1350` world | `scaleX = 1.5625`, `scaleY = 1.9176` | `REDESIGN_V2_SOURCE_TO_WORLD` |
+
+- The playable deck polygon is hand-authored from the source image's ship silhouette, not from a full rectangle.
+- Deck plank rendering is clipped to the playable polygon so ocean remains visible outside curved bow/stern edges.
+- Spawn, obstacle, dash clamp, and QA smoke checks must use the ship-deck polygon as the gameplay boundary.
+- Any future map extraction pass should update the source coordinate contract before moving props or collision anchors.
 
 ### Terrain / Obstacle System
 | System | Status | Current Implementation | Notes |
 |---|---|---|---|
-| Obstacle type | Implemented | Procedural `terrain_rock`, `terrain_pillar` | Ship-themed placeholder geometry |
+| Obstacle type | Implemented | Authored ship prop sprites for random crates/barrels/rope/hatches plus legacy static bodies | Ship-themed V2 sprite pass |
 | Obstacle placement | Implemented | Random 5–10 static obstacles at run start | Spacing + player-safe-distance guards |
 | Collision behavior | Implemented | Static collider blocks player and enemies | `physics.add.collider(player/enemies, obstacles)` |
 | Navigation mesh | Not Implemented | No navmesh/pathfinding graph | Movement is velocity + physics collision |
@@ -71,13 +83,18 @@
 - [x] Enemy spawn checks enforce off-screen + safe radius.
 - [x] Boss/miniboss spawn event emits warning feedback.
 - [x] Runtime render config favors crisp pixel-art presentation.
-- [ ] Ship-zone authored layout (mast/cargo/cannon lanes) not yet authored.
+- [x] Ship-zone authored decor landmarks added for mast/cargo/winch/lantern/banner lanes.
 - [ ] Bow/stern-exclusive boss entry is not yet enforced.
-- [ ] Replace grid-placeholder floor art with authored `32x32` deck tiles / modular prop chunks.
+- [x] Replace grid-placeholder floor art with authored deck tile variants and modular prop chunks.
 - [ ] Verify imported art licenses are compatible (`CC0` preferred, `CC-BY` acceptable with attribution plan).
 
 ## Validation Checklist
-- [ ] Player cannot exit world bounds during normal move/dash.
+- [x] Redesign-v2 environment source is the map source of truth: `assets/generated/redesign_v2/source/v2_environment_source.png`.
+- [x] Runtime deck geometry uses a ship-shaped playable polygon instead of a full rectangular deck.
+- [x] Deck planks are clipped to the playable deck polygon so ocean remains visible around curved bow/stern hull edges.
+- [x] Player, enemies, random obstacles, and spawn candidates are constrained to the ship deck polygon.
+- [x] Central mast/skull-banner landmark is present near the source-derived center anchor.
+- [x] Smoke test checks player remains inside ship deck after a Space dash.
 - [ ] Enemies never spawn inside current camera view.
 - [ ] Spawn points remain outside `SAFE_RADIUS` from player.
 - [ ] Obstacles do not fully seal movement paths.
@@ -94,7 +111,7 @@
   - Verify boss spawn timing against active enemy density.
 
 ## Next Iteration Hooks
-- Replace procedural layout with authored ship zones (mast/cargo/cannon/rails).
+- Tune authored ship zones against the redesign-v2 source image after combat screenshot review.
 - Add explicit spawn markers per lane (bow, stern, port, starboard).
 - Add constrained boss walk-in sequence (bow/stern only).
 - Add optional dynamic hazards (wave push, destructible props) after baseline stability.

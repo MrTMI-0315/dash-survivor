@@ -50,6 +50,12 @@
   - Boss/miniboss warning text (implemented)
   - Run-end summary scene (implemented)
 
+### QA2 Overlay Fit Contract
+- Start weapon select, level-up, run summary, and upgrade shop must fit inside the `1280 x 720` design canvas without clipping titles, rows, buttons, or HUD-critical text.
+- Upgrade shop rows use responsive panel metrics instead of fixed desktop x/y positions, so the same scene stays legible inside browser chrome and scaled canvas captures.
+- Overlay fonts should stay in gameplay-scale ranges (`18px` to `32px`) unless the view is a dedicated title/menu screen.
+- Game HUD can remain visible under modal dimming, but modal content must not overlap its own buttons or row text.
+
 ### Pixel-UI Direction (Planned)
 - HUD chrome should snap to a `16px` sub-grid even if gameplay art uses a `32px` world grid.
 - Use 1px or 2px integer borders only; avoid soft gradients that blur against pixel sprites.
@@ -74,6 +80,7 @@
 - [x] Add floating damage numbers.
 - [x] Add enemy HP bars with elite/boss readability emphasis.
 - [x] Add low-HP danger vignette.
+- [x] Upgrade shop layout now uses responsive panel metrics to avoid oversized row/title clipping.
 
 ## Validation Checklist
 - [ ] HP UI changes immediately when player takes collision/poison damage.

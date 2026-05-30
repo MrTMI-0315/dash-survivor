@@ -31,6 +31,10 @@ export const CHARACTER_ASSET_MANIFEST = Object.freeze([
     basePath: "assets/sprites/enemies/hunter"
   }),
   Object.freeze({
+    keyPrefix: "char_enemy_jellyfish",
+    basePath: "assets/sprites/enemies/jellyfish"
+  }),
+  Object.freeze({
     keyPrefix: "char_enemy_miniboss_davy",
     basePath: "assets/sprites/enemies/miniboss_davy"
   })

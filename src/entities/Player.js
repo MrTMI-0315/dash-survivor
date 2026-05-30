@@ -37,7 +37,7 @@ function getPlayerTextureKey(scene, direction = "south") {
   return "player_triangle";
 }
 const PLAYER_RENDER_DEPTH = 20;
-const PLAYER_PIRATE_SCALE = 1.78;
+const PLAYER_PIRATE_SCALE = 1.34;
 const PLAYER_CREW_SCALE = 2.24;
 const PLAYER_WALK_BOB_SPEED = 0.018;
 const PLAYER_WALK_STRETCH = 0.025;
@@ -65,8 +65,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.visualBaseScale = PLAYER_PIRATE_SCALE;
 
     this.dashGaugeMax = 100;
-    this.dashGauge = 0;
-    this.dashCooldownMs = 4000;
+    this.dashGauge = this.dashGaugeMax;
+    this.dashCooldownMs = 2600;
     this.dashChargeRate = this.dashGaugeMax / (this.dashCooldownMs / 1000);
     this.dashDurationMs = 250;
     this.dashRemainingMs = 0;

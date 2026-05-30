@@ -5,7 +5,12 @@ import { WeaponSystem } from "../systems/WeaponSystem.js";
 import { MetaProgressionSystem } from "../systems/MetaProgressionSystem.js";
 import { ObjectPool } from "../systems/ObjectPool.js";
 import { PokiAdapter } from "../platform/PokiAdapter.js";
-import { ENEMY_ARCHETYPE_CONFIGS, ENEMY_TYPE_WEIGHTS, HUNTER_UNLOCK_TIME_SEC } from "../config/enemies.js";
+import {
+  ENEMY_ARCHETYPE_CONFIGS,
+  ENEMY_TYPE_WEIGHTS,
+  HUNTER_UNLOCK_TIME_SEC,
+  JELLYFISH_UNLOCK_TIME_SEC
+} from "../config/enemies.js";
 import { LEVEL_UP_UPGRADES } from "../config/weapons.js";
 import { DIRECTOR_BOSS_SPAWN } from "../config/director.js";
 import { CHARACTER_ASSET_MANIFEST, CHARACTER_DIRECTIONS } from "../config/assets.manifest.js";
@@ -30,33 +35,37 @@ import {
 } from "../config/progression.js";
 
 const SHIP_DECK_OBSTACLE_LAYOUT = [
-  // Mast: central large anchor that promotes circular kiting.
-  { type: "terrain_pillar", role: "mast", x: 1080, y: 675, scale: 1.7 },
+  // Mast: redesign_v2 source center landmark, kept large enough to shape kiting.
+  { type: "terrain_pillar", role: "mast", x: 1200, y: 675, scale: 1.66, anchorRadius: 58 },
 
-  // Crate cluster A (mid-right).
-  { type: "terrain_rock", role: "crate", x: 1490, y: 520, scale: 1.02 },
-  { type: "terrain_pillar", role: "crate", x: 1570, y: 565, scale: 0.94 },
-  { type: "terrain_rock", role: "crate", x: 1410, y: 590, scale: 0.9 },
+  // Crate cluster A (upper-right), copied from the source image composition.
+  { type: "terrain_rock", role: "crate", x: 1512, y: 414, scale: 0.96 },
+  { type: "terrain_pillar", role: "crate", x: 1606, y: 468, scale: 0.9 },
+  { type: "terrain_rock", role: "crate", x: 1440, y: 516, scale: 0.86 },
 
   // Crate cluster B (lower-right), leaves center lane open.
-  { type: "terrain_pillar", role: "crate", x: 1620, y: 900, scale: 1.0 },
-  { type: "terrain_rock", role: "crate", x: 1700, y: 960, scale: 0.9 },
-  { type: "terrain_rock", role: "crate", x: 1540, y: 980, scale: 0.88 },
-  { type: "terrain_rock", role: "crate", x: 1320, y: 980, scale: 0.85 },
-  { type: "terrain_pillar", role: "crate", x: 1390, y: 1040, scale: 0.82 },
+  { type: "terrain_pillar", role: "crate", x: 1650, y: 916, scale: 0.96 },
+  { type: "terrain_rock", role: "crate", x: 1740, y: 984, scale: 0.88 },
+  { type: "terrain_rock", role: "crate", x: 1550, y: 1016, scale: 0.86 },
+  { type: "terrain_rock", role: "crate", x: 1358, y: 996, scale: 0.82 },
+  { type: "terrain_pillar", role: "crate", x: 1432, y: 1062, scale: 0.78 },
 
   // Cannons (port/left rail).
-  { type: "terrain_pillar", role: "cannon", x: 270, y: 290, scale: 0.84 },
-  { type: "terrain_pillar", role: "cannon", x: 270, y: 675, scale: 0.84 },
-  { type: "terrain_pillar", role: "cannon", x: 270, y: 1060, scale: 0.84 },
+  { type: "terrain_pillar", role: "cannon", x: 246, y: 330, scale: 0.8 },
+  { type: "terrain_pillar", role: "cannon", x: 232, y: 676, scale: 0.82 },
+  { type: "terrain_pillar", role: "cannon", x: 276, y: 990, scale: 0.78 },
 
   // Cannons (starboard/right rail).
-  { type: "terrain_pillar", role: "cannon", x: 2130, y: 290, scale: 0.84 },
-  { type: "terrain_pillar", role: "cannon", x: 2130, y: 675, scale: 0.84 },
-  { type: "terrain_pillar", role: "cannon", x: 2130, y: 1060, scale: 0.84 }
+  { type: "terrain_pillar", role: "cannon", x: 2154, y: 330, scale: 0.8 },
+  { type: "terrain_pillar", role: "cannon", x: 2168, y: 676, scale: 0.82 },
+  { type: "terrain_pillar", role: "cannon", x: 2124, y: 990, scale: 0.78 }
 ];
 const BOSS_ENTRY_LANES = Object.freeze([SPAWN_LANES.BOW, SPAWN_LANES.STERN]);
 const HATCH_BREACH_POINT = Object.freeze({ x: 1200, y: 1090 });
+const BOSS_SKULL_PROJECTILE_ASSET = Object.freeze({
+  keyPrefix: "boss_skull_bullet",
+  basePath: "assets/sprites/projectiles/boss_skull_bullet"
+});
 const LADDER_SPAWN_POINTS = Object.freeze({
   [SPAWN_LANES.PORT]: Object.freeze([
     Object.freeze({ x: 76, y: 430 }),
@@ -159,6 +168,18 @@ const BEST_TIME_STORAGE_KEY = "dashsurvivor_best_time_ms";
 const SHOP_UPGRADES_STORAGE_KEY = "dashsurvivor_shop_upgrades_v1";
 const WEAPON_UNLOCK_STORAGE_KEY = "dashsurvivor_weapon_unlocks_v1";
 const PLAYTEST_SPAWN_PACING_STORAGE_KEY = "dashsurvivor_playtest_spawn_pacing_v1";
+const REDESIGN_V2_ENVIRONMENT_SOURCE = Object.freeze({
+  path: "assets/generated/redesign_v2/source/v2_environment_source.png",
+  width: 1536,
+  height: 1024,
+  shipMapHeight: 704
+});
+const REDESIGN_V2_SOURCE_TO_WORLD = Object.freeze({
+  sourceShipRegion: Object.freeze({ x: 0, y: 0, width: 1536, height: 704 }),
+  worldRegion: Object.freeze({ x: 0, y: 0, width: WORLD_WIDTH, height: WORLD_HEIGHT }),
+  scaleX: WORLD_WIDTH / 1536,
+  scaleY: WORLD_HEIGHT / 704
+});
 const DEBUG_HUD_X = 16;
 const DEBUG_HUD_Y = 116;
 const RENDER_DEPTH = Object.freeze({
@@ -219,7 +240,9 @@ const DAMAGE_NUMBER_BOSS_LIFETIME_MS = 620;
 const DAMAGE_NUMBER_NORMAL_RISE_PX = 16;
 const DAMAGE_NUMBER_ELITE_RISE_PX = 20;
 const DAMAGE_NUMBER_BOSS_RISE_PX = 24;
-const GAMEPLAY_CAMERA_ZOOM = 1.72;
+const GAMEPLAY_CAMERA_ZOOM = 1.42;
+const GAMEPLAY_OVERVIEW_CAMERA_ZOOM = 0.62;
+const GAMEPLAY_OVERVIEW_CAMERA_DURATION_MS = 1350;
 const GAMEPLAY_CAMERA_FOLLOW_LERP_X = 0.1;
 const GAMEPLAY_CAMERA_FOLLOW_LERP_Y = 0.1;
 const PLAYER_HURT_FEEDBACK_COOLDOWN_MS = 120;
@@ -231,6 +254,49 @@ const PLAYER_HURT_PULSE_ALPHA = 0.22;
 const DECK_BRIGHTNESS_MULTIPLIER = 0.9;
 const DECK_HIGHLIGHT_OPACITY = 0.6;
 const EDGE_FOG_VIGNETTE_OPACITY = 0.35;
+const SHIP_ARENA = Object.freeze({
+  source: REDESIGN_V2_ENVIRONMENT_SOURCE,
+  outerHull: Object.freeze([
+    Object.freeze({ x: 64, y: 520 }),
+    Object.freeze({ x: 96, y: 350 }),
+    Object.freeze({ x: 230, y: 214 }),
+    Object.freeze({ x: 470, y: 122 }),
+    Object.freeze({ x: 820, y: 74 }),
+    Object.freeze({ x: 1580, y: 74 }),
+    Object.freeze({ x: 1930, y: 122 }),
+    Object.freeze({ x: 2170, y: 214 }),
+    Object.freeze({ x: 2304, y: 350 }),
+    Object.freeze({ x: 2336, y: 520 }),
+    Object.freeze({ x: 2312, y: 842 }),
+    Object.freeze({ x: 2180, y: 1096 }),
+    Object.freeze({ x: 1948, y: 1232 }),
+    Object.freeze({ x: 1572, y: 1294 }),
+    Object.freeze({ x: 828, y: 1294 }),
+    Object.freeze({ x: 452, y: 1232 }),
+    Object.freeze({ x: 220, y: 1096 }),
+    Object.freeze({ x: 88, y: 842 })
+  ]),
+  playableDeck: Object.freeze([
+    Object.freeze({ x: 150, y: 520 }),
+    Object.freeze({ x: 180, y: 388 }),
+    Object.freeze({ x: 286, y: 270 }),
+    Object.freeze({ x: 500, y: 174 }),
+    Object.freeze({ x: 842, y: 118 }),
+    Object.freeze({ x: 1558, y: 118 }),
+    Object.freeze({ x: 1900, y: 174 }),
+    Object.freeze({ x: 2114, y: 270 }),
+    Object.freeze({ x: 2220, y: 388 }),
+    Object.freeze({ x: 2250, y: 520 }),
+    Object.freeze({ x: 2226, y: 830 }),
+    Object.freeze({ x: 2100, y: 1042 }),
+    Object.freeze({ x: 1884, y: 1168 }),
+    Object.freeze({ x: 1558, y: 1232 }),
+    Object.freeze({ x: 842, y: 1232 }),
+    Object.freeze({ x: 516, y: 1168 }),
+    Object.freeze({ x: 300, y: 1042 }),
+    Object.freeze({ x: 174, y: 830 })
+  ])
+});
 const DECK_TILE_VARIANTS = Object.freeze([
   Object.freeze({
     key: "deck_a",
@@ -271,47 +337,64 @@ const DECK_TILE_VARIANTS = Object.freeze([
     tileOffsetStep: 29,
     fallbackEven: 0x5e3c28,
     fallbackOdd: 0x66442f
+  }),
+  Object.freeze({
+    key: "deck_clean",
+    path: "assets/sprites/environment/ship/deck_plank_clean.png",
+    weight: 8,
+    tintEven: 0xd8c2a6,
+    tintOdd: 0xc99f78,
+    tileOffsetStep: 31,
+    fallbackEven: 0x66432e,
+    fallbackOdd: 0x704b33
+  }),
+  Object.freeze({
+    key: "deck_damaged",
+    path: "assets/sprites/environment/ship/deck_plank_damaged.png",
+    weight: 6,
+    tintEven: 0xc7ab8c,
+    tintOdd: 0xb98f6d,
+    tileOffsetStep: 37,
+    fallbackEven: 0x593826,
+    fallbackOdd: 0x63412c
   })
 ]);
 const RANDOM_DECK_OBSTACLE_SPAWN_TABLE = Object.freeze([
   Object.freeze({
     objectType: "crate",
     type: "terrain_rock",
-    textureKey: "terrain_crate",
+    textureKey: "sprite_ship_cargo_crate",
     weight: 40,
-    scaleMin: 0.72,
-    scaleMax: 0.96,
+    scaleMin: 1.05,
+    scaleMax: 1.28,
     anchorRadius: 32
   }),
   Object.freeze({
     objectType: "barrel",
     type: "terrain_rock",
-    textureKey: "terrain_rock",
+    textureKey: "sprite_ship_barrel",
     weight: 24,
-    scaleMin: 0.54,
-    scaleMax: 0.72,
-    anchorRadius: 24,
-    tint: 0x855d3f
+    scaleMin: 0.95,
+    scaleMax: 1.18,
+    anchorRadius: 24
   }),
   Object.freeze({
     objectType: "ropeBundle",
     type: "terrain_pillar",
-    textureKey: "terrain_pillar",
+    textureKey: "sprite_ship_rope_coil",
     weight: 20,
-    scaleMin: 0.52,
-    scaleMax: 0.68,
-    anchorRadius: 22,
-    tint: 0xb39163
+    scaleMin: 0.9,
+    scaleMax: 1.12,
+    anchorRadius: 18
   }),
   Object.freeze({
     objectType: "deckVent",
     type: "terrain_pillar",
-    textureKey: "terrain_pillar",
+    textureKey: "sprite_ship_hatch_grate_square",
     weight: 16,
-    scaleMin: 0.6,
-    scaleMax: 0.78,
-    anchorRadius: 24,
-    tint: 0x6b7689
+    scaleMin: 0.95,
+    scaleMax: 1.18,
+    anchorRadius: 22
   })
 ]);
 const RANDOM_DECK_OBSTACLE_DENSITY_MIN_TILES = 12;
@@ -349,6 +432,54 @@ const IMPORTED_PIXEL_ASSETS = Object.freeze({
   deckCannonBall: Object.freeze({
     key: "sprite_deck_cannonball",
     path: "assets/sprites/environment/ship/deck_cannonball.png"
+  }),
+  oceanTile: Object.freeze({
+    key: "sprite_ship_ocean_tile",
+    path: "assets/sprites/environment/ship/ocean_tile.png"
+  }),
+  cargoCrate: Object.freeze({
+    key: "sprite_ship_cargo_crate",
+    path: "assets/sprites/environment/ship/cargo_crate.png"
+  }),
+  barrel: Object.freeze({
+    key: "sprite_ship_barrel",
+    path: "assets/sprites/environment/ship/barrel.png"
+  }),
+  cargoStack: Object.freeze({
+    key: "sprite_ship_cargo_stack",
+    path: "assets/sprites/environment/ship/cargo_stack.png"
+  }),
+  mastBase: Object.freeze({
+    key: "sprite_ship_mast_base",
+    path: "assets/sprites/environment/ship/mast_base.png"
+  }),
+  deckWinch: Object.freeze({
+    key: "sprite_ship_deck_winch",
+    path: "assets/sprites/environment/ship/deck_winch.png"
+  }),
+  deckLantern: Object.freeze({
+    key: "sprite_ship_deck_lantern",
+    path: "assets/sprites/environment/ship/deck_lantern.png"
+  }),
+  ropeCoil: Object.freeze({
+    key: "sprite_ship_rope_coil",
+    path: "assets/sprites/environment/ship/rope_coil.png"
+  }),
+  hatchGrateSquare: Object.freeze({
+    key: "sprite_ship_hatch_grate_square",
+    path: "assets/sprites/environment/ship/hatch_grate_square.png"
+  }),
+  hatchGrateLarge: Object.freeze({
+    key: "sprite_ship_hatch_grate_large",
+    path: "assets/sprites/environment/ship/hatch_grate_large.png"
+  }),
+  bannerSkullBlack: Object.freeze({
+    key: "sprite_ship_banner_skull_black",
+    path: "assets/sprites/environment/ship/banner_skull_black.png"
+  }),
+  railStraight: Object.freeze({
+    key: "sprite_ship_rail_straight",
+    path: "assets/sprites/environment/ship/rail_straight.png"
   }),
   uiPanelBrown: Object.freeze({
     key: "sprite_ui_panel_brown",
@@ -518,6 +649,24 @@ function pickWeightedDeckVariant(variants, excludedKey = null) {
     }
   }
   return available[available.length - 1];
+}
+
+function getDirectionNameFromVector(x, y, fallback = "south") {
+  if (Math.abs(x) < 0.0001 && Math.abs(y) < 0.0001) {
+    return fallback;
+  }
+  const octant = Math.round(Math.atan2(y, x) / (Math.PI / 4));
+  const index = ((octant % 8) + 8) % 8;
+  return ["east", "south-east", "south", "south-west", "west", "north-west", "north", "north-east"][index] ?? fallback;
+}
+
+function getBossSkullProjectileTextureKey(scene, vx = 0, vy = 0) {
+  const direction = getDirectionNameFromVector(vx, vy, "south");
+  const textureKey = `${BOSS_SKULL_PROJECTILE_ASSET.keyPrefix}_${direction.replace(/-/g, "_")}`;
+  if (scene?.textures?.exists(textureKey)) {
+    return textureKey;
+  }
+  return scene?.textures?.exists("boss_bullet") ? "boss_bullet" : textureKey;
 }
 
 function scaleHexColor(hexColor, multiplier = 1) {
@@ -784,6 +933,8 @@ export class GameScene extends Phaser.Scene {
     this.touchMovePointerId = null;
     this.touchMoveVector = new Phaser.Math.Vector2(0, 0);
     this.touchDashQueued = false;
+    this.keyboardDashQueued = false;
+    this.onWindowDashKeyDown = null;
     this.touchJoystickCenter = new Phaser.Math.Vector2(0, 0);
     this.touchJoystickBase = null;
     this.touchJoystickThumb = null;
@@ -798,6 +949,7 @@ export class GameScene extends Phaser.Scene {
     this.weaponSelectionActions = [];
     this.weaponUnlocks = {};
     this.selectedStartWeaponId = null;
+    this.weaponSelectionError = null;
     this.openingRaidStarted = false;
     this.openingRaidHandles = [];
     this.bossProjectiles = null;
@@ -807,6 +959,9 @@ export class GameScene extends Phaser.Scene {
     this.performanceKillTotal = 0;
     this.seaWaveGraphics = null;
     this.seaWaves = [];
+    this.shipDeckBounds = null;
+    this.shipDeckPolygon = null;
+    this.shipDeckMaskGraphics = null;
     this.devAntiJamEnabled = false;
   }
 
@@ -850,11 +1005,13 @@ export class GameScene extends Phaser.Scene {
     this.touchMovePointerId = null;
     this.touchMoveVector.set(0, 0);
     this.touchDashQueued = false;
+    this.keyboardDashQueued = false;
     this.isWeaponSelecting = false;
     this.weaponSelectionUi = [];
     this.weaponSelectionActions = [];
     this.weaponUnlocks = this.loadWeaponUnlocks();
     this.selectedStartWeaponId = null;
+    this.weaponSelectionError = null;
     this.clearOpeningRaidSchedule();
     this.openingRaidStarted = false;
     this.debugOverlayEnabled = false;
@@ -872,6 +1029,9 @@ export class GameScene extends Phaser.Scene {
     this.performanceKillTotal = 0;
     this.helpOverlayCompact = false;
     this.devAntiJamEnabled = this.resolveDevAntiJamEnabled();
+    this.shipDeckBounds = null;
+    this.shipDeckPolygon = null;
+    this.shipDeckMaskGraphics = null;
 
     this.createTextures();
     this.drawArena();
@@ -901,6 +1061,7 @@ export class GameScene extends Phaser.Scene {
       meta3: Phaser.Input.Keyboard.KeyCodes.THREE,
       meta4: Phaser.Input.Keyboard.KeyCodes.FOUR
     });
+    this.installKeyboardDashFallback();
     const desiredPointers = 3;
     const pointerDeficit = desiredPointers - this.input.manager.pointersTotal;
     if (pointerDeficit > 0) {
@@ -928,6 +1089,7 @@ export class GameScene extends Phaser.Scene {
       GAMEPLAY_CAMERA_FOLLOW_LERP_X,
       GAMEPLAY_CAMERA_FOLLOW_LERP_Y
     );
+    this.publishQaHooks();
 
     this.hudLevelText = this.add
       .text(20, 24, "", {
@@ -1180,6 +1342,14 @@ export class GameScene extends Phaser.Scene {
         this.load.image(textureKey, `${basePath}/rotations/${direction}.png`);
       });
     });
+    CHARACTER_DIRECTIONS.forEach((direction) => {
+      const dirKey = direction.replace(/-/g, "_");
+      const textureKey = `${BOSS_SKULL_PROJECTILE_ASSET.keyPrefix}_${dirKey}`;
+      if (this.textures?.exists(textureKey)) {
+        return;
+      }
+      this.load.image(textureKey, `${BOSS_SKULL_PROJECTILE_ASSET.basePath}/rotations/${direction}.png`);
+    });
     DECK_TILE_VARIANTS.forEach(({ key, path }) => {
       if (this.textures?.exists(key)) {
         return;
@@ -1289,17 +1459,15 @@ export class GameScene extends Phaser.Scene {
       this.maintainEnemyDensity();
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.keys.dash) || this.consumeTouchDash()) {
-      const didDash = this.player.tryDash();
-      if (didDash) {
-        this.showDashImpulse();
-      }
+    if (Phaser.Input.Keyboard.JustDown(this.keys.dash) || this.consumeKeyboardDash() || this.consumeTouchDash()) {
+      this.tryPerformPlayerDash();
     }
 
     this.player.updateDash(delta);
     this.updateBossProjectiles(time);
     this.emitDashTrail(delta);
     this.player.moveFromInput(this.keys, this.getTouchMoveInput());
+    this.constrainActorToShipDeck(this.player, 18);
     this.player.updateMotionVisual(time);
     this.updatePlayerReadabilityAura();
     this.pullXpOrbsToPlayer();
@@ -1320,6 +1488,7 @@ export class GameScene extends Phaser.Scene {
         enemy.updateBossPattern(this.player, time);
       }
       this.applyEnemyAntiJam(enemy, time);
+      this.constrainActorToShipDeck(enemy, enemy.getData("isBoss") ? 42 : 18);
     });
 
     if (this.player.isDead()) {
@@ -1427,10 +1596,32 @@ export class GameScene extends Phaser.Scene {
       { x: 2, y: 10 }
     ], 0xfff2a0, 0xb8831e);
     this.generateCircleTexture("xp_orb", 6, 0x66f5b2, 0x1f8d63);
-    this.generateCircleTexture("proj_dagger", 4, 0xeef7ff, 0x7895af);
+    this.generatePolygonTexture(
+      "proj_dagger",
+      10,
+      [
+        { x: 2, y: 11 },
+        { x: 16, y: 5 },
+        { x: 20, y: 8 },
+        { x: 7, y: 15 }
+      ],
+      0xeef7ff,
+      0x7895af
+    );
     this.generateCircleTexture("proj_fireball", 8, 0xff944d, 0xa84d1b);
     this.generateCircleTexture("proj_meteor", 11, 0xff8b44, 0x70220d);
-    this.generateCircleTexture("proj_orbit_blade", 7, 0xc6e5ff, 0x5884ad);
+    this.generatePolygonTexture(
+      "proj_orbit_blade",
+      12,
+      [
+        { x: 3, y: 13 },
+        { x: 13, y: 3 },
+        { x: 22, y: 7 },
+        { x: 13, y: 21 }
+      ],
+      0xc6e5ff,
+      0x5884ad
+    );
     this.generateCircleTexture("boss_bullet", 5, 0xff8b8b, 0x7b1a1a);
     this.generateCircleTexture("hit_particle", 2, 0xffffff, 0xffffff);
   }
@@ -1973,11 +2164,11 @@ export class GameScene extends Phaser.Scene {
     }
 
     const canvasTexture = this.textures.createCanvas(key, width, height);
-    if (!canvasTexture?.context) {
+    const ctx = canvasTexture?.context ?? null;
+    if (!ctx || typeof ctx.drawImage !== "function") {
       return;
     }
 
-    const ctx = canvasTexture.context;
     ctx.clearRect(0, 0, width, height);
     ctx.imageSmoothingEnabled = false;
 
@@ -1985,6 +2176,9 @@ export class GameScene extends Phaser.Scene {
       const sourceTexture = this.textures.get(layer.sourceKey);
       const sourceImage = sourceTexture?.getSourceImage?.();
       if (!sourceImage) {
+        return;
+      }
+      if (!ctx || typeof ctx.drawImage !== "function") {
         return;
       }
       ctx.drawImage(
@@ -2046,32 +2240,155 @@ export class GameScene extends Phaser.Scene {
     gfx.destroy();
   }
 
+  getShipArenaPoints(kind = "playableDeck") {
+    const points = SHIP_ARENA[kind] ?? SHIP_ARENA.playableDeck;
+    return points.map((point) => new Phaser.Geom.Point(point.x, point.y));
+  }
+
+  getShipDeckPolygon() {
+    if (!this.shipDeckPolygon) {
+      this.shipDeckPolygon = new Phaser.Geom.Polygon(this.getShipArenaPoints("playableDeck"));
+    }
+    return this.shipDeckPolygon;
+  }
+
+  getShipDeckBounds() {
+    if (!this.shipDeckBounds) {
+      const points = SHIP_ARENA.playableDeck;
+      const xs = points.map((point) => point.x);
+      const ys = points.map((point) => point.y);
+      const left = Math.min(...xs);
+      const right = Math.max(...xs);
+      const top = Math.min(...ys);
+      const bottom = Math.max(...ys);
+      this.shipDeckBounds = {
+        left,
+        right,
+        top,
+        bottom,
+        width: right - left,
+        height: bottom - top
+      };
+    }
+    return this.shipDeckBounds;
+  }
+
+  isPointInsideShipDeck(x, y) {
+    return Phaser.Geom.Polygon.Contains(this.getShipDeckPolygon(), x, y);
+  }
+
+  getClosestPointOnSegment(px, py, ax, ay, bx, by) {
+    const abx = bx - ax;
+    const aby = by - ay;
+    const lengthSq = abx * abx + aby * aby;
+    if (lengthSq <= 0.0001) {
+      return { x: ax, y: ay };
+    }
+    const t = Phaser.Math.Clamp(((px - ax) * abx + (py - ay) * aby) / lengthSq, 0, 1);
+    return {
+      x: ax + abx * t,
+      y: ay + aby * t
+    };
+  }
+
+  getClosestPointOnShipDeck(x, y) {
+    let closest = SHIP_ARENA.playableDeck[0];
+    let closestDistanceSq = Number.POSITIVE_INFINITY;
+    const points = SHIP_ARENA.playableDeck;
+    for (let i = 0; i < points.length; i += 1) {
+      const a = points[i];
+      const b = points[(i + 1) % points.length];
+      const candidate = this.getClosestPointOnSegment(x, y, a.x, a.y, b.x, b.y);
+      const dx = candidate.x - x;
+      const dy = candidate.y - y;
+      const distanceSq = dx * dx + dy * dy;
+      if (distanceSq < closestDistanceSq) {
+        closest = candidate;
+        closestDistanceSq = distanceSq;
+      }
+    }
+    return closest;
+  }
+
+  clampPointToShipDeck(x, y, inset = 0) {
+    if (this.isPointInsideShipDeck(x, y)) {
+      return { x, y };
+    }
+    const closest = this.getClosestPointOnShipDeck(x, y);
+    if (inset <= 0) {
+      return closest;
+    }
+    const inward = new Phaser.Math.Vector2(WORLD_WIDTH * 0.5 - closest.x, WORLD_HEIGHT * 0.5 - closest.y);
+    if (inward.lengthSq() > 0.0001) {
+      inward.normalize().scale(inset);
+      return {
+        x: closest.x + inward.x,
+        y: closest.y + inward.y
+      };
+    }
+    return closest;
+  }
+
+  constrainActorToShipDeck(actor, inset = 0) {
+    if (!actor?.active || this.isPointInsideShipDeck(actor.x, actor.y)) {
+      return false;
+    }
+    const clamped = this.clampPointToShipDeck(actor.x, actor.y, inset);
+    actor.setPosition(clamped.x, clamped.y);
+    if (actor.body?.reset) {
+      actor.body.reset(clamped.x, clamped.y);
+    }
+    return true;
+  }
+
   drawArena() {
     const seaGraphics = this.add.graphics();
     seaGraphics.setDepth(-3);
     seaGraphics.fillStyle(0x061328, 1);
     seaGraphics.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    if (this.textures.exists(IMPORTED_PIXEL_ASSETS.oceanTile.key)) {
+      this.add
+        .tileSprite(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5, WORLD_WIDTH, WORLD_HEIGHT, IMPORTED_PIXEL_ASSETS.oceanTile.key)
+        .setDepth(-2.95)
+        .setTint(0x8fdce5)
+        .setAlpha(0.72);
+    }
 
-    const graphics = this.add.graphics();
-    graphics.setDepth(0);
-
-    const deckLeft = DECK_SURFACE_INSET;
-    const deckTop = DECK_SURFACE_INSET;
-    const deckWidth = WORLD_WIDTH - DECK_SURFACE_INSET * 2;
-    const deckHeight = WORLD_HEIGHT - DECK_SURFACE_INSET * 2;
-    const deckRight = deckLeft + deckWidth;
-    const deckBottom = deckTop + deckHeight;
+    const outerHullPoints = this.getShipArenaPoints("outerHull");
+    const playableDeckPoints = this.getShipArenaPoints("playableDeck");
+    const { left: deckLeft, top: deckTop, right: deckRight, bottom: deckBottom, width: deckWidth, height: deckHeight } =
+      this.getShipDeckBounds();
     const hasDeckPlankTexture = DECK_TILE_VARIANTS.some((variant) => this.textures.exists(variant.key));
     const hasDeckTrimTexture = this.textures.exists(IMPORTED_PIXEL_ASSETS.deckPlankTrim.key);
 
+    const hullGraphics = this.add.graphics();
+    hullGraphics.setDepth(-0.2);
+    hullGraphics.fillStyle(0x15110f, 1);
+    hullGraphics.fillPoints(outerHullPoints, true);
+    hullGraphics.lineStyle(22, 0x101722, 0.98);
+    hullGraphics.strokePoints(outerHullPoints, true, true);
+    hullGraphics.lineStyle(8, 0x7b5538, 0.75);
+    hullGraphics.strokePoints(outerHullPoints, true, true);
+
+    if (this.shipDeckMaskGraphics) {
+      this.shipDeckMaskGraphics.destroy();
+    }
+    this.shipDeckMaskGraphics = this.make.graphics({ x: 0, y: 0, add: false });
+    this.shipDeckMaskGraphics.fillStyle(0xffffff, 1);
+    this.shipDeckMaskGraphics.fillPoints(playableDeckPoints, true);
+    const deckMask = this.shipDeckMaskGraphics.createGeometryMask();
+
+    const graphics = this.add.graphics();
+    graphics.setDepth(0);
+    graphics.setMask(deckMask);
     graphics.fillStyle(scaleHexColor(0x5b3b25, DECK_BRIGHTNESS_MULTIPLIER), 1);
-    graphics.fillRect(deckLeft, deckTop, deckWidth, deckHeight);
+    graphics.fillPoints(playableDeckPoints, true);
 
     let lastVariantKey = null;
     let variantRunLength = 0;
-    for (let y = deckTop; y < deckBottom; y += DECK_TILE_SIZE) {
+    for (let y = deckTop - DECK_TILE_SIZE; y < deckBottom + DECK_TILE_SIZE; y += DECK_TILE_SIZE) {
       const plankIndex = Math.floor((y - deckTop) / DECK_TILE_SIZE);
-      const rowHeight = Math.min(DECK_TILE_SIZE - 2, deckBottom - y);
+      const rowHeight = DECK_TILE_SIZE - 2;
       const excludedKey = variantRunLength >= 3 ? lastVariantKey : null;
       const deckVariant = pickWeightedDeckVariant(DECK_TILE_VARIANTS, excludedKey);
       if (deckVariant.key === lastVariantKey) {
@@ -2086,11 +2403,12 @@ export class GameScene extends Phaser.Scene {
         const plankRow = this.add.tileSprite(
           deckLeft + deckWidth * 0.5,
           y + rowHeight * 0.5,
-          deckWidth,
+          deckWidth + DECK_TILE_SIZE * 4,
           rowHeight,
           textureKey
         );
         plankRow.setDepth(0);
+        plankRow.setMask(deckMask);
         const plankTint = plankIndex % 2 === 0 ? deckVariant.tintEven : deckVariant.tintOdd;
         plankRow.setTint(scaleHexColor(plankTint, DECK_BRIGHTNESS_MULTIPLIER));
         plankRow.tileScaleX = 1;
@@ -2102,7 +2420,7 @@ export class GameScene extends Phaser.Scene {
         graphics.fillRect(deckLeft, y, deckWidth, rowHeight);
       }
 
-      const seamInset = 28 + (plankIndex % 4) * 18;
+      const seamInset = 28 + (Math.abs(plankIndex) % 4) * 18;
       const seamWidth = Math.max(120, deckWidth - seamInset * 2);
       graphics.fillStyle(
         scaleHexColor(0x8b603f, DECK_BRIGHTNESS_MULTIPLIER),
@@ -2114,11 +2432,12 @@ export class GameScene extends Phaser.Scene {
         const trimRow = this.add.tileSprite(
           deckLeft + deckWidth * 0.5,
           y + 2,
-          deckWidth,
+          deckWidth + DECK_TILE_SIZE * 4,
           6,
           IMPORTED_PIXEL_ASSETS.deckPlankTrim.key
         );
         trimRow.setDepth(0.1);
+        trimRow.setMask(deckMask);
         trimRow.setTint(
           scaleHexColor(plankIndex % 2 === 0 ? 0xd9b48c : 0xc49263, DECK_BRIGHTNESS_MULTIPLIER)
         );
@@ -2126,8 +2445,8 @@ export class GameScene extends Phaser.Scene {
       }
 
       const jointSteps = [148, 206, 172, 228];
-      let jointX = deckLeft + 76 + ((plankIndex % 5) * 22);
-      let jointIndex = plankIndex % jointSteps.length;
+      let jointX = deckLeft + 76 + ((Math.abs(plankIndex) % 5) * 22);
+      let jointIndex = Math.abs(plankIndex) % jointSteps.length;
       while (jointX < deckRight - 72) {
         graphics.fillStyle(
           scaleHexColor(0x4a2f1f, DECK_BRIGHTNESS_MULTIPLIER),
@@ -2146,11 +2465,10 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    graphics.fillStyle(0x3d2619, 1);
-    graphics.fillRect(deckLeft, deckTop, deckWidth, 18);
-    graphics.fillRect(deckLeft, deckBottom - 18, deckWidth, 18);
-    graphics.fillRect(deckLeft, deckTop, 18, deckHeight);
-    graphics.fillRect(deckRight - 18, deckTop, 18, deckHeight);
+    graphics.lineStyle(20, 0x3d2619, 1);
+    graphics.strokePoints(playableDeckPoints, true, true);
+    graphics.lineStyle(5, 0x9a6a45, 0.5);
+    graphics.strokePoints(playableDeckPoints, true, true);
 
     const hatchWidth = 128;
     const hatchHeight = 64;
@@ -2177,10 +2495,10 @@ export class GameScene extends Phaser.Scene {
     });
 
     [
-      { x: deckLeft + 118, y: deckTop + 146 },
-      { x: deckRight - 118, y: deckTop + 146 },
-      { x: deckLeft + 118, y: deckBottom - 146 },
-      { x: deckRight - 118, y: deckBottom - 146 }
+      { x: deckLeft + 140, y: deckTop + 178 },
+      { x: deckRight - 140, y: deckTop + 178 },
+      { x: deckLeft + 140, y: deckBottom - 178 },
+      { x: deckRight - 140, y: deckBottom - 178 }
     ].forEach((plate) => {
       graphics.fillStyle(0x4f3728, 0.42);
       graphics.fillRect(plate.x - 18, plate.y - 12, 36, 24);
@@ -2272,6 +2590,12 @@ export class GameScene extends Phaser.Scene {
 
   drawDeckDecor(deckLeft, deckTop, deckRight, deckBottom) {
     const decorDepth = 1.4;
+    const addDecorImage = (asset, x, y, scale = 1, rotation = 0, depthOffset = 0) => {
+      if (!this.textures.exists(asset.key)) {
+        return null;
+      }
+      return this.add.image(x, y, asset.key).setDepth(decorDepth + depthOffset).setScale(scale).setRotation(rotation);
+    };
 
     if (this.textures.exists(IMPORTED_PIXEL_ASSETS.deckHullLarge.key)) {
       this.add
@@ -2305,6 +2629,22 @@ export class GameScene extends Phaser.Scene {
           .setScale(1.6);
       }
     });
+
+    addDecorImage(IMPORTED_PIXEL_ASSETS.mastBase, WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5, 1.24, 0, 0.08);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.hatchGrateLarge, HATCH_BREACH_POINT.x, HATCH_BREACH_POINT.y, 1.1, 0, 0.06);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.deckWinch, deckLeft + 410, deckTop + 214, 0.92);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.deckWinch, deckRight - 410, deckBottom - 214, 0.92, Math.PI);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.cargoStack, deckRight - 360, deckTop + 275, 0.92);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.cargoStack, deckLeft + 382, deckBottom - 268, 0.86, Math.PI * 0.5);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.deckLantern, deckLeft + 265, deckTop + 88, 1.05, 0, 0.12);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.deckLantern, deckRight - 265, deckTop + 88, 1.05, 0, 0.12);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.deckLantern, deckLeft + 265, deckBottom - 88, 1.05, 0, 0.12);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.deckLantern, deckRight - 265, deckBottom - 88, 1.05, 0, 0.12);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.bannerSkullBlack, WORLD_WIDTH * 0.5 - 154, deckTop + 68, 0.72, 0, 0.1);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.bannerSkullBlack, WORLD_WIDTH * 0.5 + 154, deckBottom - 68, 0.72, Math.PI, 0.1);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.bannerSkullBlack, WORLD_WIDTH * 0.5 + 130, WORLD_HEIGHT * 0.5 - 104, 0.78, 0, 0.34);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.railStraight, deckLeft + 185, deckTop + 34, 1, 0, -0.05);
+    addDecorImage(IMPORTED_PIXEL_ASSETS.railStraight, deckRight - 185, deckBottom - 34, 1, Math.PI, -0.05);
   }
 
   initializeSeaWaves() {
@@ -2365,31 +2705,42 @@ export class GameScene extends Phaser.Scene {
     const rail = this.add.graphics();
     rail.setDepth(1);
 
-    const left = DECK_RAIL_INSET;
-    const top = DECK_RAIL_INSET;
-    const width = WORLD_WIDTH - DECK_RAIL_INSET * 2;
-    const height = WORLD_HEIGHT - DECK_RAIL_INSET * 2;
-    const right = left + width;
-    const bottom = top + height;
+    const outerHullPoints = this.getShipArenaPoints("outerHull");
+    const deckPoints = this.getShipArenaPoints("playableDeck");
 
-    // Main rail body and highlight.
-    rail.lineStyle(12, 0x503724, 0.95);
-    rail.strokeRect(left, top, width, height);
-    rail.lineStyle(4, 0x8e6340, 0.9);
-    rail.strokeRect(left + 4, top + 4, width - 8, height - 8);
+    rail.lineStyle(16, 0x4a321f, 0.98);
+    rail.strokePoints(outerHullPoints, true, true);
+    rail.lineStyle(5, 0xb18355, 0.76);
+    rail.strokePoints(outerHullPoints, true, true);
+    rail.lineStyle(4, 0x1b2330, 0.9);
+    rail.strokePoints(deckPoints, true, true);
 
-    // Post segments along port/starboard.
-    rail.fillStyle(0x6d4b30, 1);
-    for (let y = top + 30; y <= bottom - 30; y += DECK_RAIL_POST_GAP) {
-      rail.fillRect(left - 2, y - DECK_RAIL_POST_LENGTH / 2, DECK_RAIL_POST_WIDTH, DECK_RAIL_POST_LENGTH);
-      rail.fillRect(right - DECK_RAIL_POST_WIDTH + 2, y - DECK_RAIL_POST_LENGTH / 2, DECK_RAIL_POST_WIDTH, DECK_RAIL_POST_LENGTH);
-    }
+    const drawPost = (x, y, rotation = 0) => {
+      const halfW = DECK_RAIL_POST_WIDTH * 0.5;
+      const halfH = DECK_RAIL_POST_LENGTH * 0.5;
+      rail.save();
+      rail.translateCanvas(x, y);
+      rail.rotateCanvas(rotation);
+      rail.fillStyle(0x6d4b30, 1);
+      rail.fillRect(-halfW, -halfH, DECK_RAIL_POST_WIDTH, DECK_RAIL_POST_LENGTH);
+      rail.fillStyle(0xc08b55, 0.75);
+      rail.fillRect(-halfW + 2, -halfH + 2, DECK_RAIL_POST_WIDTH - 4, 5);
+      rail.restore();
+    };
 
-    // Post segments along bow/stern.
-    for (let x = left + 34; x <= right - 34; x += DECK_RAIL_POST_GAP) {
-      rail.fillRect(x - DECK_RAIL_POST_LENGTH / 2, top - 2, DECK_RAIL_POST_LENGTH, DECK_RAIL_POST_WIDTH);
-      rail.fillRect(x - DECK_RAIL_POST_LENGTH / 2, bottom - DECK_RAIL_POST_WIDTH + 2, DECK_RAIL_POST_LENGTH, DECK_RAIL_POST_WIDTH);
-    }
+    outerHullPoints.forEach((point, index) => {
+      const next = outerHullPoints[(index + 1) % outerHullPoints.length];
+      const segmentLength = Phaser.Math.Distance.Between(point.x, point.y, next.x, next.y);
+      const steps = Math.max(1, Math.floor(segmentLength / DECK_RAIL_POST_GAP));
+      const rotation = Math.atan2(next.y - point.y, next.x - point.x) + Math.PI * 0.5;
+      for (let step = 0; step <= steps; step += 1) {
+        if ((index + step) % 2 !== 0) {
+          continue;
+        }
+        const t = step / steps;
+        drawPost(Phaser.Math.Linear(point.x, next.x, t), Phaser.Math.Linear(point.y, next.y, t), rotation);
+      }
+    });
   }
 
   createTouchControls() {
@@ -3159,6 +3510,57 @@ export class GameScene extends Phaser.Scene {
     return true;
   }
 
+  installKeyboardDashFallback() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (this.onWindowDashKeyDown) {
+      window.removeEventListener("keydown", this.onWindowDashKeyDown);
+    }
+
+    this.onWindowDashKeyDown = (event) => {
+      if (event.code !== "Space" && event.key !== " " && event.key !== "Spacebar") {
+        return;
+      }
+      const didDash = this.tryPerformPlayerDash();
+      this.keyboardDashQueued = !didDash && this.canAcceptDashInput();
+      event.preventDefault();
+    };
+
+    window.addEventListener("keydown", this.onWindowDashKeyDown, true);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      if (this.onWindowDashKeyDown) {
+        window.removeEventListener("keydown", this.onWindowDashKeyDown, true);
+        this.onWindowDashKeyDown = null;
+      }
+      this.keyboardDashQueued = false;
+    });
+  }
+
+  consumeKeyboardDash() {
+    if (!this.keyboardDashQueued) {
+      return false;
+    }
+    this.keyboardDashQueued = false;
+    return true;
+  }
+
+  canAcceptDashInput() {
+    return Boolean(this.player?.active && !this.isGameOver && !this.isLeveling && !this.isWeaponSelecting);
+  }
+
+  tryPerformPlayerDash() {
+    if (!this.canAcceptDashInput()) {
+      return false;
+    }
+    const didDash = this.player.tryDash();
+    if (didDash) {
+      this.showDashImpulse();
+    }
+    return didDash;
+  }
+
   createTerrainObstacles() {
     if (!this.obstacles) {
       return;
@@ -3171,12 +3573,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   spawnRandomDeckObstacles() {
-    const deckLeft = DECK_SURFACE_INSET;
-    const deckTop = DECK_SURFACE_INSET;
-    const deckWidth = WORLD_WIDTH - DECK_SURFACE_INSET * 2;
-    const deckHeight = WORLD_HEIGHT - DECK_SURFACE_INSET * 2;
-    const deckRight = deckLeft + deckWidth;
-    const deckBottom = deckTop + deckHeight;
+    const { left: deckLeft, top: deckTop, right: deckRight, bottom: deckBottom, width: deckWidth, height: deckHeight } =
+      this.getShipDeckBounds();
 
     const logicalCols = Math.max(1, Math.floor(deckWidth / RANDOM_DECK_OBSTACLE_TILE_GROUP_SIZE));
     const logicalRows = Math.max(1, Math.floor(deckHeight / RANDOM_DECK_OBSTACLE_TILE_GROUP_SIZE));
@@ -3194,6 +3592,10 @@ export class GameScene extends Phaser.Scene {
       const x = Phaser.Math.Between(deckLeft + RANDOM_DECK_OBSTACLE_MIN_PADDING, deckRight - RANDOM_DECK_OBSTACLE_MIN_PADDING);
       const y = Phaser.Math.Between(deckTop + RANDOM_DECK_OBSTACLE_MIN_PADDING, deckBottom - RANDOM_DECK_OBSTACLE_MIN_PADDING);
 
+      if (!this.isPointInsideShipDeck(x, y)) {
+        continue;
+      }
+
       if (Phaser.Math.Distance.Between(playerStartX, playerStartY, x, y) <= this.safeRadius) {
         continue;
       }
@@ -3204,6 +3606,10 @@ export class GameScene extends Phaser.Scene {
 
       const minEdgeDistance = Math.min(x - deckLeft, deckRight - x, y - deckTop, deckBottom - y);
       if (minEdgeDistance <= RANDOM_DECK_OBSTACLE_EDGE_SPAWN_BUFFER) {
+        continue;
+      }
+
+      if (!this.isPointInsideShipDeck(x, y - RANDOM_DECK_OBSTACLE_EDGE_SPAWN_BUFFER * 0.4)) {
         continue;
       }
 
@@ -3338,6 +3744,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (nextX < 12 || nextX > WORLD_WIDTH - 12 || nextY < 12 || nextY > WORLD_HEIGHT - 12) {
+      return false;
+    }
+    if (!this.isPointInsideShipDeck(nextX, nextY)) {
       return false;
     }
     const distFromCenter = Phaser.Math.Distance.Between(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5, nextX, nextY);
@@ -4061,6 +4470,60 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  publishQaHooks() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.__DASH_SURVIVOR_QA__ = {
+      getGameScene: () => this,
+      getSnapshot: () => this.getQaSnapshot(),
+      tryDash: () => this.tryPerformPlayerDash()
+    };
+  }
+
+  getQaSnapshot() {
+    const player = this.player;
+    const camera = this.cameras?.main;
+    const clampedCorner = this.clampPointToShipDeck(-120, -120, 18);
+
+    return {
+      source: {
+        path: REDESIGN_V2_ENVIRONMENT_SOURCE.path,
+        scaleX: REDESIGN_V2_SOURCE_TO_WORLD.scaleX,
+        scaleY: REDESIGN_V2_SOURCE_TO_WORLD.scaleY
+      },
+      camera: {
+        zoom: camera?.zoom ?? null,
+        scrollX: camera?.scrollX ?? null,
+        scrollY: camera?.scrollY ?? null
+      },
+      player: {
+        x: player?.x ?? null,
+        y: player?.y ?? null,
+        dashGauge: player?.dashGauge ?? null,
+        dashGaugeMax: player?.dashGaugeMax ?? null,
+        dashRemainingMs: player?.dashRemainingMs ?? null,
+        isDashing: player?.isDashing?.() ?? false,
+        insideShipDeck: player ? this.isPointInsideShipDeck(player.x, player.y) : false,
+        weaponCount: player?.weapons?.length ?? 0
+      },
+      run: {
+        selectedStartWeaponId: this.selectedStartWeaponId,
+        isWeaponSelecting: this.isWeaponSelecting,
+        isLeveling: this.isLeveling,
+        isGameOver: this.isGameOver,
+        weaponSelectionError: this.weaponSelectionError
+      },
+      map: {
+        sourceShipRegion: REDESIGN_V2_SOURCE_TO_WORLD.sourceShipRegion,
+        worldRegion: REDESIGN_V2_SOURCE_TO_WORLD.worldRegion,
+        clampedCornerInsideDeck: this.isPointInsideShipDeck(clampedCorner.x, clampedCorner.y),
+        playerSpawnIsInvalidEnemySpawn: player ? !this.isValidSpawnPoint(player.x, player.y) : false
+      }
+    };
+  }
+
   updateBossApproachWarning() {
     const intervalMs = DIRECTOR_BOSS_SPAWN.intervalMs;
     if (!Number.isFinite(intervalMs) || intervalMs <= 0) {
@@ -4562,6 +5025,28 @@ export class GameScene extends Phaser.Scene {
       y = Phaser.Math.Between(view.top + height * rangeStart, view.top + height * rangeEnd);
     }
 
+    if (!this.isPointInsideShipDeck(x, y)) {
+      const deck = this.getShipDeckBounds();
+      if (rule.edge === "top") {
+        y = deck.top + 42;
+        x = Phaser.Math.Clamp(x, deck.left + 220, deck.right - 220);
+      } else if (rule.edge === "bottom") {
+        y = deck.bottom - 42;
+        x = Phaser.Math.Clamp(x, deck.left + 220, deck.right - 220);
+      } else if (rule.edge === "left") {
+        x = deck.left + 42;
+        y = Phaser.Math.Clamp(y, deck.top + 190, deck.bottom - 190);
+      } else if (rule.edge === "right") {
+        x = deck.right - 42;
+        y = Phaser.Math.Clamp(y, deck.top + 190, deck.bottom - 190);
+      }
+      if (!this.isPointInsideShipDeck(x, y)) {
+        const clamped = this.clampPointToShipDeck(x, y, 36);
+        x = clamped.x;
+        y = clamped.y;
+      }
+    }
+
     return {
       x: Phaser.Math.Clamp(x, 12, WORLD_WIDTH - 12),
       y: Phaser.Math.Clamp(y, 12, WORLD_HEIGHT - 12),
@@ -4606,16 +5091,20 @@ export class GameScene extends Phaser.Scene {
 
   isValidSpawnPoint(x, y) {
     const view = this.cameras.main.worldView;
+    const isOnShipDeck = this.isPointInsideShipDeck(x, y);
     const isOutsideView = !Phaser.Geom.Rectangle.Contains(view, x, y);
     const isOutsideSafeRadius = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y) > this.safeRadius;
     const noObstacleOverlap = !this.isObstacleBlockedAt(x, y, 18);
-    return isOutsideView && isOutsideSafeRadius && noObstacleOverlap;
+    return isOnShipDeck && isOutsideView && isOutsideSafeRadius && noObstacleOverlap;
   }
 
   pickEnemyArchetype() {
     const elapsedSeconds = this.runTimeMs / 1000;
     const availableTypes = ENEMY_TYPE_WEIGHTS.filter((entry) => {
       if (entry.type === "hunter" && elapsedSeconds < HUNTER_UNLOCK_TIME_SEC) {
+        return false;
+      }
+      if (entry.type === "jellyfish" && elapsedSeconds < JELLYFISH_UNLOCK_TIME_SEC) {
         return false;
       }
       return true;
@@ -4769,14 +5258,19 @@ export class GameScene extends Phaser.Scene {
       if (this.bossProjectiles.getLength() >= BOSS_BULLET_MAX) {
         return null;
       }
-      projectile = this.bossProjectiles.create(-1000, -1000, "boss_bullet");
+      projectile = this.bossProjectiles.create(-1000, -1000, getBossSkullProjectileTextureKey(this, 0, 1));
       if (!projectile?.body) {
         return null;
       }
-      projectile.body.setCircle(Math.max(2, projectile.displayWidth * 0.42), 0, 0);
       projectile.setDepth(8);
     }
 
+    const bodyRadius = 5;
+    projectile.body.setCircle(
+      bodyRadius,
+      Math.max(0, projectile.width * 0.5 - bodyRadius),
+      Math.max(0, projectile.height * 0.5 - bodyRadius)
+    );
     projectile.setActive(true);
     projectile.setVisible(true);
     projectile.body.enable = true;
@@ -4814,7 +5308,17 @@ export class GameScene extends Phaser.Scene {
       const angle = (Math.PI * 2 * i) / safeCount;
       const vx = Math.cos(angle) * safeSpeed;
       const vy = Math.sin(angle) * safeSpeed;
+      const textureKey = getBossSkullProjectileTextureKey(this, vx, vy);
+      if (textureKey && projectile.texture?.key !== textureKey) {
+        projectile.setTexture(textureKey);
+      }
       projectile.enableBody(true, boss.x, boss.y, true, true);
+      const bodyRadius = 5;
+      projectile.body.setCircle(
+        bodyRadius,
+        Math.max(0, projectile.width * 0.5 - bodyRadius),
+        Math.max(0, projectile.height * 0.5 - bodyRadius)
+      );
       projectile.body.setVelocity(vx, vy);
       projectile.setData("damage", damagePerBullet);
       projectile.setData("expireAtMs", nowMs + BOSS_BULLET_LIFETIME_MS);
@@ -5242,8 +5746,8 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     const centerX = cam.width * 0.5;
     const centerY = cam.height * 0.5;
-    const panelWidth = 430;
-    const panelHeight = 238;
+    const panelWidth = 398;
+    const panelHeight = 226;
     const overlay = this.add
       .rectangle(centerX, centerY, cam.width, cam.height, 0x000000, 0.6)
       .setScrollFactor(0)
@@ -5261,7 +5765,7 @@ export class GameScene extends Phaser.Scene {
     const title = this.add
       .text(centerX, centerY - 66, "LEVEL UP", {
         fontFamily: "Arial",
-        fontSize: "30px",
+        fontSize: "26px",
         color: "#f3dfb9",
         stroke: "#2a1a10",
         strokeThickness: 4
@@ -5277,9 +5781,9 @@ export class GameScene extends Phaser.Scene {
     const optionObjects = [];
 
     choices.forEach((upgrade, index) => {
-      const y = centerY - 38 + index * 58;
+      const y = centerY - 36 + index * 54;
       const box = this.add
-        .rectangle(centerX, y, 380, 48, 0x4a2f1d, 0.98)
+        .rectangle(centerX, y, 352, 44, 0x4a2f1d, 0.98)
         .setStrokeStyle(1, 0xb48855, 0.92)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
@@ -5288,7 +5792,7 @@ export class GameScene extends Phaser.Scene {
       const label = this.add
         .text(centerX, y - 9, `[${index + 1}] ${upgrade.label}`, {
           fontFamily: "Arial",
-          fontSize: "16px",
+          fontSize: "14px",
           color: "#f7e8cc",
           stroke: "#2a170f",
           strokeThickness: 3
@@ -5299,7 +5803,7 @@ export class GameScene extends Phaser.Scene {
       const detail = this.add
         .text(centerX, y + 12, upgrade.description ?? "", {
           fontFamily: "Arial",
-          fontSize: "12px",
+          fontSize: "11px",
           color: "#d8bf95",
           stroke: "#2a170f",
           strokeThickness: 2
@@ -5347,46 +5851,54 @@ export class GameScene extends Phaser.Scene {
     this.player.body?.setVelocity(0, 0);
     this.applyHudModalFocus(true);
     try {
-      const centerX = 640;
-      const centerY = 360;
+      const cam = this.cameras.main;
+      const centerX = cam.width * 0.5;
+      const centerY = cam.height * 0.5;
+      const panelWidth = Math.min(650, cam.width - 92);
+      const panelHeight = Math.min(442, cam.height - 54);
+      const rowWidth = panelWidth - 72;
+      const rowHeight = 60;
+      const rowGap = 70;
+      const rowStartY = centerY - 62;
+      const textLeft = centerX - rowWidth * 0.5 + 82;
       const panel = this.add
-      .rectangle(centerX, centerY, 700, 500, 0x22150d, 0.96)
+      .rectangle(centerX, centerY, panelWidth, panelHeight, 0x22150d, 0.96)
       .setStrokeStyle(3, 0xb48855, 0.96)
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 1);
       const panelInset = this.add
-      .rectangle(centerX, centerY, 672, 470, 0x342214, 0.94)
+      .rectangle(centerX, centerY, panelWidth - 24, panelHeight - 24, 0x342214, 0.94)
       .setStrokeStyle(1, 0x6d4a31, 0.88)
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 2);
       const { titleChip, title } = this.createModalTitle(
       centerX,
-      centerY - 206,
+      centerY - panelHeight * 0.5 + 44,
       "SELECT START WEAPON",
       {
-        fontSize: 32,
-        minWidth: 292,
+        fontSize: 25,
+        minWidth: 242,
         badgeDepth: RENDER_DEPTH.MENUS + 3,
         textDepth: RENDER_DEPTH.MENUS + 4
       }
     );
 
       const coinText = this.add
-      .text(centerX, centerY - 168, `Coins: ${this.metaData.currency}`, {
+      .text(centerX, centerY - panelHeight * 0.5 + 78, `Coins: ${this.metaData.currency}`, {
         fontFamily: "Arial",
-        fontSize: "20px",
+        fontSize: "16px",
         color: "#e2c388",
         stroke: "#2e170d",
-        strokeThickness: 3
+        strokeThickness: 2
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
       .setDepth(RENDER_DEPTH.MENUS + 4);
 
       const subtitle = this.add
-      .text(centerX, centerY - 130, "Pick one weapon to begin this run", {
+      .text(centerX, centerY - panelHeight * 0.5 + 108, "Pick one weapon to begin this run", {
         fontFamily: "Arial",
-        fontSize: "17px",
+        fontSize: "14px",
         color: "#d8bf95",
         stroke: "#2a1a10",
         strokeThickness: 2
@@ -5396,12 +5908,12 @@ export class GameScene extends Phaser.Scene {
       .setDepth(RENDER_DEPTH.MENUS + 4);
 
       const statusText = this.add
-      .text(centerX, centerY + 204, "", {
+      .text(centerX, centerY + panelHeight * 0.5 - 26, "", {
         fontFamily: "Arial",
-        fontSize: "18px",
+        fontSize: "14px",
         color: "#ebd7b7",
         stroke: "#2e170d",
-        strokeThickness: 4
+        strokeThickness: 3
       })
       .setOrigin(0.5)
       .setScrollFactor(0)
@@ -5409,28 +5921,28 @@ export class GameScene extends Phaser.Scene {
 
       const optionRows = [];
       START_WEAPON_OPTIONS.forEach((option, index) => {
-      const y = centerY - 60 + index * 86;
+      const y = rowStartY + index * rowGap;
       const box = this.add
-        .rectangle(centerX, y, 620, 74, 0x4a2f1d, 0.98)
+        .rectangle(centerX, y, rowWidth, rowHeight, 0x4a2f1d, 0.98)
         .setStrokeStyle(2, 0xb48855, 0.92)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(RENDER_DEPTH.MENUS + 4);
       const boxInlay = this.add
-        .rectangle(centerX, y, 604, 58, 0xead7b7, 0.88)
+        .rectangle(centerX, y, rowWidth - 16, rowHeight - 14, 0xead7b7, 0.88)
         .setStrokeStyle(1, 0x6d4a31, 0.6)
         .setInteractive({ useHandCursor: true })
         .setScrollFactor(0)
         .setDepth(RENDER_DEPTH.MENUS + 5);
       const weaponIcon = this.add
-        .image(centerX - 314, y, this.getWeaponIconKey(option.weaponType))
-        .setDisplaySize(36, 36)
+        .image(centerX - rowWidth * 0.5 + 38, y, this.getWeaponIconKey(option.weaponType))
+        .setDisplaySize(32, 32)
         .setScrollFactor(0)
         .setDepth(RENDER_DEPTH.MENUS + 6);
       const heading = this.add
-        .text(centerX - 268, y - 13, `[${index + 1}] ${option.label}`, {
+        .text(textLeft, y - 10, `[${index + 1}] ${option.label}`, {
           fontFamily: "Arial",
-          fontSize: "24px",
+          fontSize: "19px",
           color: "#2e170d",
           stroke: "#f7e8cc",
           strokeThickness: 1
@@ -5439,13 +5951,13 @@ export class GameScene extends Phaser.Scene {
         .setScrollFactor(0)
         .setDepth(RENDER_DEPTH.MENUS + 6);
       const detail = this.add
-        .text(centerX - 268, y + 15, "", {
+        .text(textLeft, y + 14, "", {
           fontFamily: "Arial",
-          fontSize: "13px",
+          fontSize: "11px",
           color: "#6a4d36",
           stroke: "#f7e8cc",
           strokeThickness: 1,
-          wordWrap: { width: 510, useAdvancedWrap: true }
+          wordWrap: { width: rowWidth - 110, useAdvancedWrap: true }
         })
         .setOrigin(0, 0.5)
         .setScrollFactor(0)
@@ -5492,6 +6004,7 @@ export class GameScene extends Phaser.Scene {
 
       this.weaponSelectionUi = [panel, panelInset, titleChip, title, coinText, subtitle, statusText, ...optionRows];
     } catch (error) {
+      this.weaponSelectionError = error?.stack ?? error?.message ?? String(error);
       console.error("[GameScene] Failed to open weapon selection modal, fallback to default weapon.", error);
       this.forceCloseWeaponSelectionWithFallback();
     }
@@ -5520,7 +6033,39 @@ export class GameScene extends Phaser.Scene {
     }
     this.selectedStartWeaponId = option.id;
     this.closeWeaponSelection();
+    this.startRunCameraIntro();
     this.showHudAlert(`${option.label.toUpperCase()} READY`, 1000);
+  }
+
+  startRunCameraIntro() {
+    if (!this.player?.active || !this.cameras?.main) {
+      return;
+    }
+
+    const camera = this.cameras.main;
+    camera.stopFollow();
+    camera.centerOn(WORLD_WIDTH * 0.5, WORLD_HEIGHT * 0.5);
+    camera.setZoom(GAMEPLAY_OVERVIEW_CAMERA_ZOOM);
+
+    this.time.delayedCall(80, () => {
+      if (!this.player?.active) {
+        return;
+      }
+      camera.pan(this.player.x, this.player.y, GAMEPLAY_OVERVIEW_CAMERA_DURATION_MS, "Sine.easeInOut", true);
+      camera.zoomTo(GAMEPLAY_CAMERA_ZOOM, GAMEPLAY_OVERVIEW_CAMERA_DURATION_MS, "Sine.easeInOut");
+    });
+
+    this.time.delayedCall(GAMEPLAY_OVERVIEW_CAMERA_DURATION_MS + 140, () => {
+      if (!this.player?.active || this.isGameOver) {
+        return;
+      }
+      camera.startFollow(
+        this.player,
+        true,
+        GAMEPLAY_CAMERA_FOLLOW_LERP_X,
+        GAMEPLAY_CAMERA_FOLLOW_LERP_Y
+      );
+    });
   }
 
   closeWeaponSelection() {
@@ -6294,13 +6839,14 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    if (this.textures.exists(EDGE_FOG_TEXTURE_KEY)) {
-      this.textures.remove(EDGE_FOG_TEXTURE_KEY);
-    }
-
-    const texture = this.textures.createCanvas(EDGE_FOG_TEXTURE_KEY, width, height);
-    if (!texture) {
+    const texture = this.textures.exists(EDGE_FOG_TEXTURE_KEY)
+      ? this.textures.get(EDGE_FOG_TEXTURE_KEY)
+      : this.textures.createCanvas(EDGE_FOG_TEXTURE_KEY, width, height);
+    if (!texture?.context) {
       return;
+    }
+    if (typeof texture.setSize === "function" && (texture.width !== width || texture.height !== height)) {
+      texture.setSize(width, height);
     }
 
     const ctx = texture.context;

@@ -86,7 +86,8 @@
 - [x] Runtime render config supports crisp pixel-art movement.
 - [ ] Arrow-key movement binding is not implemented.
 - [ ] Health resistance/regeneration systems are not implemented.
-- [ ] Replace placeholder geometry with a `32x32` player sheet and dash-smear frame set.
+- [x] Replace placeholder geometry with the promoted V2 `32x32` 8-direction player sheet.
+- [ ] Add dash-smear frame set.
 
 ## Validation Checklist
 - [ ] Movement speed remains consistent in all 8 directions.

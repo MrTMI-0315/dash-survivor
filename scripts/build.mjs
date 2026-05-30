@@ -6,7 +6,7 @@ const ROOT = process.cwd();
 const DIST_DIR = path.join(ROOT, "dist");
 const DIST_ASSETS_DIR = path.join(DIST_DIR, "assets");
 const BUILD_MAX_BYTES = 10 * 1024 * 1024;
-const EXCLUDED_DIRS = new Set(["vendor", "raw"]);
+const EXCLUDED_DIRS = new Set(["generated", "vendor", "raw"]);
 const EXCLUDED_EXTENSIONS = new Set([".md"]);
 
 async function ensureCleanDist() {

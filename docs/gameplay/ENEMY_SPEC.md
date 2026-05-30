@@ -26,6 +26,7 @@
 | `tank` | Implemented | HP 70 / Speed 52 / Damage 14 / XP 24 | Available from run start |
 | `swarm` | Implemented | HP 8 / Speed 84 / Damage 5 / XP 5 | Available from run start; spawns in group (3–5) |
 | `hunter` | Implemented | HP 9 / Speed 176 / Damage 6 / XP 11 | Unlock after `45s` (`HUNTER_UNLOCK_TIME_SEC`) |
+| `jellyfish` | Implemented | HP 28 / Speed 64 / Damage 9 / XP 18 | Unlock after `75s` (`JELLYFISH_UNLOCK_TIME_SEC`); late-run slow pressure unit |
 
 ### Elite Variants (Modifier-Based)
 | Elite Type | Status | Effect |
@@ -52,6 +53,7 @@
 | `swarm` | `16x16` or `24x24` | Small but high-contrast center mass, no noisy outline |
 | `tank` | `32x32` to `48x48` | Wide silhouette, readable top-down shoulders / shell |
 | `hunter` | `32x32` | Sharp forward-facing shape that reads as speed |
+| `jellyfish` | `24x24` to `32x32` candidate | Tall tentacle silhouette, purple/teal glow, must not blend into XP or weapon effects |
 | `boss` / `mini boss` | `64x64+` | Oversized silhouette, keep collision smaller than visual sprite |
 
 ### Free Source Shortlist (Reference Only)
@@ -90,6 +92,7 @@
 - [ ] Bow/stern-constrained boss entry (currently any valid edge candidate).
 - [ ] Separate enemy-side attack/recover FSM if needed.
 - [ ] Replace temporary procedural silhouettes with authored `16/32/64px` sprite families.
+- [x] Promote staged `jellyfish` art as a new late-run pressure archetype.
 - [ ] Lock enemy palette so hostile units stay cooler / brighter than deck props.
 
 ## Validation Checklist
@@ -118,6 +121,7 @@
 ## Next Iteration Hooks
 - Add ranged archetype (projectile-based pressure).
 - Add summoner archetype (spawn-support behavior).
+- Tune `jellyfish` spawn weight and role after dense-combat visual testing.
 - Add explicit enemy-side attack/recover state timers.
 - Add ship-themed spawn lanes (bow/port/starboard/stern explicit zones).
 - Add one-page enemy sprite sheet guide once the first real asset batch is chosen.

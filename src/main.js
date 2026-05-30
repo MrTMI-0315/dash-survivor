@@ -55,7 +55,8 @@ async function bootstrap() {
     scene: [MainMenuScene, GameScene, RunSummaryScene, UpgradeScene]
   };
 
-  new Phaser.Game(config);
+  const game = new Phaser.Game(config);
+  globalThis.__DASH_SURVIVOR_GAME__ = game;
 }
 
 bootstrap();

@@ -16,7 +16,8 @@ const ENEMY_TYPE_TO_FOLDER = Object.freeze({
   chaser: "enemy_chaser",
   swarm: "enemy_swarm",
   tank: "enemy_tank",
-  hunter: "enemy_hunter"
+  hunter: "enemy_hunter",
+  jellyfish: "enemy_jellyfish"
 });
 const HIT_FLASH_DURATION_MS = 100;
 const HIT_FLASH_TINT = 0xffaaaa;

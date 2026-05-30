@@ -35,6 +35,12 @@
 | `meteor` (evolved) | Heavy projectile + large explosion | 52 | 1850ms | 430 | Evolution target of fireball |
 | `orbit_blades` (evolved) | Rotating close-range blades | 16 | 230ms | 120 | Evolution target of dagger |
 
+### Runtime Art Pass
+- V2 weapon icons are promoted for `dagger` (cutlass art), `fireball` (flintlock art), `lightning` (whip art), and `orbit_blades` (boarding axe art).
+- `meteor` keeps its existing icon until a dedicated V2 meteor candidate is produced.
+- Boss radial bullets now use the promoted 8-direction skull projectile family while preserving a small collision circle.
+- QA2 keeps weapon behavior re-planning out of scope, but visual pairing must still be coherent: straight blade attacks should use slash-like visuals, firearm-style weapons should not borrow blade projectiles, and boss-only skull bullets should remain visually distinct from player weapons.
+
 ### Scaling / Upgrades
 - Global upgrades (implemented):
   - `weapon_damage`: all weapon damage multiplier
@@ -73,6 +79,7 @@
 - [ ] Lightning chain hits up to 3 targets and applies falloff.
 - [ ] Explosion weapons apply AoE damage within radius only.
 - [ ] Dead enemies from weapon damage trigger defeat flow once.
+- [x] Smoke test covers immediate start-run weapon selection and live dash input after the weapon modal closes.
 
 ## Debug / Failure Points
 - Cooldown desync:

@@ -34,6 +34,15 @@ export const ENEMY_ARCHETYPE_CONFIGS = {
     radius: 11,
     scale: 1.36,
     tint: 0x6db8ff
+  },
+  jellyfish: {
+    speed: 64,
+    hp: 28,
+    damage: 9,
+    xpValue: 18,
+    radius: 13,
+    scale: 1.32,
+    tint: 0xd097ff
   }
 };
 
@@ -57,10 +66,12 @@ export const ELITE_TYPE_CONFIGS = {
 };
 
 export const ENEMY_TYPE_WEIGHTS = [
-  { type: "chaser", weight: 40 },
-  { type: "tank", weight: 22 },
-  { type: "swarm", weight: 23 },
-  { type: "hunter", weight: 15 }
+  { type: "chaser", weight: 36 },
+  { type: "tank", weight: 21 },
+  { type: "swarm", weight: 22 },
+  { type: "hunter", weight: 14 },
+  { type: "jellyfish", weight: 7 }
 ];
 
 export const HUNTER_UNLOCK_TIME_SEC = 45;
+export const JELLYFISH_UNLOCK_TIME_SEC = 75;
